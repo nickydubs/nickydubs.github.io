@@ -1,4 +1,0 @@
-This is a Brave Rewards publisher verification file.
-
-Domain: nickydubs.github.io
-Token: 793b30305e7c583f2be1a4a60dd2f8ef18bc584ff5b9ada43e5858584eb19c75
