@@ -1,5 +1,4 @@
-### I am Nic Dublanko aka Nicky Dubs and this is my web space for testing some web coding/hosting shits... :)
-### k bye!
+### I am Nic Dublanko aka Nicky Dubs. I play music. :)
 ### https://linktr.ee/NickyDubs
 
 <!--
