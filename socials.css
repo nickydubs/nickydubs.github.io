@@ -1,0 +1,164 @@
+body{
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+}
+.social-icons{
+    display: flex;
+}
+.social-icon{
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    width: 80px;
+    height: 80px;
+    margin: 0 0.5rem;
+    border-radius: 50%;
+    cursor: pointer;
+    font-family: "Halvetica Neue",sans-serif,"Arial";
+    font-size: 2.5rem;
+    text-decoration: none;
+    transition: all 0.15s ease;
+    box-shadow: inset 1px 1px 2px #90a4ae,
+                inset -1px -1px 2px white,
+                5px 5px 10px #90a4ae,
+                -5px -5px 10px white;
+    border: 6px solid rgba(230,228,228);            
+}
+/* Tooltips */
+.tooltip {
+    display: block;
+    position: absolute;
+    top: 0;
+    left: 50%;
+    padding: 0.8rem 1rem;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: bold;
+    opacity: 0;
+    pointer-events: none;
+    text-transform: uppercase;
+    transform: translate(-50%, -100%);
+    transition: all 0.3s ease;
+    z-index: 1;
+  }
+  .tooltip:after {
+    display: block;
+    position: absolute;
+    bottom: 1px;
+    left: 50%;
+    width: 0;
+    height: 0;
+    content: "";
+    border: solid;
+    border-width: 10px 10px 0 10px;
+    border-color: transparent;
+    transform: translate(-50%, 100%);
+  }
+
+/* color */
+.social-icon--codepen{
+    background: #000;
+    color: #fff;
+}
+.social-icon--github{
+    background: #4284c0;
+    color: #fff;
+}
+.social-icon--twitter{
+    background: #2b97f1;
+    color: #fff;
+}
+.social-icon--youtube{
+    background: #fa3217;
+    color: white;
+}
+.social-icon--instagram{
+    background: #527fa6;
+    color: white;
+}
+.social-icon--facebook{
+    background: #3b5a9b;
+    color: white;
+}
+.social-icon--twitch{
+    background: #000;
+    color: white;
+}
+.social-icon--linktree{
+    background: #000;
+    color: white;
+}
+
+/* Hover Effect*/
+.social-icon:hover .tooltip {
+    visibility: visible;
+    opacity: 1;
+    transform: translate(-50%, -150%);
+}
+.social-icon--codepen .tooltip{
+    background: #000;
+    columns: currentColor;
+}
+.social-icon--codepen .tooltip::after{
+    border-top-color: black;
+}
+
+.social-icon--facebook .tooltip{
+    background: #3b5a9b;
+    columns: currentColor;
+}
+.social-icon--facebook .tooltip::after{
+    border-top-color: #3b5a9a;
+}
+.social-icon--twitter .tooltip{
+    background: #2b97f1;
+    columns: currentColor;
+}
+.social-icon--twitter .tooltip::after{
+    border-top-color: #2b97f1;
+}
+
+.social-icon--youtube .tooltip{
+    background: #f31344;
+    columns: currentColor;
+}
+.social-icon--youtube .tooltip::after{
+    border-top-color: #f31344;
+}
+
+.social-icon--instagram .tooltip{
+    background: #527fa6;
+    columns: currentColor;
+}
+.social-icon--instagram .tooltip:after{
+    border-top-color: #527fa6;
+}
+
+.social-icon--github .tooltip{
+    background: #4284c0;
+    columns: currentColor;
+}
+/* icon after effect */
+.social-icon--github .tooltip::after{
+    border-top-color: #4284c0;
+}
+
+.social-icon--twitch .tooltip{
+    background: #4284c0;
+    columns: currentColor;
+}
+/* icon after effect */
+.social-icon--twitch .tooltip::after{
+    border-top-color: #4284c0;
+}
+.social-icon--linktree .tooltip{
+    background: #000;
+    columns: currentColor;
+}
+/* icon after effect */
+.social-icon--linktree .tooltip::after{
+    border-top-color: black;
+}
