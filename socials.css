@@ -147,7 +147,7 @@ body{
 }
 
 .social-icon--twitch .tooltip{
-    background: #4284c0;
+    background: purple;
     columns: currentColor;
 }
 .social-icon--twitch .tooltip::after{
