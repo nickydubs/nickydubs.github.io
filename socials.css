@@ -150,15 +150,14 @@ body{
     background: #4284c0;
     columns: currentColor;
 }
-/* icon after effect */
 .social-icon--twitch .tooltip::after{
     border-top-color: #4284c0;
 }
+
 .social-icon--linktree .tooltip{
     background: #000;
     columns: currentColor;
 }
-/* icon after effect */
 .social-icon--linktree .tooltip::after{
-    border-top-color: black;
+    border-top-color: green;
 }
