@@ -84,11 +84,11 @@ body{
     color: white;
 }
 .social-icon--twitch{
-    background: #000;
+    background: purple;
     color: white;
 }
 .social-icon--linktree{
-    background: #000;
+    background: green;
     color: white;
 }
 
@@ -155,9 +155,9 @@ body{
 }
 
 .social-icon--linktree .tooltip{
-    background: #000;
+    background: green;
     columns: currentColor;
 }
 .social-icon--linktree .tooltip::after{
-    border-top-color: green;
+    border-top-color: #4284c0;
 }
