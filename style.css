@@ -188,7 +188,7 @@ textarea {
   margin: 0;
   vertical-align: baseline; }
 
-/*
+
 button,
 input {
   line-height: normal; }
@@ -226,7 +226,7 @@ input[type="search"]::-webkit-search-decoration {
 button::-moz-focus-inner, input::-moz-focus-inner {
   border: 0;
   padding: 0; }
-*/
+
 
 textarea {
   overflow: auto;
