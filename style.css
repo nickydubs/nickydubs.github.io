@@ -1439,7 +1439,8 @@ body {
   color: inherit;
   text-decoration: none; }
   #branding img {
-    display: block; }
+    display: block; 
+    padding: 0px 50px 0px 50px;}
   #branding .site-description {
     display: block;
     margin: 0; }
