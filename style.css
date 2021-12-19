@@ -78,7 +78,7 @@ body {
   width: 100%;          /* nic ==============================================================*/
   overflow-x: hidden;   /* nic ==============================================================*/
   position: absolute; /* nic ==============================================================*/
-  margin: 0; */
+  /*margin: 0; */
 }
 
 /* line 159, sass/libs/_normalize.scss */
@@ -1894,9 +1894,10 @@ body {
       min-height: 540px;
       background-color: #171717;
       background-size: cover; }
-    /* line 19, sass/pages/_homepage.scss */
+    
+
     .slider .slides .container {
-      /* padding: 200px 0; Nic ======================================================================*/
+      padding: 200px 0;     /* Nic ======================================================================*/
       text-align: center; }
    
     .slider .slides .slide-title {
