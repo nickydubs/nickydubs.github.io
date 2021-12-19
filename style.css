@@ -195,7 +195,8 @@ input {
 
 button,
 select {
-  text-transform: none; }
+  /*text-transform: none;*/
+  text-transform: uppercase; }
 
 button,
 html input[type="button"],
@@ -244,15 +245,15 @@ body {
   background-color: #141414;
   color: #848484;
   font-family: "Source Sans Pro", "Open Sans", sans-serif;
-  font-size: 16px;
-  line-height: 24px; }
+  font-size: 14px;
+  line-height: 20px; }
 
 #site-content {
   overflow: hidden; }
 
 .button {
   display: inline-block;
-  padding: 10px 30px;
+  padding: 8px 24px;
   background-color: #fd5927;
   border: none;
   color: white;
@@ -564,10 +565,13 @@ body {
   .imagelightbox-arrow-right {
     right: 0; } }
 .container {
+  /*=== NIC =================================================================*/
+  /* 
   margin-right: auto;
   margin-left: auto;
   padding-left: 15px;
   padding-right: 15px;
+  */
   *zoom: 1; }
   .container:after {
     content: " ";
@@ -1887,9 +1891,9 @@ body {
       background-size: cover; }
     /* line 19, sass/pages/_homepage.scss */
     .slider .slides .container {
-      padding: 200px 0;
+      /* padding: 200px 0; Nic ======================================================================*/
       text-align: center; }
-    /* line 24, sass/pages/_homepage.scss =================================================*/
+   
     .slider .slides .slide-title {
       margin: 0;
       color: white;
@@ -2182,7 +2186,7 @@ body {
   font-size: 1.125em; }
 /* line 27, sass/pages/_post.scss */
 .content p {
-  margin: 0 0 40px; }
+  margin: 0 0 30px; }
 
 /* line 1, sass/pages/_gallery.scss */
 .content.fullwidth {
