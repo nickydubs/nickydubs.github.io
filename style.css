@@ -576,6 +576,9 @@ body {
   padding-left: 15px;
   padding-right: 15px;
   */
+  margin-right: 0;
+  margin-left: 0;
+  
   *zoom: 1; }
   .container:after {
     content: " ";
