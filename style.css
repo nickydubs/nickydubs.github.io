@@ -78,7 +78,7 @@ body {
   width: 100%;          /* nic ==============================================================*/
   overflow-x: hidden;   /* nic ==============================================================*/
   position: absolute; /* nic ==============================================================*/
-  /*margin: 0; */
+  margin: 0; */
 }
 
 /* line 159, sass/libs/_normalize.scss */
@@ -570,17 +570,12 @@ body {
     right: 0; } }
 .container {
   
-  
   /*=== dicks =================================================================*/
  
   margin-right: auto;
   margin-left: auto;
-   /* 
   padding-left: 15px;
   padding-right: 15px;
-  */
-  margin-right: 0;
-  margin-left: 0;
   
   *zoom: 1; }
   .container:after {
