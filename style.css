@@ -78,7 +78,7 @@ body {
   width: 100%;        /* nic ==============================================================*/
   overflow: hidden;   /* nic ==============================================================*/
   overflow-x: hidden; /* nic ==============================================================*/
-  position: absolute;
+  /*position: absolute;*/
   margin: 0; }
 
 /* line 159, sass/libs/_normalize.scss */
