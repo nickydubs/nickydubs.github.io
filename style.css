@@ -75,6 +75,8 @@ textarea {
 
 /* line 119, sass/libs/_normalize.scss */
 body {
+  width: 100%;      /* nic ==============================================================*/
+  overflow: hidden; /* nic ==============================================================*/
   margin: 0; }
 
 /* line 159, sass/libs/_normalize.scss */
