@@ -29,6 +29,11 @@ a:hover, a:active {
   text-decoration: underline;
   outline: 0; }
 
+#nic-logo:hover, #nic-logo:active {
+  width:83px; height:75px; 
+  border-radius: 4px; 
+  box-shadow: 2px 2px 20px 23px #fd5927; }
+
 /* line 45, sass/libs/_normalize.scss */
 article,
 aside,
