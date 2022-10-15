@@ -1,4 +1,4 @@
-### I am Nic Dublanko aka Nicky Dubs. I play music. :)
+### I am Nicky Dubs and I play music.
 ### https://linktr.ee/NickyDubs
 
 <!--
