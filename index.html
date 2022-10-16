@@ -25,26 +25,31 @@
 </head>
 
 <!-- BODY & Site Content -->
-
 <body class="header-collapse" style="margin: 0px;">
-<div id="site-content" style="margin: 0px;">
+<div id="site-content" style="margin: 0 5px 5px 5px;">
+
+<!-- script sources -->
+<script src="https://use.fontawesome.com/c6464c3092.js"></script>
+<script src="js/clipboard.js"></script>
+<script src="js/jquery-1.11.1.min.js"></script>
+<script src="js/plugins.js"></script>
+<script src="js/app.js"></script>
 
 <!-- Header, container -->
-	<header class="site-header" style="padding: 0px; margin: 0px;">
-	<div class="container" style="padding: 0px; margin: 0px;">
+<header class="site-header" style="margin: 0px;">
+<div class="container" style="margin: 0px;">
 	
+	<!-- #branding -->
 	<div style="float: left; width: 12%; margin: 25px 0px 0px 25px;">
 	<a href="http://nickydubs.com" id="branding">
-		<img src="images/nicky dubs logo oilers.png" alt="nickydubs.com" style="width:83px;height:75px; border-radius: 4px;">
-	<small class="site-description">Nicky Dubs Music</small>				
-	</a> <!-- #branding -->
-	</div>
+		<img src="images/nicky dubs logo oilers.png" alt="nickydubs.com" style="width:83px; height:75px; border-radius: 4px;">
+		<small class="site-description">Nicky Dubs Music</small>				
+	</a></div><!-- end #branding -->
 	
 <!-- socials -->
 	<div style="float: center; width: 80%; margin: 0 0 0 20px;">
-	<br><br><br>
 	
-	<!-- 
+	<!-- <br><br><br>
 	<a href="https://nickydubs.github.io" class="social-icon social-icon--github" style="opacity: 0;">
             <i class="fa fa-github"></i> 
             <div class="tooltip">GitHub</div>
@@ -71,8 +76,7 @@
           </a>
 	</div>
 
-<!--					
-	<nav class="main-navigation">
+<!--	<nav class="main-navigation">
 	<button type="button" class="toggle-menu"><i class="fa fa-bars"></i></button>
 	<ul class="menu">
 		<li class="menu-item current-menu-item"><a href="index.html">Home</a></li>
@@ -83,7 +87,9 @@
 		<li class="menu-item"><a href="contact.html">Contact</a></li>
 	</ul> <!-- .menu -->
 <!--	</nav> <!-- .main-navigation -->
-	<div class="mobile-menu" style="padding: 0px; margin: 0px;"></div>
+
+<!--	<div class="mobile-menu" style="padding: 0px; margin: 0px;"></div>
+-->
 	
 </div><!-- container -->
 </header><!-- .site-header end -->
@@ -100,7 +106,7 @@
 
 <h4 class="slide-title" style="padding: 0px; margin: 0px;">Now accepting donations</h4>
 (google pay, apple pay, debit and all major credit cards)
-<p class="slide-desc" style="padding: 0px; margin: 0px; font: 12pt;">
+<p class="slide-desc" style="margin: 5px; font: 10pt;">
 I've always wanted my music to be accessible for free but I won't stop you from helping with my bills if you want to! :) 
 Thank you so much for every subscription, dollar, bit & cryptocoin!!
 </p>
@@ -111,7 +117,7 @@ Thank you so much for every subscription, dollar, bit & cryptocoin!!
 <br>
 <img src="https://n.anycodes.com/mimg/merimg/b_143952989614.png?v=141016" width="80px" height="80px"></h3></a>
 
-<br>
+<br><br>
 <a href="https://paypal.me/nickydubs"><h3 class="slide-subtitle" style="padding: 0px; margin: 0px;"><b>PayPal</b>
 <br><form action="https://www.paypal.com/donate" method="post" target="_top">
 <input type="hidden" name="hosted_button_id" value="4KKZ6486EC3NJ" />
@@ -119,14 +125,14 @@ Thank you so much for every subscription, dollar, bit & cryptocoin!!
 <img alt="Donate via Paypal" border="0" src="https://www.paypal.com/en_CA/i/scr/pixel.gif" width="1" height="1" />
 </form>	</h3></a>
 
-<br>
-<h3 class="slide-subtitle"><b>Crypto</b></h3>
+<br><br>
+<h3 class="slide-subtitle" style="padding: 0px; margin: 0px;"><b>Crypto</b></h3>
 <!-- a href="https://rb.gy/zg1jpv" class="button cut-corner">Donate Crypto</a><br>  -->
 
-<table align="center" >
+<table align="center" style="padding: 0px; margin: 0px;">
 <tr><td>Universal wallet for crypto donations:</td></tr>
 <tr><td>0x42Fd5B1e7173A108D11cda3A5ab85bfDF3C76a60</td>
-    <td style="padding: 4px;"><button onclick=copyStringToClipboard("0x42Fd5B1e7173A108D11cda3A5ab85bfDF3C76a60")><!-- <i class="fas fa-copy"></i>-->Copy</button></td>
+    <td style="padding: 10px;"><button onclick=copyStringToClipboard("0x42Fd5B1e7173A108D11cda3A5ab85bfDF3C76a60")><!-- <i class="fas fa-copy"></i>-->Copy</button></td>
 </tr>
 </table>
 
@@ -146,28 +152,18 @@ Thank you so much for every subscription, dollar, bit & cryptocoin!!
 	</p></ul>
 </div>
 
-	</div> <!-- container -->
-	</li>
+</div> <!-- end container -->
+</li> <!-- end slide 1 -->
 
-<!--	<li class="lazy-bg" data-background="dummy/slide-2.jpg">
-	<div class="container">
+<!-- slide 2 etc -->
+<!--	<li class="lazy-bg" data-background="dummy/slide-2.jpg"><div class="container">
 		<h2 class="slide-title">Tah-tah there, chomos</h2>
 		<h3 class="slide-subtitle">RIP Fedsmoker</h3>
 		<p class="slide-desc"><br></p>
 		<a href="#" class="button cut-corner">Click me for nothing!</a>
-	</div>
-	</li>
-	<li class="lazy-bg" data-background="dummy/slide-3.jpg">
-		<div class="container">
-		<h2 class="slide-title">Fuck</h2>
-		<h3 class="slide-subtitle">Shoulda bought bitcoin 10 years ago... sigh..</h3>
-		<p class="slide-desc">Fuuuuuuuuuuuuck</p>
-		<a href="#" class="button cut-corner">Read More</a>
-		</div>
-	</li>
--->
+	</div></li> -->
 
-</ul> <!-- end slides -->
+</ul> <!-- end all slides -->
 </div> <!-- end slider -->
 </div> <!-- end hero -->
 
@@ -389,17 +385,9 @@ Thank you so much for every subscription, dollar, bit & cryptocoin!!
 					
 	</div>
 				
-</footer> <!-- .site-footer -->
+</footer><!-- end .site-footer -->
 
-</div> <!-- #site-content -->
-
-<script src="https://use.fontawesome.com/c6464c3092.js"></script>
-<script src="js/clipboard.js"></script>
-<script src="js/jquery-1.11.1.min.js"></script>
-<script src="js/plugins.js"></script>
-<script src="js/app.js"></script>
-
-<!-- Body End -->
-</body> 
+</div><!-- end #site-content -->
+</body><!-- end body -->
 
 </html>
