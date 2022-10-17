@@ -22,7 +22,7 @@ body{
     text-decoration: none;
     transition: all 0.35s ease; /*0.15s ease; */
     box-shadow: inset 1px 1px 2px #90a4ae,
-                inset -1px -1px 2px white,
+                inset -1px -1px 2px black,
                 5px 5px 10px #90a4ae,
                 -5px -5px 10px white;
     border: 6px solid rgba(200,200,200);            
@@ -59,9 +59,6 @@ body{
   }
 
 /* color */
-.social-icon--codepen{
-    background: #000;
-    color: #fff; }
 .social-icon--github{
     background: #4284c0;
     color: #fff; }
@@ -84,7 +81,7 @@ body{
     background: green;
     color: white; }
 .social-icon--soundcloud{
-    background: orange;
+    background: #ff7700;
     color: white; }
 
 /* Hover Effect*/
@@ -92,12 +89,6 @@ body{
     visibility: visible;
     opacity: 1;
     transform: translate(-50%, -150%);}
-
-.social-icon--codepen .tooltip{
-    background: #000;
-    columns: currentColor;}
-.social-icon--codepen .tooltip::after{
-    border-top-color: black;}
 
 .social-icon--facebook .tooltip{
     background: #3b5a9b;
@@ -142,7 +133,7 @@ body{
     border-top-color: green;}
 
 .social-icon--soundcloud .tooltip{
-    background: orange;
+    background: #ff7700;
     columns: currentColor;}
 .social-icon--soundcloud .tooltip:after{
-    border-top-color: orange;}
+    border-top-color: #ff7700;}
