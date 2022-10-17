@@ -14,7 +14,7 @@ body{
     position: relative;
     width: 80px;
     height: 80px;
-    margin: 0 0.3rem;
+    margin: 0 0.5rem;
     border-radius: 50%;
     cursor: pointer;
     font-family: "Halvetica Neue",sans-serif,"Arial";
@@ -145,4 +145,4 @@ body{
     background: orange;
     columns: currentColor;}
 .social-icon--soundcloud .tooltip:after{
-    border-top-color: white;}
+    border-top-color: orange;}
