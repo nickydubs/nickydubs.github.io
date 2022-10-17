@@ -32,7 +32,7 @@ a:hover, a:active {
 #branding:hover, #branding:active {
   width:83px; height:75px; 
   border-radius: 4px; 
-  box-shadow: 2px 2px 20px 23px #fd5927; }
+  box-shadow: 2px 2px 20px 23px #fd5927; }  /* animate me */
 
 /* line 45, sass/libs/_normalize.scss */
 article,
@@ -193,10 +193,9 @@ input,
 select,
 textarea {
   font-family: inherit;
-  font-size: 100%;
+  font-size: 80%;
   margin: 0;
   vertical-align: baseline; }
-
 
 button,
 input {
@@ -579,8 +578,11 @@ body {
  
   margin-right: auto;
   margin-left: auto;
-  padding-left: 15px;
-  padding-right: 15px;
+  padding-top: 5px;
+  padding-right: 5px;
+  padding-bottom: 5px;
+  padding-left: 5px;
+  
   
   *zoom: 1; }
   .container:after {
@@ -1424,6 +1426,7 @@ body {
 @media print {
   .hidden-print {
     display: none !important; } }
+
 .site-header {
   *zoom: 1;
   z-index: 99; }
@@ -1707,7 +1710,7 @@ body {
     background: #353535;
     display: block;
     width: 100%;
-    padding: 15px;
+    padding: 10px;
     color: white;
     margin-bottom: 10px;
     border: none; }
@@ -1721,7 +1724,7 @@ body {
     background-color: #fd5927; }
   /* line 159, sass/layout/_content.scss */
   .contact-form textarea {
-    min-height: 150px; }
+    min-height: 120px; }
 
 /* line 164, sass/layout/_content.scss */
 .map-wrapper address {
@@ -1844,9 +1847,12 @@ body {
         /* line 37, sass/layout/_footer.scss */
         .site-footer .newsletter-form input[type="submit"] {
           width: 30%; } }
-  /* line 44, sass/layout/_footer.scss */
-  .site-footer .social-links {
-    margin: 50px 0; }
+  /* line 44, sass/layout/_footer.scss * nic split this into 2 *************************************************************/
+  .site-footer {
+    margin: 30px 0; }
+  .social-links {
+    margin 20px 0; }
+/* end nic ************************************************************************/
     /* line 46, sass/layout/_footer.scss */
     .site-footer .social-links a {
       display: inline-block;
@@ -1858,9 +1864,9 @@ body {
       background-repeat: no-repeat;
       color: white;
       margin: 0 5px;
-      font-size: 20px;
-      font-size: 1.25em;
-      line-height: 45px; }
+      font-size: 16px; /*20px;*/
+      font-size: 1.25em; /*1.25em;*/
+      line-height: 30px; /*45px;*/ }
       /* line 61, sass/layout/_footer.scss */
       .site-footer .social-links a:hover {
         background: -webkit-linear-gradient(0, #4f4f4f, #4f4f4f) top left, -webkit-linear-gradient(0, #4f4f4f, #4f4f4f) top right, -webkit-linear-gradient(135deg, transparent 5px, #4f4f4f 0) bottom right, -webkit-linear-gradient(0, #4f4f4f, #4f4f4f) bottom left;
