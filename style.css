@@ -1,6 +1,6 @@
 /*!
  * Project_Name: Themezy Band Template
- * Author: Themezy + NICKY DUBS
+ * New Author: NICKY DUBS
  * Email: nickydubsmusic@gmail.com
  * URL: https://nickydubs.com
  */
@@ -8,11 +8,11 @@
  * Importing CSS Libraries
  *===========================================*/
 
-a {
-  background: transparent; }
+a { background: transparent;
+    transition: all 0.3s ease; }
 
-a:focus {
-  outline: thin dotted; }
+a:focus { outline: thin dotted;
+          transition: all 0.3s ease; }
 
 /* nic links */
 /*=========================================================*/
@@ -32,6 +32,7 @@ a:hover, a:active {
 #branding:hover, #branding:active {
   width:83px; height:75px; 
   border-radius: 4px; 
+  transition: all 0.3s ease;
   box-shadow: 2px 2px 20px 23px #fd5927; }  /* animate me */
 
 /* line 45, sass/libs/_normalize.scss */
@@ -572,19 +573,14 @@ body {
 
   .imagelightbox-arrow-right {
     right: 0; } }
+
 .container {
-  
   /*=== dicks =================================================================*/
- 
   margin-right: auto;
   margin-left: auto;
-  padding-top: 5px;
-  padding-right: 5px;
-  padding-bottom: 5px;
-  padding-left: 5px;
-  
-  
+  padding: 5px;
   *zoom: 1; }
+
   .container:after {
     content: " ";
     clear: both;
@@ -1441,7 +1437,7 @@ body {
     width: 100%; }
   .site-header .container {
     *zoom: 1;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.15); }
+    border-bottom: 3px solid rgba(255, 255, 255, 0.15); }
     .site-header .container:after {
       content: " ";
       clear: both;
@@ -1631,7 +1627,10 @@ body {
   margin-bottom: 30px;
   padding-left: 100px;
   padding-bottom: 30px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1); }
+  border-bottom: 3px solid rgba(255, 255, 255, 0.1); }
+/* nic try to remove the horizontal line near top of site ***************************************************************/
+/************************************************************************************************************************/
+
   /* line 80, sass/layout/_content.scss */
   .content .post .entry-date {
     position: absolute;
@@ -1684,8 +1683,12 @@ body {
       .content .post .entry-title a:hover {
         color: #fd5927; }
   /* line 130, sass/layout/_content.scss */
+
   .content .post p {
-    margin-bottom: 10px; }
+    margin-bottom: 0;/*20px;*/ }
+/* nic try to remove the horizontal line near top of site ***************************************************************/
+/************************************************************************************************************************/
+
   /* line 131, sass/layout/_content.scss */
   .content .post a {
     color: #fd5927;
@@ -1798,7 +1801,7 @@ body {
 /* line 1, sass/layout/_footer.scss */
 .site-footer {
   background: #191919;
-  padding: 50px 0;
+  padding: 0;
   text-align: center; }
   /* line 6, sass/layout/_footer.scss */
   .site-footer address {
@@ -1809,7 +1812,7 @@ body {
       text-decoration: none; }
   /* line 15, sass/layout/_footer.scss */
   .site-footer .newsletter-form {
-    margin: 30px 0; }
+    margin: 0; }
     /* line 18, sass/layout/_footer.scss */
     .site-footer .newsletter-form form {
       *zoom: 1;
@@ -1823,7 +1826,7 @@ body {
         height: 0; }
     /* line 22, sass/layout/_footer.scss */
     .site-footer .newsletter-form input[type="email"] {
-      width: 80%;
+      width: 50%;
       padding: 25px;
       border: none;
       float: left;
@@ -1849,7 +1852,7 @@ body {
           width: 30%; } }
   /* line 44, sass/layout/_footer.scss * nic split this into 2 *************************************************************/
   .site-footer {
-    margin: 30px 0; }
+    margin: 20px 0; }
   .social-links {
     margin 20px 0; }
 /* end nic ************************************************************************/
@@ -1867,6 +1870,10 @@ body {
       font-size: 16px; /*20px;*/
       font-size: 1.25em; /*1.25em;*/
       line-height: 30px; /*45px;*/ }
+
+/************************************************************************************************************************/
+
+
       /* line 61, sass/layout/_footer.scss */
       .site-footer .social-links a:hover {
         background: -webkit-linear-gradient(0, #4f4f4f, #4f4f4f) top left, -webkit-linear-gradient(0, #4f4f4f, #4f4f4f) top right, -webkit-linear-gradient(135deg, transparent 5px, #4f4f4f 0) bottom right, -webkit-linear-gradient(0, #4f4f4f, #4f4f4f) bottom left;
@@ -2203,7 +2210,7 @@ body {
   font-size: 1.125em; }
 /* line 27, sass/pages/_post.scss */
 .content p {
-  margin: 0 0 30px; }
+  margin: 0; }
 
 /* line 1, sass/pages/_gallery.scss */
 .content.fullwidth {
