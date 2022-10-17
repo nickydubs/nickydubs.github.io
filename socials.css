@@ -25,7 +25,7 @@ body{
                 inset -1px -1px 2px black,
                 5px 5px 10px #90a4ae,
                 -5px -5px 10px white;
-    border: 6px solid rgba(200,200,200);            
+    border: 6px solid rgba(230,255,255);            
 }
 /* Tooltips */
 .tooltip {
@@ -81,7 +81,7 @@ body{
     background: green;
     color: white; }
 .social-icon--soundcloud{
-    background: #ff7700;
+    background: #ff5836;
     color: white; }
 
 /* Hover Effect*/
@@ -133,7 +133,7 @@ body{
     border-top-color: green;}
 
 .social-icon--soundcloud .tooltip{
-    background: #ff7700;
+    background: #ff5836;
     columns: currentColor;}
 .social-icon--soundcloud .tooltip:after{
-    border-top-color: #ff7700;}
+    border-top-color: #ff5836;}
