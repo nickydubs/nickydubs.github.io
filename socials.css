@@ -94,7 +94,7 @@ a:hover, a:active {
     box-shadow: inset 1px 1px 2px #90a4ae,
                 inset -1px -1px 2px black,
                 5px 5px 10px #90a4ae,
-                -5px -5px 10px #fd5927;
+                -5px -5px 10px white; /* #fd5927; */
     border: 6px solid rgba(255,255,255);
 }
 .social-icon:hover .tooltip {
@@ -187,12 +187,11 @@ a:hover, a:active {
     columns: currentColor;}
 .social-icon--github .tooltip:after{   border-top-color: #4284c0;  }
 
-/*  test
 .social-icon--twitch .tooltip{
     background: purple;
     columns: currentColor;}
 .social-icon--twitch .tooltip:after{   border-top-color: purple;   }
-*/
+
 .social-icon--linktree .tooltip{
     background: green;
     columns: currentColor;}
