@@ -51,10 +51,8 @@ a:hover, a:active {
 #branding img {    display: block; }
 #branding .site-description {
     display: block;
-    margin: 0;
     color: #ffffff;
     text-shadow: 1px 1px 1px #333333;
-    background: rgba(0, 0, 0, 0);
 }
 #branding:hover, #branding:active {
     width:83px; 
