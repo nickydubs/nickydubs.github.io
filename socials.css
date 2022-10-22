@@ -1,12 +1,8 @@
-/*!
- * Project_Name: Nicky Dubs github page based on Themezy Band Template
+/* Project_Name: Nicky Dubs github page based on Themezy Band Template
  * Author: NICKY DUBS
  * Email: nickydubsmusic@gmail.com
  * URL: https://nickydubs.com
  */
-/*=========================================== 
- * Importing CSS Libraries
- *===========================================*/
 
 body {
     width: 100%;          /* nic ==============================================================*/
@@ -86,9 +82,9 @@ a:hover, a:active {
     font-size: 2rem;
     text-decoration: none;
     transition: all 0.35s ease; /*0.15s ease; */
-    box-shadow: inset 1px 1px 2px red,      /* #90a4ae */
-                inset -1px -1px 2px yellow,
-                5px 5px 10px pink,
+    box-shadow: inset 1px 1px 2px black,      /* #90a4ae */
+                inset -1px -1px 2px white,
+                5px 5px 10px red,
                 -5px -5px 10px blue;
     border: 6px solid rgba(230,255,255);
 }
@@ -98,7 +94,7 @@ a:hover, a:active {
     box-shadow: inset 1px 1px 2px #90a4ae,
                 inset -1px -1px 2px black,
                 5px 5px 10px #90a4ae,
-                -5px -5px 10px white;
+                -5px -5px 10px #fd5927;
     border: 6px solid rgba(255,255,255);
 }
 .social-icon:hover .tooltip {
