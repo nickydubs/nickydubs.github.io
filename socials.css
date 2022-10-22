@@ -2,7 +2,7 @@ body{
     display: flex;
     align-items: center;
     justify-content: center;
-    /* min-height: 80vh; */
+    min-height: 30vh;
 }
 .social-icons{
     display: flex;
@@ -21,12 +21,27 @@ body{
     font-size: 2rem;
     text-decoration: none;
     transition: all 0.35s ease; /*0.15s ease; */
+    box-shadow: inset 1px 1px 2px red,      /* #90a4ae */
+                inset -1px -1px 2px blue,
+                5px 5px 10px red,
+                -5px -5px 10px blue;
+    border: 6px solid rgba(230,255,255);
+}
+/* Hover Effect & tooltip */
+.social-icon:hover {
+    transition: all 0.35s ease; /*0.15s ease; */
     box-shadow: inset 1px 1px 2px #90a4ae,
                 inset -1px -1px 2px black,
                 5px 5px 10px #90a4ae,
                 -5px -5px 10px white;
-    border: 6px solid rgba(230,255,255);            
+    border: 10px solid rgba(255,255,255);
 }
+.social-icon:hover .tooltip {
+    visibility: visible;
+    opacity: 1;
+    transform: translate(-50%, -150%);
+}
+
 /* Tooltips */
 .tooltip {
     display: block;
@@ -84,56 +99,45 @@ body{
     background: #ff5836;
     color: white; }
 
-/* Hover Effect*/
-.social-icon:hover .tooltip {
-    visibility: visible;
-    opacity: 1;
-    transform: translate(-50%, -150%);}
 
+/* more tooltip stuff ?? */
 .social-icon--facebook .tooltip{
     background: #3b5a9b;
     columns: currentColor; }
-.social-icon--facebook .tooltip::after{
-    border-top-color: #3b5a9a;}
+.social-icon--facebook .tooltip:after{ border-top-color: #3b5a9a;  }
 
 .social-icon--twitter .tooltip{
     background: #2b97f1;
     columns: currentColor;}
-.social-icon--twitter .tooltip::after{
-    border-top-color: #2b97f1;}
+.social-icon--twitter .tooltip:after{  border-top-color: #2b97f1;  }
 
 .social-icon--youtube .tooltip{
     background: #f31344;
     columns: currentColor;}
-.social-icon--youtube .tooltip::after{
-    border-top-color: #f31344;}
+.social-icon--youtube .tooltip:after{  border-top-color: #f31344;  }
 
 .social-icon--instagram .tooltip{
     background: #E1306C;
     columns: currentColor;}
-.social-icon--instagram .tooltip:after{
-    border-top-color: #E1306C;}
+.social-icon--instagram .tooltip:after{ border-top-color: #E1306C;  }
 
 .social-icon--github .tooltip{
     background: #4284c0;
     columns: currentColor;}
-.social-icon--github .tooltip::after{
-    border-top-color: #4284c0;}
+.social-icon--github .tooltip:after{   border-top-color: #4284c0;  }
 
+/*  test
 .social-icon--twitch .tooltip{
     background: purple;
     columns: currentColor;}
-.social-icon--twitch .tooltip::after{
-    border-top-color: purple;}
-
+.social-icon--twitch .tooltip:after{   border-top-color: purple;   }
+*/
 .social-icon--linktree .tooltip{
     background: green;
     columns: currentColor;}
-.social-icon--linktree .tooltip::after{
-    border-top-color: green;}
+.social-icon--linktree .tooltip:after{ border-top-color: green;    }
 
 .social-icon--soundcloud .tooltip{
     background: #ff5836;
     columns: currentColor;}
-.social-icon--soundcloud .tooltip:after{
-    border-top-color: #ff5836;}
+.social-icon--soundcloud .tooltip:after{    border-top-color: #ff5836;  }
