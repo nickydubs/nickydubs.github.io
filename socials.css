@@ -1,9 +1,74 @@
-body{
+/*!
+ * Project_Name: Nicky Dubs github page based on Themezy Band Template
+ * Author: NICKY DUBS
+ * Email: nickydubsmusic@gmail.com
+ * URL: https://nickydubs.com
+ */
+/*=========================================== 
+ * Importing CSS Libraries
+ *===========================================*/
+
+body {
+    width: 100%;          /* nic ==============================================================*/
+    overflow-x: hidden;   /* nic ==============================================================*/
+    /*position: absolute; /* nic ==============================================================*/
+    /*margin: 0; */
+    background-color: #141414;
+    color: #848484;
+    font-family: "Source Sans Pro", "Open Sans", sans-serif;
+    font-size: 14px;
+    line-height: 20px; 
     display: flex;
     align-items: center;
     justify-content: center;
     min-height: 30vh;
 }
+
+a { background: transparent;
+    transition: all 0.3s ease; }
+
+a:focus { outline: thin dotted;
+          transition: all 0.3s ease; }
+
+/* nic links */
+/*=========================================================*/
+a:link, a:visited {
+  /* background-color: #f44336; */
+  color: white;
+  /* padding: 5px 10px; */
+  text-align: center;
+  text-decoration: none;
+  display: inline-block; }
+
+a:hover, a:active {
+  /* background-color: black; */
+  text-decoration: underline;
+  outline: 0; }
+
+#branding {
+  float: left;
+  position: relative;
+  margin: 20px 0 20px;
+  color: inherit;
+  text-decoration: none; 
+}
+#branding img {    display: block; }
+#branding .site-description {
+    display: block;
+    margin: 0;
+    color: #ffffff;
+    text-shadow: 1px 1px 1px #333333;
+    background: rgba(0, 0, 0, 0);
+}
+#branding:hover, #branding:active {
+    width:83px; 
+    height:75px;
+    border-radius: 4px;
+    transition: all 0.3s ease;
+    box-shadow: 2px 2px 20px 23px #fd5927; 
+}  /* animate me */
+
+/* Social Icons ============================================================ */
 .social-icons{
     display: flex;
 }
@@ -22,8 +87,8 @@ body{
     text-decoration: none;
     transition: all 0.35s ease; /*0.15s ease; */
     box-shadow: inset 1px 1px 2px red,      /* #90a4ae */
-                inset -1px -1px 2px blue,
-                5px 5px 10px red,
+                inset -1px -1px 2px yellow,
+                5px 5px 10px pink,
                 -5px -5px 10px blue;
     border: 6px solid rgba(230,255,255);
 }
@@ -34,7 +99,7 @@ body{
                 inset -1px -1px 2px black,
                 5px 5px 10px #90a4ae,
                 -5px -5px 10px white;
-    border: 10px solid rgba(255,255,255);
+    border: 6px solid rgba(255,255,255);
 }
 .social-icon:hover .tooltip {
     visibility: visible;
