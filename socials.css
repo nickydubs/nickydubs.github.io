@@ -71,7 +71,7 @@ a:hover, a:active {
 .social-icon{
     display: flex;
     align-items: center;
-    justify-content: center;
+    justify-content: top; /* center; */
     position: relative;
     width: 80px;
     height: 80px;
