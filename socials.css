@@ -59,7 +59,7 @@ a:hover, a:active {
     height:75px;
     border-radius: 4px;
     transition: all 0.3s ease;
-    box-shadow: 2px 2px 10px 10px #fd5927; 
+    box-shadow: 2px 2px 20px 20px #fd5927; 
 }  /* animate me */
 
 /* Social Icons ============================================================ */
@@ -70,7 +70,7 @@ a:hover, a:active {
     display: flex;
     align-items: center;
     justify-content: center; */
-    position: relative;
+    position: absolute; /* relative; */
     width: 60px;
     height: 60px;
     margin: 0 0.5rem;
@@ -95,7 +95,7 @@ a:hover, a:active {
                 5px 5px 10px #90a4ae,
                 -5px -5px 10px white; /* #fd5927; */
     border: 6px solid rgba(255,255,255);
-    animation: glowpulse 2s infinite;
+    animation: glowpulse 1s infinite;
 }
 @keyframes glowpulse {
     0% {
