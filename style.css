@@ -8,18 +8,8 @@
  * Importing CSS Libraries
  *===========================================*/
 
-article,
-aside,
-details,
-figcaption,
-figure,
-footer,
-header,
-hgroup,
-nav,
-section,
-summary {
-  display: block; }
+article, aside, details, figcaption, figure, footer, header, hgroup, nav, section, summary {
+    display: block; }
 
 audio,
 canvas,
@@ -34,8 +24,8 @@ audio:not([controls]) {
   display: none; }
 
 html {
-  background: #fff;
-  color: #000;
+  background: #000;
+  color: #fff;
   -webkit-text-size-adjust: 100%;
   -ms-text-size-adjust: 100%; }
 
@@ -150,7 +140,7 @@ input,
 select,
 textarea {
   font-family: inherit;
-  font-size: 80%;
+  font-size: 100%;
   margin: 0;
   vertical-align: baseline; }
 
