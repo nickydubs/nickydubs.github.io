@@ -526,7 +526,7 @@ table {
     right: 0; } }
 
 .container {
-  /*=== dicks =================================================================*/
+  /*=== dicks ========================================================================== */
   margin-right: auto;
   margin-left: auto;
   padding: 0px;
@@ -989,7 +989,7 @@ table {
   clear: both;
   display: block;
   overflow: hidden;
-  height: 200px; }
+  height: 300px; }
 
 .main-navigation {
   float: right; }
