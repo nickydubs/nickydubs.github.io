@@ -969,27 +969,6 @@ table {
 
 /* more relevant classes for Nic */
 /* ========================================================================= */
-.site-header {
-  *zoom: 1;
-  z-index: 99; }
-.site-header:after {
-  content: " ";
-  clear: both;
-  display: block;
-  overflow: hidden;
-  height: 0; }
-.header-collapse .site-header {
-  position: absolute;
-  width: 100%; }
-.site-header .container {
-  *zoom: 1;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.15); }
-.site-header .container:after {
-  content: " ";
-  clear: both;
-  display: block;
-  overflow: hidden;
-  height: 300px; }
 
 .main-navigation {
   float: right; }
@@ -1158,11 +1137,11 @@ table {
 
 .content .post {
   position: relative;
-/*  margin-bottom: 30px;
+  margin-bottom: 30px;
   padding-left: 100px;
   padding-bottom: 30px;
   border-bottom: 5px solid rgba(255, 255, 255, 0.1); 
-*/}
+}
 
 /* nic try to remove the horizontal line near top of site ***************************************************************/
 /************************************************************************************************************************/
