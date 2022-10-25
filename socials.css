@@ -65,7 +65,7 @@ a:hover, a:active {
 #branding {
   float: left;
   position: relative;
-  margin: 15px 30px 20px;
+  margin: 13px 30px 13px 13px;
   color: inherit;
   text-decoration: none;
 }
@@ -97,8 +97,8 @@ a:hover, a:active {
     }
 */}
 
-/* Social Icons ============================================================ */
-.social-icons {
+/* Social links ============================================================ */
+.social-links {
     display: flex;
     float: center;
     position: relative;
