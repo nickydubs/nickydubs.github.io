@@ -82,20 +82,20 @@ a:hover, a:active {
     height:75px;
     border-radius: 4px;
     transition: all 0.3s ease;
-    box-shadow: 0px 0px 20px #fd5927; 
-/*    animate: orangepulse 2s infinite;
+    box-shadow: 0px 0px 20px 20px #fd5927; 
+    animate: orangepulse 2s infinite;
 }
 @keyframes orangepulse {
     0% {
     box-shadow: 0px 0px 20px 20px #fd5927;
     }
     50% {
-    box-shadow: 0px 0px 30px 20px #ff4500;       
+    box-shadow: 0px 0px 25px 25px #ff4500;       
     }
     100% {
     box-shadow: 0px 0px 20px 20px #fd5927;
     }
-*/}
+}
 
 /* Social links ============================================================ */
 .social-links {
