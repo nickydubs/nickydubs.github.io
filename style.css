@@ -213,7 +213,7 @@ table {
 
 .button {
   display: inline-block;
-  padding: 8px 24px;
+  padding: 8px;
   background-color: #fd5927;
   border: none;
   color: white;
@@ -810,18 +810,10 @@ table {
 .visible-xs, .visible-sm, .visible-md, .visible-lg {
   display: none !important; }
 
-.visible-xs-block,
-.visible-xs-inline,
-.visible-xs-inline-block,
-.visible-sm-block,
-.visible-sm-inline,
-.visible-sm-inline-block,
-.visible-md-block,
-.visible-md-inline,
-.visible-md-inline-block,
-.visible-lg-block,
-.visible-lg-inline,
-.visible-lg-inline-block {
+.visible-xs-block, .visible-xs-inline, .visible-xs-inline-block,
+.visible-sm-block, .visible-sm-inline, .visible-sm-inline-block,
+.visible-md-block, .visible-md-inline, .visible-md-inline-block,
+.visible-lg-block, .visible-lg-inline, .visible-lg-inline-block {
   display: none !important; }
 
 @media (max-width: 767px) {
@@ -980,25 +972,24 @@ table {
 .site-header {
   *zoom: 1;
   z-index: 99; }
-  .site-header:after {
-    content: " ";
-    clear: both;
-    display: block;
-    overflow: hidden;
-    height: 0; }
-  .header-collapse .site-header {
-    position: absolute;
-    width: 100%; }
-  .site-header .container {
-    *zoom: 1;
-    border-bottom: 3px solid rgba(255, 255, 255, 0.15); }
-    .site-header .container:after {
-      content: " ";
-      clear: both;
-      display: block;
-      overflow: hidden;
-      height: 0; }
-
+.site-header:after {
+  content: " ";
+  clear: both;
+  display: block;
+  overflow: hidden;
+  height: 0; }
+.header-collapse .site-header {
+  position: absolute;
+  width: 100%; }
+.site-header .container {
+  *zoom: 1;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15); }
+.site-header .container:after {
+  content: " ";
+  clear: both;
+  display: block;
+  overflow: hidden;
+  height: 200px; }
 
 .main-navigation {
   float: right; }
@@ -1164,13 +1155,15 @@ table {
   -moz-transform: translate3d(0, 0, 0);
   -ms-transform: translate3d(0, 0, 0); }
 
-/* line 74, sass/layout/_content.scss */
+
 .content .post {
   position: relative;
-  margin-bottom: 30px;
+/*  margin-bottom: 30px;
   padding-left: 100px;
   padding-bottom: 30px;
-  border-bottom: 5px solid rgba(255, 255, 255, 0.1); }
+  border-bottom: 5px solid rgba(255, 255, 255, 0.1); 
+*/}
+
 /* nic try to remove the horizontal line near top of site ***************************************************************/
 /************************************************************************************************************************/
 
@@ -1186,7 +1179,7 @@ table {
     background-size: 55% 55%;
     background-repeat: no-repeat;
     color: white;
-    padding: 10px;
+    /* padding: 10px; */
     text-align: center; }
     /* line 96, sass/layout/_content.scss */
     .content .post .entry-date .date {
@@ -1393,13 +1386,12 @@ table {
         /* line 37, sass/layout/_footer.scss */
         .site-footer .newsletter-form input[type="submit"] {
           width: 30%; } }
+
   /* line 44, sass/layout/_footer.scss * nic split this into 2 *************************************************************/
-  .site-footer {
+  .site-footer .social-links {
     margin: 20px 0; }
-  .social-links {
-    margin 20px 0; }
 /* end nic ************************************************************************/
-    /* line 46, sass/layout/_footer.scss */
+    
     .site-footer .social-links a {
       display: inline-block;
       width: 45px;
@@ -1602,7 +1594,7 @@ table {
       .quote-slider .flex-direction-nav a:hover {
         background-color: #fd5927; }
 
-/* line 152, sass/pages/_homepage.scss */
+/* =================================================================================================== */
 .section-title {
   color: white;
   font-size: 36px;
