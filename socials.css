@@ -66,8 +66,7 @@ a:hover, a:active {
 .social-icons{
     display: block; /* flex; */
     align-items: center;
-    justify-content: center; 
-    float: center;
+    justify-content: center;
 }
 .social-icon {
     display: block; /* flex; */
@@ -75,8 +74,8 @@ a:hover, a:active {
     justify-content: center;
     position: absolute; /* relative; */
     float: center;
-    width: 80px;
-    height: 80px;
+    width: 64px;
+    height: 64px;
     margin: 0 0.5rem;
     padding: 0;
     border-radius: 50%;
