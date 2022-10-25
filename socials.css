@@ -66,18 +66,19 @@ a:hover, a:active {
 .social-icons{
     display: block; /* flex; */
     align-items: center;
-    justify-content: center; */
-}
-.social-icon{
+    justify-content: center; 
     float: center;
+}
+.social-icon {
     display: block; /* flex; */
     align-items: center;
-    justify-content: center; */
+    justify-content: center;
     position: absolute; /* relative; */
-    width: 64px;
-    height: 64px;
+    float: center;
+    width: 80px;
+    height: 80px;
     margin: 0 0.5rem;
-    padding 0;
+    padding: 0;
     border-radius: 50%;
     cursor: pointer;
     font-family: "Halvetica Neue",sans-serif,"Arial";
@@ -92,7 +93,7 @@ a:hover, a:active {
 }
 /* Hover Effect & tooltip */
 .social-icon:hover {
-    transition: all 0.6s ease; */
+    transition: all 0.6s ease; 
     box-shadow: inset 1px 1px 2px #90a4ae,
                 inset -1px -1px 2px black,
                 5px 5px 10px #90a4ae,
