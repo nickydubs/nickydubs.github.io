@@ -64,10 +64,11 @@ a:hover, a:active {
 
 /* Social Icons ============================================================ */
 .social-icons{
-    display: flex;
+    display: block; /* flex; */
 }
 .social-icon{
-    display: flex;
+    float: center;
+    display: block; /* flex; */
     align-items: center;
     justify-content: center; */
     position: absolute; /* relative; */
@@ -80,7 +81,7 @@ a:hover, a:active {
     font-family: "Halvetica Neue",sans-serif,"Arial";
     font-size: 2rem;
     text-decoration: none;
-    transition: all 0.25s ease; /*0.15s ease; */
+    transition: all 0.15s ease; */
     box-shadow: inset 1px 1px 2px black,      /* #90a4ae */
                 inset -1px -1px 2px white,
                 5px 5px 10px red,
@@ -89,18 +90,18 @@ a:hover, a:active {
 }
 /* Hover Effect & tooltip */
 .social-icon:hover {
-    transition: all 0.25s ease; /*0.15s ease; */
+    transition: all 0.15s ease; */
     box-shadow: inset 1px 1px 2px #90a4ae,
                 inset -1px -1px 2px black,
                 5px 5px 10px #90a4ae,
                 -5px -5px 10px white; /* #fd5927; */
     border: 6px solid rgba(255,255,255);
-    animation: glowpulse 1s infinite;
+    animation: glowpulse 1.2s infinite;
 }
 @keyframes glowpulse {
     0% {
-    box-shadow: inset 1px 1px 2px black,      /* #90a4ae */
-        inset -1px -1px 2px white,
+    box-shadow: inset 1px 1px 2px #90a4ae,      /* #90a4ae */
+        inset -1px -1px 2px black,
         5px 5px 10px #90a4ae,
         -5px -5px 10px white;
     }
@@ -111,8 +112,8 @@ a:hover, a:active {
         -5px -5px 10px blue;        
     }
     100% {
-    box-shadow: inset 1px 1px 2px black,      /* #90a4ae */
-        inset -1px -1px 2px white,
+    box-shadow: inset 1px 1px 2px #90a4ae,      /* #90a4ae */
+        inset -1px -1px 2px black,
         5px 5px 10px #90a4ae,
         -5px -5px 10px white;
     }
