@@ -26,8 +26,6 @@ a { background: transparent;
 a:focus { outline: thin dotted;
           transition: all 0.3s ease; }
 
-/* nic links */
-/*=========================================================*/
 a:link, a:visited {
   /* background-color: #f44336; */
   color: white;
@@ -41,6 +39,29 @@ a:hover, a:active {
   text-decoration: underline;
   outline: 0; }
 
+.site-header {
+  *zoom: 1;
+  z-index: 99; }
+.site-header:after {
+  content: " ";
+  clear: both;
+  display: block;
+  overflow: hidden;
+  height: 0; }
+.header-collapse .site-header {
+  position: absolute;
+  width: 100%; }
+.site-header .container {
+  *zoom: 1;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15); }
+.site-header .container:after {
+  content: " ";
+  clear: both;
+  display: block;
+  overflow: hidden;
+  height: 100px; }
+
+/* mouseovers ================================================================================ */
 #branding {
   float: left;
   position: relative;
@@ -61,7 +82,7 @@ a:hover, a:active {
     height:75px;
     border-radius: 4px;
     transition: all 0.3s ease;
-    box-shadow: 0px 0px 20px #fd5927; 
+    box-shadow: 0px 0px 20px 20px #fd5927; 
 /*    animate: orangepulse 2s infinite;
 }
 @keyframes orangepulse {
