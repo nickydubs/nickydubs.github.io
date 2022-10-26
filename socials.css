@@ -5,8 +5,7 @@ body {
     display: block; /* flex; */    
     width: 100%;                /* nic ==============================================================*/
     overflow-x: hidden;         /* nic ==============================================================*/
-/*    margin: 0 20px;             /* nic ==============================================================*/
-/*    padding: 32px 0 0 32px;     /* nic ==============================================================*/
+    padding: 0;         /* nic ==============================================================*/
     background-color: #141414;
     color: #848484;
     align-items: stretch;       /**/
@@ -36,25 +35,25 @@ a:hover, a:active {
   outline: 0; }
 
 /* site header ===============================================================================*/
-.site-header {
-  margin: 32px; /**/
+header {
+  margin: 36px; /**/
   position: relative;   /**/
   width: 100%;
   *zoom: 1;
   z-index: 99; /* float in front of stuff */ 
 }
-.site-header:after {
+header:after {
   content: " ";
   clear: both;
   display: block;
   overflow: hidden;
   height: 0; 
 }
-.site-header .container {
+header .container {
   *zoom: 1;
   border-bottom: 1px solid rgba(255, 255, 255, 0.15); 
 }
-.site-header .container:after {
+header .container:after {
   content: " ";
   clear: both;
   display: block;
@@ -127,7 +126,7 @@ small { display: inline-block;
 
 /* Social links ============================================================ */
 .social-links {
-    margin: 20px 20px;         /* centers the div layer */
+    margin: 36px;         /* centers the div layer */
     width: 100%;
     display: flex;
     position: absolute;
@@ -138,7 +137,7 @@ small { display: inline-block;
 }
 .social-icon {
     display: flex;
-    position: relative; /**/
+    position: relative; /* very important */
     width: 60px;
     height: 60px;
     margin: 0 0.5rem;
