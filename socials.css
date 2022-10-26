@@ -12,7 +12,7 @@ body {
     font-family: "Source Sans Pro", "Open Sans", sans-serif;
     font-size: 14px;
     line-height: 20px; 
-    display: flex;
+    display: block; /* flex; */
     align-items: center;
     justify-content: center;
     min-height: 30vh;
@@ -38,6 +38,7 @@ a:hover, a:active {
   outline: 0; }
 
 small {
+  display: block;
   margin: 2px;
   font-size: 80%; }
 
@@ -45,7 +46,7 @@ small {
 #site-content { overflow: hidden; }
 
 .site-header {
-  margin: 0 0 30px 0; /**/
+  /*margin: 0 0 30px 0; /**/
   *zoom: 1;
   z-index: 99; }
 .site-header:after {
@@ -108,11 +109,12 @@ small {
   text-decoration: none;
 }
 #branding img {
+    border-radius: 4px;
     border: 5px solid rgba(230,255,255, 1);
-    display: flex;
+    display: block;
 }
 #branding .site-description {
-    display: flex;                           /********/
+    display: block;
     color: #ffffff;
 /*    text-shadow: 1px 1px 1px #333333; */
 }
@@ -133,7 +135,7 @@ small {
     float: center;
     width: 100%;
     align: center;
-    display: block;
+    display: flex;
     position: relative;
 /*    margin: 0 0 0 40px;
     padding: 0; */
@@ -190,7 +192,8 @@ small {
 /* Tooltips */
 .social-icon:hover .tooltip {
     visibility: visible;
-    opacity: 0.9;
+    opacity: 1;
+    border: 5px solid rgba(255, 255, 255);
     transform: translate(-50%, -150%);
 }
 
