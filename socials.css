@@ -6,7 +6,7 @@ body {
     width: 100%;                /* nic ==============================================================*/
     overflow-x: hidden;         /* nic ==============================================================*/
     margin: 0 20px;             /* nic ==============================================================*/
-    padding: 32pxpx;            /* nic ==============================================================*/
+    padding: 32px 0 0 32px;     /* nic ==============================================================*/
     background-color: #141414;
     color: #848484;
     align-items: stretch;       /**/
@@ -111,7 +111,7 @@ small { display: block;
 #branding img {
     border-radius: 4px;
     box-shadow: 0px 0px 15px 15px rgba(253, 89, 39, 0.9);
-    border: 4px solid rgba(230,255,255, 0.5);
+    border: 4px solid rgba(230,255,255, 0.2);
     display: block;
 }
 .site-description {
@@ -130,10 +130,11 @@ small { display: block;
 .social-links {
     margin: 0 auto;         /* centers the div layer */
     width: 100%;
+    display: flex;
+    position: absolute;
+    z-index: 97;
     padding: 0 0 0 139px;
-/*    display: flex;
-    position: relative;
-    align-items: center;
+/*    align-items: stretch;
     justify-content: center; */
 }
 .social-icon {
