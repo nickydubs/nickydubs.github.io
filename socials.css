@@ -149,6 +149,7 @@ small {
     height: 60px;
     margin: 0 0.5rem 30px 0;
     padding: 0;
+    color: white;
     border-radius: 50%;
     cursor: pointer;
     font-family: "Halvetica Neue",sans-serif,"Arial";
@@ -189,17 +190,9 @@ small {
                 -5px -5px 10px white;       }
 }
 
-/* Tooltips */
-.social-icon:hover .tooltip {
-    visibility: visible;
-    opacity: 1;
-    border: 2px solid rgba(230,255,255);
-/*    box-shadow: 5px 5px 10px rgba(230,255,255,0.5);
-*/    transform: translate(-50%, -150%);
-}
-
+/* Tooltips ===============================================================================***/
 .tooltip {
-    display: block;
+/*    display: block; */
     position: absolute;
     top: 0;
     left: 50%;
@@ -211,7 +204,7 @@ small {
     pointer-events: none;
 /*    text-transform: uppercase; */
     transform: translate(-50%, -100%);
-    transition: all 0.3s ease;
+    transition: all 0.3s ease-in-out;       /**/
     z-index: 1;
   }
   .tooltip:after {
@@ -223,20 +216,26 @@ small {
     height: 0;
     content: "";
     border: solid;
-    border-width: 5px 5px 0 5px; /*10px 10px 0 10px;*/
-    border-color: rgba(255, 69, 0,  0.1); /* transparent; */
+/*    border-width: 5px 5px 0 5px; /*10px 10px 0 10px;*/
+/*    border-color: rgba(255, 69, 0,  0.1); /* transparent; */
     opacity: 0.9;
     transform: translate(-50%, 100%);
-  }
+}
 
-/* color */
+.social-icon:hover .tooltip {
+    visibility: visible;
+    opacity: 1;
+    border: 2px solid rgba(230,255,255,0.8);
+    box-shadow: 5px 5px 10px rgba(230,255,255);
+    transform: translate(-50%, -150%);
+}
+
+/* colors ================================================================================ */
 .social-icon--github{
     background: #4284c0;
     color: #fff; }
-.social-icon--twitter{
-    background: #2b97f1;
-    color: #fff; }
-.social-icon--youtube{
+.social-icon--twitter { background: #2b97f1; }
+.social-icon--youtube {
     background: #fa3217;
     color: white; }
 .social-icon--instagram{
@@ -255,44 +254,28 @@ small {
     background: #ff5836;
     color: white; }
 
+/* more tooltip stuff ?? ----------------------------------------------------------------------*/
 
-/* more tooltip stuff ?? */
-.social-icon--facebook .tooltip{
-    background: #3b5a9b;
-    columns: currentColor; }
-.social-icon--facebook .tooltip:after{ border-top-color: #3b5a9a;  }
+.social-icon--facebook .tooltip {             background: #3b5a9b; columns: currentColor; }
+.social-icon--facebook .tooltip:after { border-top-color: #3b5a9a; }
 
-.social-icon--twitter .tooltip{
-    background: #2b97f1;
-    columns: currentColor;}
-.social-icon--twitter .tooltip:after{  border-top-color: #2b97f1;  }
+.social-icon--twitter .tooltip {             background: #2b97f1; columns: currentColor; }
+.social-icon--twitter .tooltip:after { border-top-color: #2b97f1; }
 
-.social-icon--youtube .tooltip{
-    background: #f31344;
-    columns: currentColor;}
-.social-icon--youtube .tooltip:after{  border-top-color: #f31344;  }
+.social-icon--youtube .tooltip {             background: #f31344; columns: currentColor; }
+.social-icon--youtube .tooltip:after { border-top-color: #f31344;  }
 
-.social-icon--instagram .tooltip{
-    background: #E1306C;
-    columns: currentColor;}
-.social-icon--instagram .tooltip:after{ border-top-color: #E1306C;  }
+.social-icon--soundcloud .tooltip {             background: #ff5836; columns: currentColor; }
+.social-icon--soundcloud .tooltip:after { border-top-color: #ff5836;  }
 
-.social-icon--github .tooltip{
-    background: #4284c0;
-    columns: currentColor;}
-.social-icon--github .tooltip:after{   border-top-color: #4284c0;  }
+.social-icon--instagram .tooltip {             background: #E1306C; columns: currentColor; }
+.social-icon--instagram .tooltip:after { border-top-color: #E1306C;  }
 
-.social-icon--twitch .tooltip{
-    background: purple;
-    columns: currentColor;}
-.social-icon--twitch .tooltip:after{   border-top-color: purple;   }
+.social-icon--github .tooltip {             background: #4284c0; columns: currentColor; }
+.social-icon--github .tooltip:after { border-top-color: #4284c0;  }
 
-.social-icon--linktree .tooltip{
-    background: green;
-    columns: currentColor;}
-.social-icon--linktree .tooltip:after{ border-top-color: green;    }
+.social-icon--twitch .tooltip {             background: purple; columns: currentColor; }
+.social-icon--twitch .tooltip:after { border-top-color: purple;   }
 
-.social-icon--soundcloud .tooltip{
-    background: #ff5836;
-    columns: currentColor;}
-.social-icon--soundcloud .tooltip:after{    border-top-color: #ff5836;  }
+.social-icon--linktree .tooltip {             background: green;  columns: currentColor; }
+.social-icon--linktree .tooltip:after { border-top-color: green;    }
