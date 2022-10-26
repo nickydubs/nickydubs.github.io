@@ -5,8 +5,8 @@ body {
     display: block; /* flex; */    
     width: 100%;                /* nic ==============================================================*/
     overflow-x: hidden;         /* nic ==============================================================*/
-    margin: 0 20px;             /* nic ==============================================================*/
-    padding: 32px 0 0 32px;     /* nic ==============================================================*/
+/*    margin: 0 20px;             /* nic ==============================================================*/
+/*    padding: 32px 0 0 32px;     /* nic ==============================================================*/
     background-color: #141414;
     color: #848484;
     align-items: stretch;       /**/
@@ -43,8 +43,8 @@ small { display: inline-block;
 
 /* site header ===============================================================================*/
 .site-header {
-  margin: 0 0 0 20px; /**/
-  position: absolute;   /**/
+  padding: 16px 0 0 16px; /**/
+  position: relative;   /**/
   width: 100%;
   *zoom: 1;
   z-index: 99; /* float in front of stuff */ 
@@ -101,7 +101,7 @@ small { display: inline-block;
 #branding {
   float: left;        /* left, right or none!! (no center) */
   display: block;       /* keep */
-  position: absolute;   /**/
+  position: relative;   /**/
   color: inherit;
   text-decoration: none;
   transition: all 0.3s ease-in-out;
@@ -128,10 +128,10 @@ small { display: inline-block;
 
 /* Social links ============================================================ */
 .social-links {
-    margin: 0 20px;         /* centers the div layer */
+    margin: 20px 20px;         /* centers the div layer */
     width: 100%;
     display: flex;
-    position: absolute;
+    position: relative;
     z-index: 97;
     padding: 0 0 0 139px;
 /*    align-items: stretch;
