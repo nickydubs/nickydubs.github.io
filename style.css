@@ -1,12 +1,6 @@
-/*!
- * Project_Name: Nicky Dubs github page based on Themezy Band Template
- * Author: NICKY DUBS
- * Email: nickydubsmusic@gmail.com
- * URL: https://nickydubs.com
+/*! Project_Name: Nicky Dubs github page based on Themezy Band Template
+ * Author: NICKY DUBS * Email: nickydubsmusic@gmail.com  * URL: https://nickydubs.com
  */
-/*=========================================== 
- * Importing CSS Libraries
- *===========================================*/
 
 article, aside, details, figcaption, figure, footer, header, hgroup, nav, section, summary {
     display: block; }
@@ -1284,7 +1278,7 @@ table {
   margin: 0 5px;
   font-size: 16px; /*20px;*/
   font-size: 1.25em; /*1.25em;*/
-  line-height: 30px; /*45px;*/ }  /************************************************************************************************************************/
+  line-height: 20px; /*45px;*/ }  /************************************************************************************************************************/
 
 .site-footer .social-links a:hover {
   background: -webkit-linear-gradient(0, #4f4f4f, #4f4f4f) top left, -webkit-linear-gradient(0, #4f4f4f, #4f4f4f) top right, -webkit-linear-gradient(135deg, transparent 5px, #4f4f4f 0) bottom right, -webkit-linear-gradient(0, #4f4f4f, #4f4f4f) bottom left;
@@ -1498,7 +1492,7 @@ table {
   float: left; }
 
 .event-carousel {
-  margin-bottom: 70px; }
+  margin-bottom: 30px; }
 
 .event-nav { float: right; }
 
