@@ -1,20 +1,18 @@
-/* Project_Name: Nicky Dubs github page based on Themezy Band Template
- * Author: NICKY DUBS * Email: nickydubsmusic@gmail.com * URL: https://nickydubs.com
- */
-
+/* Project_Name: Nicky Dubs github page (based on Themezy Band Template) * Author: NICKY DUBS * Email: nickydubsmusic@gmail.com * URL: https://nickydubs.com */
 body {
-    width: 100%;          /* nic ==============================================================*/
-    overflow-x: hidden;   /* nic ==============================================================*/
-    /*position: absolute; /* nic ==============================================================*/
-    margin: 0 20px 0 20px;
+    position: absolute;         /* nic ==============================================================*/
+    display: block; /* flex; */    
+    width: 100%;                /* nic ==============================================================*/
+    overflow-x: hidden;         /* nic ==============================================================*/
+    margin: 0 20px;             /* nic ==============================================================*/
+    padding: 32pxpx;            /* nic ==============================================================*/
     background-color: #141414;
     color: #848484;
+    align-items: stretch;       /**/
+    justify-content: center;    /**/
     font-family: "Source Sans Pro", "Open Sans", sans-serif;
     font-size: 14px;
     line-height: 20px; 
-    display: block; /* flex; */
-    align-items: center;
-    justify-content: center;
     min-height: 30vh;
 }
 
@@ -37,10 +35,9 @@ a:hover, a:active {
   text-decoration: underline;
   outline: 0; }
 
-small {
-  display: block;
-  margin: 2px;
-  font-size: 80%; }
+small { display: block;
+        margin: 2px;
+        font-size: 80%; }
 
 /* site cunt ent ===============================================================================*/
 #site-content { overflow: hidden; }
@@ -48,7 +45,7 @@ small {
 .site-header {
   /*margin: 0 0 30px 0; /**/
   *zoom: 1;
-  z-index: 99; }
+  z-index: 99; /* float in front of stuff */ }
 .site-header:after {
   content: " ";
   clear: both;
@@ -56,8 +53,9 @@ small {
   overflow: hidden;
   height: 0; }
 .header-collapse .site-header {
-  position: block;
-  width: 100%; }
+  position: absolute;               /* fixed ? */
+  width: 100%; 
+}
 .site-header .container {
   *zoom: 1;
   border-bottom: 1px solid rgba(255, 255, 255, 0.15); }
@@ -71,10 +69,8 @@ small {
 /* container ========================================================================== */
 .container {
   width: 100%;
-  margin-right: auto;
-  margin-left: auto;
-  padding: 0 20px 0 20px;                /*****/
-  /* margin: 20px;                /*****/
+  margin: 0 20px;
+  padding: 0 20px;         /*****/
   *zoom: 1; }
 .container:after {
   content: " ";
@@ -88,8 +84,7 @@ small {
 @media (min-width: 1200px) { .container { width: 1170px; } }
 
 .container-fluid {
-  margin-right: auto;
-  margin-left: auto;
+  margin: 0 auto;
   padding: 0;
   *zoom: 1; }
 .container-fluid:after {
@@ -102,28 +97,27 @@ small {
 
 /* mouseovers ================================================================================ */
 #branding {
-  float: center;        /* left; */
-  display: flex;
-  position: relative;
+  float: left;        /* left, right or none!! (no center) */
+  display: block;       /* fixed it? */
+  position: absolute;   /**/
   color: inherit;
   text-decoration: none;
+  transition: all 0.3s ease-in-out;
+  border-radius: 4px;
+  z-index: 97;
 }
 #branding img {
     border-radius: 4px;
-    border: 5px solid rgba(230,255,255, 1);
+    box-shadow: 0px 0px 15px 15px rgba(253, 89, 39, 0.9);
+    border: 4px solid rgba(230,255,255, 0.5);
     display: block;
 }
-#branding .site-description {
+.site-description {
     display: block;
-    color: #ffffff;
-/*    text-shadow: 1px 1px 1px #333333; */
+    color: white;
+    text-shadow: 1px 1px 1px #333333; /**/
 }
-#branding:hover, #branding:active {
-    border-radius: 4px;
-    transition: all 0.3s ease;
-    box-shadow: 0px 0px 20px 20px rgba(253, 89, 39, 0.9); 
-    animation: orangepulse 2s infinite;
-}
+#branding:hover, #branding:active { animation: orangepulse 2s infinite; }
 @keyframes orangepulse {
     0%   { box-shadow: 0px 0px 15px 15px rgba(253, 89, 39, 0.9); }
     50%  { box-shadow: 0px 0px 20px 20px rgba(255, 69, 0,  1.0); }
@@ -132,22 +126,20 @@ small {
 
 /* Social links ============================================================ */
 .social-links {
-    float: center;
+    margin: 0 auto;         /* centers the div layer */
     width: 100%;
-    align: center;
-    display: flex;
+    padding: 0 0 0 139px;
+/*    display: flex;
     position: relative;
-/*    margin: 0 0 0 40px;
-    padding: 0; */
-/*    align-items: center;
+    align-items: center;
     justify-content: center; */
 }
 .social-icon {
     display: flex;
-    position: relative;
+    position: absolute;     /* relative; */
     width: 60px;
     height: 60px;
-    margin: 0 0.5rem 30px 0;
+    margin: 0 0.5rem;
     padding: 0;
     color: white;
     border-radius: 50%;
@@ -205,7 +197,7 @@ small {
 /*    text-transform: uppercase; */
     transform: translate(-50%, -100%);
     transition: all 0.3s ease-in-out;       /**/
-    z-index: 1;
+    z-index: 98;
   }
   .tooltip:after {
     display: block;
@@ -225,7 +217,7 @@ small {
 .social-icon:hover .tooltip {
     visibility: visible;
     opacity: 1;
-    border: 2px solid rgba(230,255,255,0.8);
+    border: 2px solid rgba(230,255,255,0.9);
     box-shadow: 5px 5px 10px rgba(230,255,255);
     transform: translate(-50%, -150%);
 }
