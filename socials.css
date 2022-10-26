@@ -35,7 +35,7 @@ a:link, a:visited {
   display: inline-block; }
 
 a:hover, a:active {
-  background-color: rgba(0,0,0,0); /**/
+  /* background-color: rgba(0,0,0,0); */
   text-decoration: underline;
   outline: 0; }
 
