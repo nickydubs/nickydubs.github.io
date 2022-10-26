@@ -138,9 +138,9 @@ a:hover, a:active {
 .social-links {
     float: center;
     width: 100%;
-    display: block;
+    display: flex;
     position: relative;
-    margin: 0 0 30px 40px;
+    margin: 0 0 0 40px;
 /*  padding: 0;
     align-items: center;
     justify-content: center; */
