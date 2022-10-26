@@ -35,7 +35,7 @@ a:link, a:visited {
   display: inline-block; }
 
 a:hover, a:active {
-  background-color: rgba(0,0,0,0);
+  background-color: rgba(0,0,0,0); /**/
   text-decoration: underline;
   outline: 0; }
 
@@ -43,6 +43,7 @@ a:hover, a:active {
   overflow: hidden; }
 
 .site-header {
+  margin: 18px 0 18px 0;
   *zoom: 1;
   z-index: 99; }
 .site-header:after {
@@ -66,6 +67,7 @@ a:hover, a:active {
 
 /* container ========================================================================== */
 .container {
+  width: 100%;
   margin-right: auto;
   margin-left: auto;
   padding: 0;
