@@ -10,7 +10,7 @@ body {
     background-color: #141414;
     color: #848484;
     align-items: stretch;       /**/
-    justify-content: center;    /**/
+/*    justify-content: center;    /**/
     font-family: "Source Sans Pro", "Open Sans", sans-serif;
     font-size: 14px;
     line-height: 20px; 
@@ -24,10 +24,8 @@ a { background: transparent;
 a:focus { outline: thin dotted;
           transition: all 0.3s ease; }
 
-a:link, a:visited {
-  /* background-color: #f44336; */
+a:link, a:visited { /* background-color: #f44336; */
   color: white;
-  /* padding: 5px 10px; */
   text-align: center;
   text-decoration: none;
   display: inline-block; }
@@ -37,8 +35,8 @@ a:hover, a:active {
   text-decoration: underline;
   outline: 0; }
 
-small { display: block;
-        margin: 2px;
+small { display: inline-block;
+        margin: 2px 0;
         font-size: 80%; }
 
 /* site header ===============================================================================*/
@@ -100,7 +98,7 @@ small { display: block;
 /* mouseovers ================================================================================ */
 #branding {
   float: left;        /* left, right or none!! (no center) */
-  display: block;       /* fixed it? */
+  display: block;       /* keep */
   position: absolute;   /**/
   color: inherit;
   text-decoration: none;
@@ -109,15 +107,15 @@ small { display: block;
   z-index: 98;
 }
 #branding img {
-    border-radius: 4px;
-    box-shadow: 0px 0px 15px 15px rgba(253, 89, 39, 0.9);
-    border: 4px solid rgba(230,255,255, 0.2);
     display: block;
+    border-radius: 4px;
+    box-shadow: 0px 0px 10px 10px rgba(253, 89, 39, 0.9);
+    border: 4px solid rgba(230,255,255, 0.2);
 }
 .site-description {
-    display: block;
+    display: inline-block;
     color: white;
-    text-shadow: 1px 1px 1px #333333; /**/
+/*    text-shadow: 1px 1px 1px #333333; /**/
 }
 #branding:hover, #branding:active { animation: orangepulse 2s infinite; }
 @keyframes orangepulse {
@@ -128,7 +126,7 @@ small { display: block;
 
 /* Social links ============================================================ */
 .social-links {
-    margin: 0 auto;         /* centers the div layer */
+    margin: 0 20px;         /* centers the div layer */
     width: 100%;
     display: flex;
     position: absolute;
@@ -221,7 +219,7 @@ small { display: block;
     visibility: visible;
     opacity: 1;
     border: 2px solid rgba(230,255,255,0.9);
-    box-shadow: 5px 5px 10px rgba(230,255,255);
+    box-shadow: 2px 2px 4px rgba(230,255,255,0.1);
     transform: translate(-50%, -150%);
 }
 
