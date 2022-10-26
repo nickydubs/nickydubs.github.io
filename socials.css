@@ -43,7 +43,7 @@ a:hover, a:active {
   overflow: hidden; }
 
 .site-header {
-  margin: 0;
+  margin: 0 0 30px 0;
   *zoom: 1;
   z-index: 99; }
 .site-header:after {
@@ -86,14 +86,14 @@ a:hover, a:active {
 .container-fluid {
   margin-right: auto;
   margin-left: auto;
-  padding: 0 0 0 0;
+  padding: 0;
   *zoom: 1; }
 .container-fluid:after {
-    content: " ";
-    clear: both;
-    display: block;
-    overflow: hidden;
-    height: 0; }
+  content: " ";
+  clear: both;
+  display: block;
+  overflow: hidden;
+  height: 0; }
 
 
 /* mouseovers ================================================================================ */
@@ -101,7 +101,6 @@ a:hover, a:active {
   float: left;
   display: flex;
   position: relative;
-  margin: 18px 30px 18px 18px;
   color: inherit;
   text-decoration: none;
 }
@@ -175,7 +174,7 @@ a:hover, a:active {
 }
 @keyframes glowpulse {
     0% {
-    box-shadow: inset 1px 1px 2px #90a4ae,      /* #90a4ae */
+    box-shadow: inset 1px 1px 2px #90a4ae,
                 inset -1px -1px 2px black,
                 5px 5px 10px #90a4ae,
                 -5px -5px 10px white;
@@ -187,7 +186,7 @@ a:hover, a:active {
                 -5px -5px 10px blue;        
     }
     100% {
-    box-shadow: inset 1px 1px 2px #90a4ae,      /* #90a4ae */
+    box-shadow: inset 1px 1px 2px #90a4ae,
                 inset -1px -1px 2px black,
                 5px 5px 10px #90a4ae,
                 -5px -5px 10px white;
