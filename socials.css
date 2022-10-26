@@ -39,6 +39,9 @@ a:hover, a:active {
   text-decoration: underline;
   outline: 0; }
 
+#site-content {
+  overflow: hidden; }
+
 .site-header {
   *zoom: 1;
   z-index: 99; }
@@ -67,22 +70,16 @@ a:hover, a:active {
   margin-left: auto;
   padding: 0;
   *zoom: 1; }
+.container:after {
+  content: " ";
+  clear: both;
+  display: block;
+  overflow: hidden;
+  height: 0; }
 
-  .container:after {
-    content: " ";
-    clear: both;
-    display: block;
-    overflow: hidden;
-    height: 0; }
-  @media (min-width: 768px) {
-    .container {
-      width: 750px; } }
-  @media (min-width: 992px) {
-    .container {
-      width: 970px; } }
-  @media (min-width: 1200px) {
-    .container {
-      width: 1170px; } }
+@media (min-width: 768px) { .container { width: 750px; } }
+@media (min-width: 992px) { .container { width: 970px; } }
+@media (min-width: 1200px) { .container { width: 1170px; } }
 
 .container-fluid {
   margin-right: auto;
