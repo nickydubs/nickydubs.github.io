@@ -100,9 +100,6 @@ q:after {
   content: '';
   content: none; }
 
-small {
-  font-size: 80%; }
-
 sub,
 sup {
   font-size: 75%;
@@ -465,7 +462,7 @@ table {
 #imagelightbox-nav,
 .imagelightbox-arrow {
   -webkit-animation: fade-in .25s linear;
-  animation: fade-in .25s linear; }
+          animation: fade-in .25s linear; }
 
 @-webkit-keyframes fade-in {
   from {
@@ -968,12 +965,13 @@ table {
         border-bottom: 4px solid #fd5927;
         -webkit-transition: .3s ease;
                 transition: .3s ease; }
-      .main-navigation .menu .menu-item:last-child a:after {
-        display: none; }
-      .main-navigation .menu .menu-item:hover:after, .main-navigation .menu .menu-item.current-menu-item:after {
-        opacity: 1; }
-      .main-navigation .menu .menu-item:hover a, .main-navigation .menu .menu-item.current-menu-item a {
-        color: #fd5927; }
+
+    .main-navigation .menu .menu-item:last-child a:after { display: none; }
+    .main-navigation .menu .menu-item:hover:after, 
+    .main-navigation .menu .menu-item.current-menu-item:after { opacity: 1; }
+    .main-navigation .menu .menu-item:hover a, 
+    .main-navigation .menu .menu-item.current-menu-item a { color: #fd5927; }
+    
     .main-navigation .menu a {
       display: block;
       position: relative;
@@ -1015,12 +1013,7 @@ table {
     .mobile-menu .menu .current-menu-item a {
       color: #fd5927; }
 
-/* 
- * 	Core Owl Carousel CSS File
- *	v1.3.3
- */
-/* clearfix */
-/* line 7, sass/layout/_content.scss */
+/* Core Owl Carousel CSS File v1.3.3 */
 .owl-carousel .owl-wrapper:after {
   content: ".";
   display: block;
@@ -1030,40 +1023,33 @@ table {
   height: 0; }
 
 /* display none until init */
-/* line 16, sass/layout/_content.scss */
 .owl-carousel {
   display: none;
   position: relative;
   width: 100%;
   -ms-touch-action: pan-y; }
 
-/* line 22, sass/layout/_content.scss */
 .owl-carousel .owl-wrapper {
   display: none;
   position: relative;
   -webkit-transform: translate3d(0px, 0px, 0px); }
 
-/* line 27, sass/layout/_content.scss */
 .owl-carousel .owl-wrapper-outer {
   overflow: hidden;
   position: relative;
   width: 100%; }
 
-/* line 32, sass/layout/_content.scss */
 .owl-carousel .owl-wrapper-outer.autoHeight {
   -webkit-transition: height 500ms ease-in-out;
   transition: height 500ms ease-in-out; }
 
-/* line 40, sass/layout/_content.scss */
 .owl-carousel .owl-item {
   float: left; }
 
-/* line 43, sass/layout/_content.scss */
 .owl-controls .owl-page,
 .owl-controls .owl-buttons div {
   cursor: pointer; }
 
-/* line 47, sass/layout/_content.scss */
 .owl-controls {
   -webkit-user-select: none;
   -khtml-user-select: none;
@@ -1073,12 +1059,10 @@ table {
   -webkit-tap-highlight-color: transparent; }
 
 /* mouse grab icon */
-/* line 57, sass/layout/_content.scss */
 .grabbing {
   cursor: url(grabbing.png) 8 8, move; }
 
 /* fix */
-/* line 62, sass/layout/_content.scss */
 .owl-carousel .owl-wrapper,
 .owl-carousel .owl-item {
   -webkit-backface-visibility: hidden;
@@ -1100,8 +1084,7 @@ table {
 /* nic try to remove the horizontal line near top of site ***************************************************************/
 /************************************************************************************************************************/
 
-  /* line 80, sass/layout/_content.scss */
-  .content .post .entry-date {
+.content .post .entry-date {
     position: absolute;
     left: 0;
     top: 0;
@@ -1114,27 +1097,27 @@ table {
     color: white;
     /* padding: 10px; */
     text-align: center; }
-    /* line 96, sass/layout/_content.scss */
+
     .content .post .entry-date .date {
       font-size: 36px;
       font-size: 2.25em;
       font-weight: 900; }
-    /* line 100, sass/layout/_content.scss */
+
     .content .post .entry-date .month {
       font-size: 14px;
       font-size: 0.875em;
       text-transform: uppercase; }
-  /* line 105, sass/layout/_content.scss */
+
   .content .post .featured-image {
     overflow: hidden;
     margin-bottom: 20px; }
-    /* line 109, sass/layout/_content.scss */
+
     .content .post .featured-image img {
       width: 100%;
       max-width: 100%;
       height: auto;
       display: block; }
-  /* line 116, sass/layout/_content.scss */
+
   .content .post .entry-title {
     margin-top: 0;
     margin-bottom: 10px;
@@ -1142,8 +1125,8 @@ table {
     font-size: 1.5em;
     font-size: normal;
     font-weight: 700; }
-    /* line 123, sass/layout/_content.scss */
-    .content .post .entry-title a {
+
+  .content .post .entry-title a {
       color: white;
       text-decoration: none;
       -webkit-transition: .3s ease;
@@ -1151,7 +1134,6 @@ table {
     .content .post .entry-title a:hover {
         color: #fd5927; }
 
-/* nic try to remove the horizontal line near top of site ***************************************************************/
 /************************************************************************************************************************/
   .content .post p {
     margin-bottom: 20px; }
