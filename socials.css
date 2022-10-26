@@ -140,8 +140,8 @@ a:hover, a:active {
     display: flex;
     position: relative;
     margin: 0 0 0 40px;
-/*  padding: 0;
-    align-items: center;
+    padding: 0;
+/*    align-items: center;
     justify-content: center; */
 }
 .social-icon {
