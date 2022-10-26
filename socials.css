@@ -39,6 +39,7 @@ a:hover, a:active {
   text-decoration: underline;
   outline: 0; }
 
+/* site cunt ent ===============================================================================*/
 #site-content {
   overflow: hidden; }
 
@@ -70,7 +71,7 @@ a:hover, a:active {
   width: 100%;
   margin-right: auto;
   margin-left: auto;
-  padding: 0;
+  padding: 20px;                /*****/
   *zoom: 1; }
 .container:after {
   content: " ";
@@ -108,7 +109,7 @@ a:hover, a:active {
     display: block;
 }
 #branding .site-description {
-    display: block;
+    display: inline-block;                           /********/
     color: #ffffff;
 /*    text-shadow: 1px 1px 1px #333333; */
 }
@@ -117,7 +118,7 @@ a:hover, a:active {
     height:75px;
     border-radius: 4px;
     transition: all 0.3s ease;
-    box-shadow: 0px 0px 20px 20px rgba(253, 89, 39, 0.9); 
+    box-shadow: 1px 1px 20px 20px rgba(253, 89, 39, 0.9); 
     animation: orangepulse 2s infinite;
 }
 @keyframes orangepulse {
@@ -173,39 +174,37 @@ a:hover, a:active {
     animation: glowpulse 1.2s infinite;
 }
 @keyframes glowpulse {
-    0% {
+  0% { 
     box-shadow: inset 1px 1px 2px #90a4ae,
                 inset -1px -1px 2px black,
                 5px 5px 10px #90a4ae,
-                -5px -5px 10px white;
-    }
-    50% {
-    box-shadow: inset 1px 1px 2px black,      /* #90a4ae */
+                -5px -5px 10px white;       }
+  50% {
+    box-shadow: inset 1px 1px 2px black, 
                 inset -1px -1px 2px white,
                 5px 5px 10px red,
-                -5px -5px 10px blue;        
-    }
-    100% {
+                -5px -5px 10px blue;        }
+  100% {
     box-shadow: inset 1px 1px 2px #90a4ae,
                 inset -1px -1px 2px black,
                 5px 5px 10px #90a4ae,
-                -5px -5px 10px white;
-    }
+                -5px -5px 10px white;       }
 }
+
+/* Tooltips */
 .social-icon:hover .tooltip {
     visibility: visible;
     opacity: 1;
     transform: translate(-50%, -150%);
 }
 
-/* Tooltips */
 .tooltip {
     display: block;
     position: absolute;
     top: 0;
     left: 50%;
     padding: 3px 4px; /*0.8rem 1rem; */
-    border-radius: 8px; /*12px;*/
+    border-radius: 4px; /*12px;*/
     font-size: 12px; /*0.8rem;*/
     font-weight: bold;
     opacity: 0;
