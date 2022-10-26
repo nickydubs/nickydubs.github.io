@@ -140,7 +140,7 @@ input,
 select,
 textarea {
   font-family: inherit;
-  font-size: 100%;
+  font-size: 80%;
   margin: 0;
   vertical-align: baseline; }
 
@@ -198,8 +198,6 @@ table {
 
 /*  ?    */
 /* ================================================================================== */
-#site-content {
-  overflow: hidden; }
 
 .button {
   display: inline-block;
