@@ -43,7 +43,7 @@ a:hover, a:active {
   overflow: hidden; }
 
 .site-header {
-  margin: 18px 0 18px 0;
+  margin: 0;
   *zoom: 1;
   z-index: 99; }
 .site-header:after {
