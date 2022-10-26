@@ -37,7 +37,7 @@ a:hover, a:active {
 
 /* site header ===============================================================================*/
 .site-header {
-  padding: 16px 0 0 16px; /**/
+  margin: 32px; /**/
   position: relative;   /**/
   width: 100%;
   *zoom: 1;
@@ -65,11 +65,10 @@ a:hover, a:active {
 /* container ========================================================================== */
 .container {
   width: 100%;
-  margin: 0 20px;
+  margin: 20px;
 /*  padding: 0 20px;         /*****/
   *zoom: 1; 
   position: relative;
-  z-index: 1;
 }
 .container:after {
   content: " ";
@@ -82,17 +81,13 @@ a:hover, a:active {
 @media (min-width: 992px) { .container { width: 970px; } }
 @media (min-width: 1200px) { .container { width: 1170px; } }
 
-.container-fluid {
-  margin: 0 auto;
-  padding: 0;
-  *zoom: 1; }
-.container-fluid:after {
-  content: " ";
-  clear: both;
-  display: block;
-  overflow: hidden;
-  height: 0; }
+.container-fluid { margin:0 auto; padding:0; *zoom:1; }
+.container-fluid:after { content:" "; clear:both; display:block; overflow:hidden; height:0; }
 
+.bg {
+    margin: 0 20px;
+    z-index: 1;
+}
 
 /* mouseovers ================================================================================ */
 #branding {
