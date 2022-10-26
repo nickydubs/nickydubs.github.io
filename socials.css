@@ -108,9 +108,7 @@ small {
   text-decoration: none;
 }
 #branding img {
-    display: block;
-    width:83px; 
-    height:75px;
+    display: flex;
 }
 #branding .site-description {
     display: flex;                           /********/
