@@ -1,7 +1,5 @@
 /* Project_Name: Nicky Dubs github page based on Themezy Band Template
- * Author: NICKY DUBS
- * Email: nickydubsmusic@gmail.com
- * URL: https://nickydubs.com
+ * Author: NICKY DUBS * Email: nickydubsmusic@gmail.com * URL: https://nickydubs.com
  */
 
 body {
@@ -44,8 +42,7 @@ small {
   font-size: 80%; }
 
 /* site cunt ent ===============================================================================*/
-#site-content {
-  overflow: hidden; }
+#site-content { overflow: hidden; }
 
 .site-header {
   margin: 0 0 30px 0; /**/
@@ -68,14 +65,15 @@ small {
   clear: both;
   display: block;
   overflow: hidden;
-  height: 0; } /* HEADER HEIGHT ============================================================== */
+  height: 0; } /* HEADER HEIGHT could be hardcoded here ============================================================== */
 
 /* container ========================================================================== */
 .container {
   width: 100%;
-  margin-right: auto;
-  margin-left: auto;
+/*  margin-right: auto;
+  margin-left: auto; */
   padding: 20px;                /*****/
+  margin: 20px;                /*****/
   *zoom: 1; }
 .container:after {
   content: " ";
@@ -111,30 +109,25 @@ small {
 }
 #branding img {
     display: block;
+    width:83px; 
+    height:75px;
 }
 #branding .site-description {
-    display: inline-block;                           /********/
+    display: flex;                           /********/
     color: #ffffff;
 /*    text-shadow: 1px 1px 1px #333333; */
 }
 #branding:hover, #branding:active {
     width:83px; 
-    height:75px;
     border-radius: 4px;
     transition: all 0.3s ease;
-    box-shadow: 1px 1px 20px 20px rgba(253, 89, 39, 0.9); 
+    box-shadow: 0px 0px 20px 20px rgba(253, 89, 39, 0.9); 
     animation: orangepulse 2s infinite;
 }
 @keyframes orangepulse {
-    0% {
-    box-shadow: 0px 0px 20px 20px rgba(253, 89, 39, 0.9);
-    }
-    50% {
-    box-shadow: 0px 0px 25px 25px rgba(255, 69, 0, 1);       
-    }
-    100% {
-    box-shadow: 0px 0px 20px 20px rgba(253, 89, 39, 0.9);
-    }
+    0%   { box-shadow: 0px 0px 15px 15px rgba(253, 89, 39, 0.9); }
+    50%  { box-shadow: 0px 0px 20px 20px rgba(255, 69, 0,  1.0); }
+    100% { box-shadow: 0px 0px 15px 15px rgba(253, 89, 39, 0.9); }
 }
 
 /* Social links ============================================================ */
@@ -153,7 +146,7 @@ small {
     position: relative;
     width: 60px;
     height: 60px;
-    margin: 0 0.5rem;
+    margin: 0 0.5rem 30px 0;
     padding: 0;
     border-radius: 50%;
     cursor: pointer;
@@ -213,7 +206,7 @@ small {
     font-weight: bold;
     opacity: 0;
     pointer-events: none;
-    text-transform: uppercase;
+/*    text-transform: uppercase; */
     transform: translate(-50%, -100%);
     transition: all 0.3s ease;
     z-index: 1;
@@ -228,7 +221,8 @@ small {
     content: "";
     border: solid;
     border-width: 5px 5px 0 5px; /*10px 10px 0 10px;*/
-    border-color: transparent;
+    border-color: rgba(255, 69, 0,  0.1); /* transparent; */
+    opacity: 0.9;
     transform: translate(-50%, 100%);
   }
 
