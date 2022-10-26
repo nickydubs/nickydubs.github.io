@@ -35,12 +35,6 @@ a:hover, a:active {
   text-decoration: underline;
   outline: 0; }
 
-small { display: inline-block;
-        margin: 2px 0;
-        font-size: 80%;
-        line-height: 80%;
-        background: transparent; }
-
 /* site header ===============================================================================*/
 .site-header {
   padding: 16px 0 0 16px; /**/
@@ -73,7 +67,10 @@ small { display: inline-block;
   width: 100%;
   margin: 0 20px;
 /*  padding: 0 20px;         /*****/
-  *zoom: 1; }
+  *zoom: 1; 
+  position: relative;
+  z-index: 1;
+}
 .container:after {
   content: " ";
   clear: both;
@@ -114,11 +111,6 @@ small { display: inline-block;
     box-shadow: 0px 0px 15px 15px rgba(253, 89, 39, 0.9);
     border: 4px solid rgba(230,255,255, 0.1);
 }
-.site-description {
-    display: inline-block;
-    color: white;
-/*    text-shadow: 1px 1px 1px #333333; /**/
-}
 #branding:hover, #branding:active { animation: orangepulse 2s infinite; }
 @keyframes orangepulse {
     0%   { box-shadow: 0px 0px 15px 15px rgba(253, 89, 39, 0.9); }
@@ -126,12 +118,24 @@ small { display: inline-block;
     100% { box-shadow: 0px 0px 15px 15px rgba(253, 89, 39, 0.9); }
 }
 
+small { display: inline-block;
+/*        margin: 2px 0; /**/
+        font-size: 11px;
+        line-height: 13px;
+        background: transparent; 
+}
+.site-description {
+    display: inline-block;
+    color: white;
+/*    text-shadow: 1px 1px 1px #333333; /**/
+}
+
 /* Social links ============================================================ */
 .social-links {
     margin: 20px 20px;         /* centers the div layer */
     width: 100%;
     display: flex;
-    position: relative;
+    position: absolute;
     z-index: 97;
     padding: 0 0 0 139px;
 /*    align-items: stretch;
