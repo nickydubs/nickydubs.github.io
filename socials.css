@@ -61,6 +61,41 @@ a:hover, a:active {
   overflow: hidden;
   height: 0; } /* HEADER HEIGHT ============================================================== */
 
+/* container ========================================================================== */
+.container {
+  margin-right: auto;
+  margin-left: auto;
+  padding: 0;
+  *zoom: 1; }
+
+  .container:after {
+    content: " ";
+    clear: both;
+    display: block;
+    overflow: hidden;
+    height: 0; }
+  @media (min-width: 768px) {
+    .container {
+      width: 750px; } }
+  @media (min-width: 992px) {
+    .container {
+      width: 970px; } }
+  @media (min-width: 1200px) {
+    .container {
+      width: 1170px; } }
+
+.container-fluid {
+  margin-right: auto;
+  margin-left: auto;
+  padding: 0 0 0 0;
+  *zoom: 1; }
+.container-fluid:after {
+    content: " ";
+    clear: both;
+    display: block;
+    overflow: hidden;
+    height: 0; }
+
 /* mouseovers ================================================================================ */
 #branding {
   float: left;
@@ -79,8 +114,8 @@ a:hover, a:active {
 /*    text-shadow: 1px 1px 1px #333333; */
 }
 #branding:hover, #branding:active {
-    width:83px; 
-    height:75px;
+/*    width:83px; 
+    height:75px; */
     border-radius: 4px;
     transition: all 0.3s ease;
     box-shadow: 0px 0px 20px 20px #fd5927; 
