@@ -194,8 +194,8 @@ small {
     visibility: visible;
     opacity: 1;
     border: 2px solid rgba(230,255,255);
-    box-shadow: 5px 5px 10px rgba(230,255,255,0.5);
-    transform: translate(-50%, -150%);
+/*    box-shadow: 5px 5px 10px rgba(230,255,255,0.5);
+*/    transform: translate(-50%, -150%);
 }
 
 .tooltip {
