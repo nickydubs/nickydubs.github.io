@@ -6,7 +6,7 @@ body {
     width: 100%;          /* nic ==============================================================*/
     overflow-x: hidden;   /* nic ==============================================================*/
     /*position: absolute; /* nic ==============================================================*/
-    /*margin: 0; */
+    margin: 0 20px 0 20px;
     background-color: #141414;
     color: #848484;
     font-family: "Source Sans Pro", "Open Sans", sans-serif;
