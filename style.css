@@ -92,35 +92,27 @@ pre {
   white-space: pre-wrap;
   word-wrap: break-word; }
 
-q {
-  quotes: "\201C" "\201D" "\2018" "\2019"; }
+q { quotes: "\201C" "\201D" "\2018" "\2019"; }
 
-q:before,
-q:after {
+q:before, q:after {
   content: '';
   content: none; }
 
-sub,
-sup {
+sub, sup {
   font-size: 75%;
   line-height: 0;
   position: relative;
   vertical-align: baseline; }
 
-sup {
-  top: -0.5em; }
+sup { top: -0.5em; }
+sub { bottom: -0.25em; }
 
-sub {
-  bottom: -0.25em; }
-
-img {
-  border: 0; }
+img { border: 0; }
 
 svg:not(:root) {
   overflow: hidden; }
 
-figure {
-  margin: 0; }
+figure { margin: 0; }
 
 fieldset {
   border: 1px solid #c0c0c0;
@@ -147,8 +139,7 @@ input {
 
 button,
 select {
-  /*text-transform: none;*/
-  text-transform: uppercase; }
+  text-transform: none; }
 
 button,
 html input[type="button"],
@@ -179,7 +170,6 @@ button::-moz-focus-inner, input::-moz-focus-inner {
   border: 0;
   padding: 0; }
 
-
 textarea {
   overflow: auto;
   vertical-align: top; }
@@ -207,7 +197,9 @@ table {
           transition: .3s ease; }
 
 .button:hover {
-  background-color: #fd805a; }
+  background-color: #fd805a;
+  text-decoration: bold;                /**/
+  text-transform: uppercase; }
 .button.primary {
   background-color: #fd5927; }
 .button.primary:hover {
@@ -1328,7 +1320,7 @@ table {
 .slider .slides li {
   margin-right: -100%;
   width: 100%;
-  float: left;
+  float: center;                /**/
   min-height: 540px;
   background-color: #171717;
   background-size: cover; }
@@ -1487,7 +1479,7 @@ table {
 .section-header {
   *zoom: 1;
   border-bottom: 1px solid rgba(255, 255, 255, 0.15);
-  margin-bottom: 70px;
+  margin-bottom: 40px;
   padding-top: 40px; }
 
 .section-header:after {
