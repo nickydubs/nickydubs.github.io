@@ -39,6 +39,10 @@ a:hover, a:active {
   text-decoration: underline;
   outline: 0; }
 
+small {
+  margin-top: 2px;
+  font-size: 80%; }
+
 /* site cunt ent ===============================================================================*/
 #site-content {
   overflow: hidden; }
