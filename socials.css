@@ -116,7 +116,6 @@ small {
 /*    text-shadow: 1px 1px 1px #333333; */
 }
 #branding:hover, #branding:active {
-    width:83px; 
     border-radius: 4px;
     transition: all 0.3s ease;
     box-shadow: 0px 0px 20px 20px rgba(253, 89, 39, 0.9); 
