@@ -39,6 +39,7 @@ header {
   margin: 36px; /**/
   position: relative;   /**/
   width: 100%;
+  min-width: 720px;
   *zoom: 1;
   z-index: 99; /* float in front of stuff */ 
 }
@@ -85,7 +86,9 @@ header .container:after {
 
 .bg {
     margin: 0 20px;
+    padding: 0;
     z-index: 1;
+    top: 0;
 }
 
 /* mouseovers ================================================================================ */
