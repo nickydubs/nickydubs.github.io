@@ -1229,8 +1229,10 @@ table {
 /************************************************************************************************************************/
 .site-footer {
   background: #191919;
-  padding: 20px;                /**/
-  text-align: center; }
+/*  padding: 20px;                /**/
+  text-align: center;
+  display: block;
+}
 
 .site-footer address { font-style: normal; }
 .site-footer address a { color: inherit; text-decoration: none; }
@@ -1264,6 +1266,7 @@ table {
 @media screen and (max-width: 480px) { .site-footer .newsletter-form input[type="submit"] { width: 30%; } }
 
 /* nic split this into 2 then recombined it. duh *****************************************************************/
+/*
 .site-footer .social-links { margin: 20px 0; }
 
 .site-footer .social-links a {
@@ -1277,14 +1280,15 @@ table {
   color: white;
   margin: 0 5px;
   font-size: 16px; /*20px;*/
-  font-size: 1.25em; /*1.25em;*/
-  line-height: 20px; /*45px;*/ }  /************************************************************************************************************************/
-
+/*  font-size: 1.25em; /*1.25em;*/
+/*  line-height: 20px; /*45px; } */ 
+/*
 .site-footer .social-links a:hover {
   background: -webkit-linear-gradient(0, #4f4f4f, #4f4f4f) top left, -webkit-linear-gradient(0, #4f4f4f, #4f4f4f) top right, -webkit-linear-gradient(135deg, transparent 5px, #4f4f4f 0) bottom right, -webkit-linear-gradient(0, #4f4f4f, #4f4f4f) bottom left;
   background: linear-gradient(0, #4f4f4f, #4f4f4f) top left, linear-gradient(0, #4f4f4f, #4f4f4f) top right, linear-gradient(315deg, transparent 5px, #4f4f4f 0) bottom right, linear-gradient(0, #4f4f4f, #4f4f4f) bottom left;
   background-size: 55% 55%;
   background-repeat: no-repeat; }
+/**********************************************************************************************************************/
 
 .site-footer .copy {
   color: #434343;
@@ -1320,7 +1324,7 @@ table {
   background-size: cover; }
 
 .slider .slides .container {
-  padding: 50px 0 0 0;     /* Nic ======================================================================*/
+/*  padding: 50px 0 0 0;     /* Nic ======================================================================*/
   text-align: center; }
 
 .slider .slides .slide-title {
