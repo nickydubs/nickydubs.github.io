@@ -1123,39 +1123,6 @@ table {
 /************************************************************************************************************************/
 .map {  height: 320px; }
 
-/************************************************************************************************************************/
-.contact-form { *zoom: 1; }
-.contact-form:after {
-    content: " ";
-    clear: both;
-    display: block;
-    overflow: hidden;
-    height: 0; }
- 
-.contact-form input, 
-.contact-form textarea {
-    background: #353535;
-    display: block;
-    width: 100%;
-    padding: 0;
-    color: white;
-    margin-bottom: 10px;
-    border: none;
-}
-.contact-form input[type="submit"] {
-    float: right;
-    width: auto;
-    background-color: #fd5927;
-}
-.contact-form textarea {    
-    resize: vertical; 
-    min-height: 120px;          /*  ???  ----------------*/
-}
-.contact-form textarea:focus {
-    border: 6px solid rgba(255, 88, 54, 1);
-}
-
-/*************************************************************************************************/
 .map-wrapper address {
   font-style: normal;
   background: #353535;
