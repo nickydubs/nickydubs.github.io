@@ -168,7 +168,7 @@ img { border: 0; }
 
 small { position:absolute;
     display: inline-block;
-/*        margin: 2px 0; /**/
+        margin: 2px 0; /**/
         font-size: 11px;
         line-height: 13px;
         background: transparent; 
@@ -182,7 +182,7 @@ small { position:absolute;
 /* Social links ============================================================ */
 .social-links {
 /*    position: absolute;     /* DELETE? */
-    margin: 20px auto;         /* centers the div box */
+    padding: 32px;         /* centers the div box */
     height: 120px;             /* better hard code it */
     width: 100%;
     min-width: 720px;
