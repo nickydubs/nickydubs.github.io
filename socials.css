@@ -3,16 +3,15 @@
 
 a       { background: transparent; transition: all 0.3s ease; }
 a:focus { outline: thin dotted;    transition: all 0.3s ease; }
-a:link, a:visited { /*background-color: #f44336;*/  color: white; text-align: center; display: inline-block; text-decoration: none; }
-a:hover, a:active { /*background-color: rgba(0,0,0,1);*/  text-decoration: underline; outline: 0; }
+a:link, a:visited { /*background-color: #f44336;*/ color:white; text-align:center; display:inline-block; text-decoration:none; }
+a:hover, a:active { /*background-color: rgba(0,0,0,1);*/  text-decoration:underline; outline:0; }
 
 .bg2 {  /* penises */
     background: url(https://images.unsplash.com/photo-1536264911542-668b0180d5a1?ixlib=rb-0.3.5&q=85&fm=jpg&crop=entropy&cs=srgb&ixid=eyJhcHBfaWQiOjE0NTg5fQ&s=a9a32743f06349efc39aeae90f047e9f) center center cover no-repeat; /* fixed;     /**/        
 }
-.lazy-bg {  }
 .bg-color {  background: -webkit-linear-gradient(0, #4f4f4f, #4f4f4f) top left, -webkit-linear-gradient(0, #4f4f4f, #4f4f4f) top right, -webkit-linear-gradient(135deg, transparent 5px, #4f4f4f 0) bottom right, -webkit-linear-gradient(0, #4f4f4f, #4f4f4f) bottom left;
             background: linear-gradient(0, #4f4f4f, #4f4f4f) top left, linear-gradient(0, #4f4f4f, #4f4f4f) top right, linear-gradient(315deg, transparent 5px, #4f4f4f 0) bottom right, linear-gradient(0, #4f4f4f, #4f4f4f) bottom left;
-            background-size: 55% 55%;
+            background-position: 55% 55%;
             background-repeat: no-repeat;
             background-size: cover;
  }
@@ -107,7 +106,7 @@ header .container:after {
 .container, footer {  /*  position: relative;       /* delete? pointless without top/bottom/left/right command ? */
   display: block; /*flex;            /* ??? */
   width: 100%;
-  mid-width: 720px;         /* ??? */
+  min-width: 720px;         /* ??? */
   height: 540px;            /* ??? */
   min-height: 360px;         /* ??? */
   margin: 20px 0;
@@ -129,7 +128,7 @@ header .container:after {
 @media (min-width: 768px) { .container { width: 750px; } }
 @media (min-width: 992px) { .container { width: 970px; } }
 @media (min-width: 1200px) { .container { width: 1170px; } }
-.container-fluid { margin:0 auto; padding:0; *zoom:1; }
+.container-fluid { margin: 0 auto; padding:0; *zoom:1; }
 .container-fluid:after { content:" "; clear:both; display:block; overflow:hidden; height:0; }
 
 /* img ======================================================================================= */
