@@ -18,7 +18,7 @@ a:hover, a:active { /*background-color: rgba(0,0,0,1);*/  text-decoration: under
 /*    position: absolute;     /* ??? */
     margin: 0 20px;
     width: 100%;
-    background-image: url(https://images.unsplash.com/photo-1536264911542-668b0180d5a1?ixlib=rb-0.3.5&q=85&fm=jpg&crop=entropy&cs=srgb&ixid=eyJhcHBfaWQiOjE0NTg5fQ&s=a9a32743f06349efc39aeae90f047e9f) center center cover no-repeat fixed;     /**/        
+    background: url(https://images.unsplash.com/photo-1536264911542-668b0180d5a1?ixlib=rb-0.3.5&q=85&fm=jpg&crop=entropy&cs=srgb&ixid=eyJhcHBfaWQiOjE0NTg5fQ&s=a9a32743f06349efc39aeae90f047e9f) center center cover no-repeat fixed;     /**/        
 /*    opacity: 0.5;           /* ??? */
 /*  background-position: 50% 50%;
     background-size: cover;
