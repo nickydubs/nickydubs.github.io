@@ -992,7 +992,7 @@ table {
     .mobile-menu .menu .current-menu-item a {
       color: #fd5927; }
 
-/* Core Owl Carousel CSS File v1.3.3 */
+/* Core Owl Carousel CSS File v1.3.3 *************************************************************8*/
 .owl-carousel .owl-wrapper:after {
   content: ".";
   display: block;
@@ -1061,7 +1061,7 @@ table {
 }
 /**/
 
-/* nic try to remove the horizontal line near top of site ***************************************************************/
+/* nic tryING to remove the horizontal line near top of site ^^  *********************************************************/
 /************************************************************************************************************************/
 
 .content .post .entry-date {
@@ -1121,38 +1121,41 @@ table {
     text-decoration: none; }
 
 /************************************************************************************************************************/
+.map {  height: 320px; }
 
-.map {
-  height: 320px; }
-
+/************************************************************************************************************************/
 .contact-form { *zoom: 1; }
-  .contact-form:after {
+.contact-form:after {
     content: " ";
     clear: both;
     display: block;
     overflow: hidden;
     height: 0; }
  
-  .contact-form input, .contact-form textarea {
+.contact-form input, 
+.contact-form textarea {
     background: #353535;
     display: block;
     width: 100%;
-    padding: 10px;
+    padding: 0;
     color: white;
     margin-bottom: 10px;
-    border: none; }
-
-  .contact-form textarea {
-    resize: vertical; }
-
-  .contact-form input[type="submit"] {
+    border: none;
+}
+.contact-form input[type="submit"] {
     float: right;
     width: auto;
-    background-color: #fd5927; }
+    background-color: #fd5927;
+}
+.contact-form textarea {    
+    resize: vertical; 
+    min-height: 120px;          /*  ???  ----------------*/
+}
+.contact-form textarea:focus {
+    border: 6px solid rgba(255, 88, 54, 1);
+}
 
-  .contact-form textarea {
-    min-height: 120px; } /*-----------------------------------------------------------------------*/
-
+/*************************************************************************************************/
 .map-wrapper address {
   font-style: normal;
   background: #353535;
@@ -1259,10 +1262,9 @@ table {
 
 @media screen and (max-width: 480px) { .site-footer .newsletter-form input[type="submit"] { width: 30%; } }
 
-/* nic split this into 2 then recombined it. duh *****************************************************************/
-/*
-.site-footer .social-links { margin: 20px 0; }
 
+/* obsolete footer & social link shit *****************************************************************/
+/*  .site-footer .social-links { margin: 20px 0; }
 .site-footer .social-links a {
   display: inline-block;
   width: 45px;
@@ -1276,38 +1278,35 @@ table {
   font-size: 16px; /*20px;*/
 /*  font-size: 1.25em; /*1.25em;*/
 /*  line-height: 20px; /*45px; } */ 
-/*
-.site-footer .social-links a:hover {
-  background: -webkit-linear-gradient(0, #4f4f4f, #4f4f4f) top left, -webkit-linear-gradient(0, #4f4f4f, #4f4f4f) top right, -webkit-linear-gradient(135deg, transparent 5px, #4f4f4f 0) bottom right, -webkit-linear-gradient(0, #4f4f4f, #4f4f4f) bottom left;
-  background: linear-gradient(0, #4f4f4f, #4f4f4f) top left, linear-gradient(0, #4f4f4f, #4f4f4f) top right, linear-gradient(315deg, transparent 5px, #4f4f4f 0) bottom right, linear-gradient(0, #4f4f4f, #4f4f4f) bottom left;
-  background-size: 55% 55%;
-  background-repeat: no-repeat; }
-/**********************************************************************************************************************/
+/*  .site-footer .social-links a:hover {
+        background: -webkit-linear-gradient(0, #4f4f4f, #4f4f4f) top left, -webkit-linear-gradient(0, #4f4f4f, #4f4f4f) top right, -webkit-linear-gradient(135deg, transparent 5px, #4f4f4f 0) bottom right, -webkit-linear-gradient(0, #4f4f4f, #4f4f4f) bottom left;
+        background: linear-gradient(0, #4f4f4f, #4f4f4f) top left, linear-gradient(0, #4f4f4f, #4f4f4f) top right, linear-gradient(315deg, transparent 5px, #4f4f4f 0) bottom right, linear-gradient(0, #4f4f4f, #4f4f4f) bottom left;
+        background-size: 55% 55%;   background-repeat: no-repeat; background-size: cover;
+}
 
+/**********************************************************************************************************************/
 .site-footer .copy {
   color: #434343;
   font-weight: 300;
   font-size: 14px;
   font-size: 0.875em; }
 
-
 /* sliderp paderp -a- derp *******************************************************************************************************************/
-
-.slider .slides {
+.slides {
   *zoom: 1;
   margin: 0;
   padding-left: 0;
   list-style: none;
-  overflow: hidden; }
-
-.slider .slides:after {
+  overflow: hidden;
+}
+.slides:after {
   content: " ";
   clear: both;
   display: block;
   overflow: hidden;
   height: 0; }
 
-.slider .slides li {
+.slides li {
   margin-right: -100%;
   width: 100%;
   float: center;                /**/
@@ -1315,11 +1314,11 @@ table {
   background-color: #171717;
   background-size: cover; }
 
-.slider .slides .container {
+.slides .container {
 /*  padding: 50px 0 0 0;     /* Nic ======================================================================*/
   text-align: center; }
 
-.slider .slides .slide-title {
+.slides .slide-title {
   margin: 0;
   color: white;
   font-size: 48px;
@@ -1335,7 +1334,7 @@ table {
       -webkit-transition-delay: .3s;
               transition-delay: .3s; }
 
-.slider .slides .slide-subtitle {
+.slides .slide-subtitle {
   color: #fd5927;
   font-size: 32px;
   font-size: 2em;
@@ -1349,7 +1348,7 @@ table {
   -webkit-transition-delay: .6s;
           transition-delay: .6s; }
 
-.slider .slides .slide-desc {
+.slides .slide-desc {
   font-size: 30px;
   font-size: 1.875em;
   font-weight: 300;
@@ -1363,7 +1362,7 @@ table {
   -webkit-transition-delay: .9s;
           transition-delay: .9s; }
 
-.slider .slides .flex-active-slide .slide-title, .slider .slides .flex-active-slide .slide-subtitle, .slider .slides .flex-active-slide .slide-desc {
+.slides .flex-active-slide .slide-title, .slides .flex-active-slide .slide-subtitle, .slides .flex-active-slide .slide-desc {
   -webkit-transform: scale(1);
       -ms-transform: scale(1);
           transform: scale(1);
@@ -1394,6 +1393,7 @@ table {
 .slider .flex-control-nav li a.flex-active { background-position: -15px 0; }
 
 
+/*************************************************************************************/
 .quote-slider {
   position: relative;
   margin: 80px 0; }
@@ -1411,8 +1411,7 @@ table {
   overflow: hidden;
   height: 0; }
 
-.quote-slider blockquote {
-  margin: 0; }
+.quote-slider blockquote {  margin: 0; }
 
 .quote-slider blockquote p {
   font-size: 36px;
@@ -1487,11 +1486,9 @@ table {
   margin-top: 0;
   float: left; }
 
-.event-carousel {
-  margin-bottom: 30px; }
-
-.event-nav { float: right; }
-
+/* =================================================================================================== */
+.event-carousel {   margin-bottom: 30px; }
+.event-nav {        float: right; }
 .event-nav a {
   display: inline-block;
   width: 33px;
@@ -1505,9 +1502,7 @@ table {
 
 .event-nav a:hover { background-color: #fd5927; }
 
-.event {
-  position: relative;
-  padding-left: 100px; }
+.event {    position: relative; padding-left: 100px; }
 
 .event .entry-date {
   position: absolute;
@@ -1544,7 +1539,7 @@ table {
       color: white;
       text-decoration: none; }
 
-
+/* ********************************************************************************************** */
 .feature {
   text-align: center;
   margin-bottom: 50px; }
@@ -1576,7 +1571,8 @@ table {
   font-size: 1.125em;
   font-weight: 400; }
 
-.inner-content { padding: 80px 0; }
+/* ********************************************************************************************** */
+.inner-content { padding: /*80px*/30px 0; }
 
 .content .entry-title {
   margin-top: 0;
@@ -1585,12 +1581,8 @@ table {
   font-size: 2.25em;
   color: white; }
 
-.content .featured-image {
-  overflow: hidden;
-  margin-bottom: 50px; }
-.content .featured-image img {
-  width: 100%;
-  max-width: 100%; }
+.content .featured-image {  overflow: hidden;   margin-bottom: 50px; }
+.content .featured-image img {  width: 100%;    max-width: 100%; }
 .content .leading {
   margin-bottom: 50px;
   color: white;
@@ -1598,7 +1590,7 @@ table {
   font-size: 1.125em;
 }
 .content p { margin: 0; }
-.content.fullwidth { padding: 80px 0; }     /* wtf is this? lol */
+.content.fullwidth { padding: 80px 0; }     /* wtf is this? lol ????????????????????????????????????????*/
 
 /* ***************************************************************** */
 .mobile-filter {
@@ -1679,12 +1671,12 @@ table {
   -webkit-transition-duration: 0s;
   transition-duration: 0s; }
 
-.download { padding: 80px 0; }                          /* wtf is this? lol */
+/* ====================================================================================================== */
+.download { padding: 80px 0; }                          /* wtf is this? lol ============================== */
 
-.page-title {
-  color: white;
-  font-size: 36px;
-  font-size: 2.25em; }
+.page-title {   color: white;
+                font-size: 36px;
+                font-size: 2.25em; }
 
 .item {
   *zoom: 1;
@@ -1730,7 +1722,6 @@ table {
   -webkit-transition: .3s ease;
           transition: .3s ease; }
 
-.item .social-share a:hover {
-   color: #fd5927; }
+.item .social-share a:hover {   color: #fd5927; }
 
 /*# sourceMappingURL=style.css.map */
