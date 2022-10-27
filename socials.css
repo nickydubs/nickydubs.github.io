@@ -20,7 +20,7 @@ a:hover, a:active { /*background-color: rgba(0,0,0,1);*/  text-decoration: under
     padding: 0 20px;    /* margin? */
     width: 100%;
 /*    background: url(https://images.unsplash.com/photo-1536264911542-668b0180d5a1?ixlib=rb-0.3.5&q=85&fm=jpg&crop=entropy&cs=srgb&ixid=eyJhcHBfaWQiOjE0NTg5fQ&s=a9a32743f06349efc39aeae90f047e9f) center center cover no-repeat; /* fixed;     /**/        
- background: url(dummy/slide-1.jpg) center center cover no-repeat fixed; /**/
+ background: url(dummy/slide-1.jpg) center center cover no-repeat; /* fixed; /**/
 /*    opacity: 0.5;           /* ??? */
 /*  background-position: 50% 50%;
     background-size: cover;
@@ -28,9 +28,9 @@ a:hover, a:active { /*background-color: rgba(0,0,0,1);*/  text-decoration: under
     background-attachment: fixed; 
     background-clip: text;/**/
     height: 200vh;
-    -webkit-text-fill-color: transparent; /**/
+ /*   -webkit-text-fill-color: transparent; /**/
 /*/*    position: relative;           /**/
-    align-items: flex-start;
+    align-items: stretch;
     justify-content: center;  /**/
 /*    
     &:before {
@@ -138,7 +138,7 @@ img { border: 0; }
   float: left;        /* left, right or none!! (no center) */
   display: block;       /* keep */
   position: absolute;   /**/
-  margin: 40px 0 0 40px;
+  margin: 20px 0 0 20px;
   color: inherit;
   text-decoration: none;
   transition: all 0.3s ease;
@@ -179,8 +179,8 @@ small { display: inline-block;
 
 /* Social links ============================================================ */
 .social-links {
-    position: absolute;     /* DELETE? */
-    margin: 16px 130px;         /* centers the div box */
+/*    position: absolute;     /* DELETE? */
+    margin: 18px 130px;         /* centers the div box */
     height: 120px;             /* better hard code it */
     width: 100%;
 /*    display: block;/*flex;      /* hmm? */
