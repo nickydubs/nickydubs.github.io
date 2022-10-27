@@ -1,6 +1,5 @@
 /*! Project_Name: Nicky Dubs github page based on Themezy Band Template
- * Author: NICKY DUBS * Email: nickydubsmusic@gmail.com  * URL: https://nickydubs.com
- */
+ * Author: NICKY DUBS * Email: nickydubsmusic@gmail.com  * URL: https://nickydubs.com */
 
 article, aside, details, figcaption, figure, footer, header, hgroup, nav, section, summary {
     display: block; }
@@ -101,8 +100,6 @@ sub, sup {
 sup { top: -0.5em; }
 sub { bottom: -0.25em; }
 
-img { border: 0; }
-
 svg:not(:root) {
   overflow: hidden; }
 
@@ -128,12 +125,10 @@ textarea {
   vertical-align: baseline; }
 
 button,
-input {
-  line-height: normal; }
+input { line-height: normal; }
 
 button,
-select {
-  text-transform: none; }
+select { text-transform: none; }
 
 button,
 html input[type="button"],
@@ -143,8 +138,7 @@ input[type="submit"] {
   cursor: pointer; }
 
 button[disabled],
-input[disabled] {
-  cursor: default; }
+input[disabled] { cursor: default; }
 
 input[type="checkbox"],
 input[type="radio"] {
@@ -907,8 +901,7 @@ table {
 /* more relevant classes for Nic */
 /* ========================================================================= */
 
-.main-navigation {
-  float: right; }
+.main-navigation { float: right; }
   .main-navigation .toggle-menu {
     background: none;
     color: #848484;
@@ -1058,7 +1051,7 @@ table {
   -moz-transform: translate3d(0, 0, 0);
   -ms-transform: translate3d(0, 0, 0); }
 
-
+/*
 .content .post {
   position: relative;
   margin-bottom: 30px;
@@ -1066,6 +1059,7 @@ table {
   padding-bottom: 30px;
   border-bottom: 5px solid rgba(255, 255, 255, 0.1); 
 }
+/**/
 
 /* nic try to remove the horizontal line near top of site ***************************************************************/
 /************************************************************************************************************************/
@@ -1120,18 +1114,18 @@ table {
     .content .post .entry-title a:hover {
         color: #fd5927; }
 
-/************************************************************************************************************************/
   .content .post p {
     margin-bottom: 20px; }
   .content .post a {
     color: #fd5927;
     text-decoration: none; }
 
+/************************************************************************************************************************/
+
 .map {
   height: 320px; }
 
-.contact-form {
-  *zoom: 1; }
+.contact-form { *zoom: 1; }
   .contact-form:after {
     content: " ";
     clear: both;
@@ -1298,8 +1292,6 @@ table {
 
 
 /* sliderp paderp -a- derp *******************************************************************************************************************/
-
-.slider { position: relative; }
 
 .slider .slides {
   *zoom: 1;
@@ -1603,14 +1595,12 @@ table {
   margin-bottom: 50px;
   color: white;
   font-size: 18px;
-  font-size: 1.125em; }
-.content p {
-  margin: 0; }
+  font-size: 1.125em;
+}
+.content p { margin: 0; }
+.content.fullwidth { padding: 80px 0; }     /* wtf is this? lol */
 
-.content.fullwidth {
-  padding: 80px 0; }
-
-/* line 5, sass/pages/_gallery.scss */
+/* ***************************************************************** */
 .mobile-filter {
   -webkit-appearance: none;
   -moz-appearance: none;
@@ -1689,8 +1679,7 @@ table {
   -webkit-transition-duration: 0s;
   transition-duration: 0s; }
 
-.download {
-  padding: 80px 0; }
+.download { padding: 80px 0; }                          /* wtf is this? lol */
 
 .page-title {
   color: white;
