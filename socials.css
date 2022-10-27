@@ -1,8 +1,20 @@
-/* Project_Name: Nicky Dubs github page (based on Themezy Band Template) * Author: NICKY DUBS * Email: nickydubsmusic@gmail.com * URL: https://nickydubs.com */
+/* Project_Name: Nicky Dubs github page (based on Themezy Band Template)
+ * Author: NICKY DUBS * Email: nickydubsmusic@gmail.com * URL: https://nickydubs.com */
+
+a {         background: transparent;    transition: all 0.3s ease; }
+a:focus {   outline: thin dotted;       transition: all 0.3s ease; }
+a:link, a:visited { /* background-color: #f44336; */
+  color: white;
+  text-align: center;
+  text-decoration: none;
+  display: inline-block; }
+a:hover, a:active { /* background-color: rgba(0,0,0,0); */
+  text-decoration: underline;
+  outline: 0; }
 
 body {
     position: absolute;         /* nic ==============================================================*/
-    top: 0px;                   /* nic ==============================================================*/
+/*    top: 0px;                   /* nic ==============================================================*/
     display: block; /* flex; */    
     width: 100%;                /* nic ==============================================================*/
     overflow-x: hidden;         /* nic ==============================================================*/
@@ -17,31 +29,15 @@ body {
 }
 #site-content { overflow: hidden; }
 
-a { background: transparent;
-    transition: all 0.3s ease; }
-
-a:focus { outline: thin dotted;
-          transition: all 0.3s ease; }
-
-a:link, a:visited { /* background-color: #f44336; */
-  color: white;
-  text-align: center;
-  text-decoration: none;
-  display: inline-block; }
-
-a:hover, a:active {
-  /* background-color: rgba(0,0,0,0); */
-  text-decoration: underline;
-  outline: 0; }
-
-/* site header ===============================================================================*/
+/* header ===============================================================================*/
 header {
+/*  display: flex; /*  ???  */
   margin: 20px; /**/
-  position: absolute;   /**/
+/*  position: relative;   /**/
   width: 100%;
   min-width: 720px;
   *zoom: 1;
-  z-index: 99; /* float in front of stuff */ 
+  z-index: 88; /* common block, floats in front of most stuff */ 
 }
 header:after {
   content: " ";
@@ -65,16 +61,19 @@ header .container:after {
 
 /* container ========================================================================== */
 .container {
+  display: flex;            /* ??? */
   width: 100%;
+  mid-width: 720px;         /* ??? */
   margin: 20px;
 /*  padding: 0 20px;         /*****/
   *zoom: 1; 
-  position: relative;
+/*  position: relative;       /* delete? pointless without top/bottom/left/right command */
+  z-index: 88; /* common block, floats in front of most stuff */ 
 }
 .container:after {
   content: " ";
   clear: both;
-  display: block;
+/*  display: block;     /* ??? */
   overflow: hidden;
   height: 0; }
 
@@ -86,12 +85,40 @@ header .container:after {
 .container-fluid:after { content:" "; clear:both; display:block; overflow:hidden; height:0; }
 
 .bg {
-    position: absolute;
+    position: absolute;     /* ??? */
     margin: 0 20px;
+    width: 100%;
     padding: 0;
-    z-index: 1;
-    top: 0;
+    z-index: -2;
+/*    top: 0; /**/
+    background-image: url(https://images.unsplash.com/photo-1536264911542-668b0180d5a1?ixlib=rb-0.3.5&q=85&fm=jpg&crop=entropy&cs=srgb&ixid=eyJhcHBfaWQiOjE0NTg5fQ&s=a9a32743f06349efc39aeae90f047e9f);
+    opacity
+    background-size: cover;
+    background-position: 50% 50%;
+/*    background-clip: text;
+    height: 200vh;
+    font-weight: bold;
+    font-size: 50rem;
+    -webkit-text-fill-color: transparent;
+    position: relative;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    overflow: hidden;
+    
+    &:before {
+        content: '';
+        background-image: inherit;
+        background-size: cover;
+        background-position: 50% 50%;
+        position: absolute;
+        top:0;  right:0;    bottom:0;   left: 0;
+        z-index: -2;
+    }
+/**/
 }
+
+img { border: 0; }
 
 /* mouseovers ================================================================================ */
 #branding {
@@ -109,9 +136,9 @@ header .container:after {
     border-radius: 4px;
     box-shadow: inset 1px 1px 2px rgba(0, 0, 0, 1),
                 inset -1px -1px 2px rgba(253, 89, 39, 0.9),
-                2px 2px 4px red,
-                -2px -2px 4px blue;
-/*    border: 6px solid rgba(230,255,255, 0.1);   /**/
+                5px 5px 10px red,
+                -5px -5px 10px blue;
+    border: 6px solid rgba(230,255,255, 0.1);   /**/
 }
 #branding:hover, #branding:active { animation: orangepulse 2s infinite; }
 @keyframes orangepulse {
@@ -136,9 +163,9 @@ small { display: inline-block;
 .social-links {
     margin: 36px;         /* centers the div box */
     width: 100%;
-    display: flex;
+    display: flex;      /* important! */
     position: absolute; /* important! */
-    z-index: 97;
+    z-index: 97;        /* ? */
     padding: 0 139px;
 /*    align-items: stretch;         /**/
 /*    justify-content: space-evenly;  /**/
@@ -148,19 +175,20 @@ small { display: inline-block;
     position: relative; /* very important */
     width: 60px;
     height: 60px;
-    margin: 20px 0.5rem;
+    min-width: 60px;        /**/
+    margin: 0 0.5rem;       /**/
     color: white;
     border-radius: 50%;
     cursor: pointer;
     font-family: "Halvetica Neue",sans-serif,"Arial";
     font-size: 2rem;
     text-decoration: none;
-    /* transition: all 0.6s ease; */
+    transition: all 0.6s ease; /**/
     box-shadow: inset 1px 1px 2px black,
                 inset -1px -1px 2px white,
                 5px 5px 10px red,
                 -5px -5px 10px blue;
-    border: 6px solid rgba(230,255,255, 1);
+    border: 6px solid rgba(230,255,255, 1); /* keep */
 }
 /* Hover Effect & tooltip */
 .social-icon:hover {
