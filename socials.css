@@ -53,8 +53,8 @@ body {
     width: 100%;                        /* nic ==============================================================*/
     overflow/*-x*/: hidden;             /* nic ==============================================================*/
     background-size: cover;             /* nic */
-    background-color: #141414;
-    color: #848484;
+    background-color: #14141408;        /* nic */
+    color: #84848408;                   /* nic */
     align-items: stretch;       /**/
     justify-content: center;    /**/
     top:0; right:0; bottom:0; left:0;   /* nic */
