@@ -6,20 +6,24 @@ a:focus { outline: thin dotted;    transition: all 0.3s ease; }
 a:link, a:visited { /*background-color: #f44336;*/  color: white; text-align: center; display: inline-block; text-decoration: none; }
 a:hover, a:active { /*background-color: rgba(0,0,0,1);*/  text-decoration: underline; outline: 0; }
 
-.bgcolor {
-  
-}
-.bg-orig {
-  /* penises */
-}
+.bg-original {  /* penises */ }
+.bgcolor {  background: -webkit-linear-gradient(0, #4f4f4f, #4f4f4f) top left, -webkit-linear-gradient(0, #4f4f4f, #4f4f4f) top right, -webkit-linear-gradient(135deg, transparent 5px, #4f4f4f 0) bottom right, -webkit-linear-gradient(0, #4f4f4f, #4f4f4f) bottom left;
+            background: linear-gradient(0, #4f4f4f, #4f4f4f) top left, linear-gradient(0, #4f4f4f, #4f4f4f) top right, linear-gradient(315deg, transparent 5px, #4f4f4f 0) bottom right, linear-gradient(0, #4f4f4f, #4f4f4f) bottom left;
+            background-size: 55% 55%;
+            background-repeat: no-repeat;
+            background-size: cover;
+ }
+.lazy-bg {  }
 .bg {
     position: absolute;     /* ??? */
     margin: 0 20px;
     width: 100%;
-    background-image: url(https://images.unsplash.com/photo-1536264911542-668b0180d5a1?ixlib=rb-0.3.5&q=85&fm=jpg&crop=entropy&cs=srgb&ixid=eyJhcHBfaWQiOjE0NTg5fQ&s=a9a32743f06349efc39aeae90f047e9f);
-    opacity: 0.2;           /* ??? */
-    background-size: cover;
+    background-image: url(https://images.unsplash.com/photo-1536264911542-668b0180d5a1?ixlib=rb-0.3.5&q=85&fm=jpg&crop=entropy&cs=srgb&ixid=eyJhcHBfaWQiOjE0NTg5fQ&s=a9a32743f06349efc39aeae90f047e9f) center center cover no-repeat fixed;
+    opacity: 0.5;           /* ??? */
     background-position: 50% 50%;
+    background-size: cover;
+/*  background-repeat: no-repeat;
+  background-attachment: fixed; /**/
 /*    background-clip: text;
     height: 200vh;
     font-weight: bold;
@@ -33,9 +37,9 @@ a:hover, a:active { /*background-color: rgba(0,0,0,1);*/  text-decoration: under
 /*    
     &:before {
         content: '';
-        background-image: inherit;
+        background-image: inherit;  /**/
         background-size: cover;
-        background-position: 50% 50%;
+/*        background-position: 50% 50%;
         position: absolute;
         top:0;  right:0;    bottom:0;   left: 0;  /**/
         z-index: -2;
@@ -46,11 +50,12 @@ a:hover, a:active { /*background-color: rgba(0,0,0,1);*/  text-decoration: under
 body {
     position: absolute;         /* nic ==============================================================*/
 /*    top: 0px;                 /* nic */
-    align: center;              /* nic */
+/*    align: center;              /* nic */
     text-align: center;         /* nic */
     display: block; /* flex; */    
     width: 100%;                /* nic ==============================================================*/
     overflow/*-x*/: hidden;         /* nic ==============================================================*/
+    background-size: cover;     /* nic */
     background-color: #141414;
     color: #848484;
     align-items: stretch;       /**/
@@ -96,14 +101,13 @@ header .container:after {
 /**/
 
 /* container ========================================================================== */
-.container, footer {
-  display: flex;            /* ??? */
+.container, footer {  /*  position: relative;       /* delete? pointless without top/bottom/left/right command ? */
+  display: block; /*flex;            /* ??? */
   width: 100%;
   mid-width: 720px;         /* ??? */
   margin: 20px;
 /*  padding: 0 20px;         /*****/
-  *zoom: 1; 
-/*  position: relative;       /* delete? pointless without top/bottom/left/right command */
+  *zoom: 1;
   z-index: 88; /* common block, floats in front of most stuff */ 
 }
 .container:after {
@@ -167,7 +171,8 @@ small { display: inline-block;
 
 /* Social links ============================================================ */
 .social-links {
-    margin: 36px;         /* centers the div box */
+/*    margin: 36px;         /* centers the div box */
+    height: 115px;             /* better hard code it */
     width: 100%;
     display: flex;      /* important! */
     position: absolute; /* important! */
@@ -255,7 +260,6 @@ small { display: inline-block;
     opacity: 0.9;
     transform: translate(-50%, 100%);
 }
-
 .social-icon:hover .tooltip {
     visibility: visible;
     opacity: 1;
@@ -265,14 +269,15 @@ small { display: inline-block;
 }
 
 /* icon colors ================================================================================ */
-.social-icon--github { background: #4284c0; }
-.social-icon--twitter { background: #2b97f1; }
+
 .social-icon--youtube { background: #fa3217; }
+.social-icon--soundcloud { background: #ff5836; }
 .social-icon--instagram { background: #E1306C; }
 .social-icon--facebook{ background: #3b5a9b; }
+.social-icon--twitter { background: #2b97f1; }
 .social-icon--twitch { background: purple; }
 .social-icon--linktree { background: green; }
-.social-icon--soundcloud { background: #ff5836; }
+.social-icon--github { background: #4284c0; }
 
 /* tooltip colors ------- ----------------------------------------------------------------------*/
 .social-icon--facebook .tooltip {             background: #3b5a9b; columns: currentColor; }
