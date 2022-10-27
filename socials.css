@@ -2,10 +2,10 @@
 
 body {
     position: absolute;         /* nic ==============================================================*/
+    top: 0px;                   /* nic ==============================================================*/
     display: block; /* flex; */    
     width: 100%;                /* nic ==============================================================*/
     overflow-x: hidden;         /* nic ==============================================================*/
-    top: 0;         /* nic ==============================================================*/
     background-color: #141414;
     color: #848484;
     align-items: stretch;       /**/
@@ -136,8 +136,8 @@ small { display: inline-block;
     position: absolute; /* important! */
     z-index: 97;
     padding: 0 0 0 139px;
-/*    align-items: stretch;
-    justify-content: center; */
+/*    align-items: stretch;*/
+    justify-content: space-evenly; 
 }
 .social-icon {
     display: flex;
