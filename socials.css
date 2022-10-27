@@ -7,29 +7,29 @@ a:link, a:visited { /*background-color: #f44336;*/  color: white; text-align: ce
 a:hover, a:active { /*background-color: rgba(0,0,0,1);*/  text-decoration: underline; outline: 0; }
 
 .bg-original {  /* penises */ }
-.bgcolor {  background: -webkit-linear-gradient(0, #4f4f4f, #4f4f4f) top left, -webkit-linear-gradient(0, #4f4f4f, #4f4f4f) top right, -webkit-linear-gradient(135deg, transparent 5px, #4f4f4f 0) bottom right, -webkit-linear-gradient(0, #4f4f4f, #4f4f4f) bottom left;
+.lazy-bg {  }
+.bg-color {  background: -webkit-linear-gradient(0, #4f4f4f, #4f4f4f) top left, -webkit-linear-gradient(0, #4f4f4f, #4f4f4f) top right, -webkit-linear-gradient(135deg, transparent 5px, #4f4f4f 0) bottom right, -webkit-linear-gradient(0, #4f4f4f, #4f4f4f) bottom left;
             background: linear-gradient(0, #4f4f4f, #4f4f4f) top left, linear-gradient(0, #4f4f4f, #4f4f4f) top right, linear-gradient(315deg, transparent 5px, #4f4f4f 0) bottom right, linear-gradient(0, #4f4f4f, #4f4f4f) bottom left;
             background-size: 55% 55%;
             background-repeat: no-repeat;
             background-size: cover;
  }
-.lazy-bg {  }
 .bg {
-/**    position: absolute;     /* ??? */
+/*    position: absolute;     /* ??? */
     margin: 0 20px;
     width: 100%;
-    background-image: url(https://images.unsplash.com/photo-1536264911542-668b0180d5a1?ixlib=rb-0.3.5&q=85&fm=jpg&crop=entropy&cs=srgb&ixid=eyJhcHBfaWQiOjE0NTg5fQ&s=a9a32743f06349efc39aeae90f047e9f) center center cover no-repeat /*fixed*/;     /**/        
+    background-image: url(https://images.unsplash.com/photo-1536264911542-668b0180d5a1?ixlib=rb-0.3.5&q=85&fm=jpg&crop=entropy&cs=srgb&ixid=eyJhcHBfaWQiOjE0NTg5fQ&s=a9a32743f06349efc39aeae90f047e9f) center center cover no-repeat fixed;     /**/        
 /*    opacity: 0.5;           /* ??? */
-    background-position: 50% 50%;
+/*  background-position: 50% 50%;
     background-size: cover;
-/*  background-repeat: no-repeat;
-  background-attachment: fixed; /**/
+    background-repeat: no-repeat;
+    background-attachment: fixed; /**/
 /*    background-clip: text;
     height: 200vh;
     font-weight: bold;
     font-size: 25rem; /**/
 /*    -webkit-text-fill-color: transparent; /**/
-    position: relative;           /**/
+/*    position: relative;           /**/
 /*    display: flex;
 /*    align-items: flex-start;
     justify-content: center;  /**/
@@ -41,25 +41,25 @@ a:hover, a:active { /*background-color: rgba(0,0,0,1);*/  text-decoration: under
         background-size: cover;
 /*        background-position: 50% 50%;
         position: absolute;
-        top:0;  right:0;    bottom:0;   left: 0;  /**/
+        top:0; right:0; bottom:0; left:0;  /* nic */
         z-index: -2;
  /*   }
 /**/
 }
 
 body {
-    position: absolute;         /* nic ==============================================================*/
-/*    top: 0px;                 /* nic */
-/*    align: center;              /* nic */
-    text-align: center;         /* nic */
-    display: block; /* flex; */    
-    width: 100%;                /* nic ==============================================================*/
-    overflow/*-x*/: hidden;         /* nic ==============================================================*/
-    background-size: cover;     /* nic */
+    position: absolute;                 /* nic ==============================================================*/
+    display: block; /* flex; */
+    width: 100%;                        /* nic ==============================================================*/
+    overflow/*-x*/: hidden;             /* nic ==============================================================*/
+    background-size: cover;             /* nic */
     background-color: #141414;
     color: #848484;
     align-items: stretch;       /**/
     justify-content: center;    /**/
+    top:0; right:0; bottom:0; left:0;   /* nic */
+/*    align: center;                    /* nic */
+    text-align: center;                 /* nic */
     font-family: "Source Sans Pro", "Open Sans", sans-serif;
     font-size: 14px;
     line-height: 20px;
@@ -108,10 +108,11 @@ header .container:after {
   height: 540px;            /* ??? */
   min-height: 540px;         /* ??? */
   margin: 20px;
+  text-align: center;
 /*  padding: 0 20px;         /*****/
   *zoom: 1;
   z-index: 88;               /* 88 ==================*/
-  text-align: center;
+
   /*  padding: 30px 20px 30px 20px;     /* Nic ======================================================================*/
   text-align: center;
 }
