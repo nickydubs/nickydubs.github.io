@@ -1,45 +1,80 @@
 /* Project_Name: Nicky Dubs github page (based on Themezy Band Template)
- * Author: NICKY DUBS * Email: nickydubsmusic@gmail.com * URL: https://nickydubs.com */
+ * Author: Nicky Dubs * Email: nickydubsmusic@gmail.com * URL: http://nickydubs.com */
 
-a {         background: transparent;    transition: all 0.3s ease; }
-a:focus {   outline: thin dotted;       transition: all 0.3s ease; }
-a:link, a:visited { /* background-color: #f44336; */
-  color: white;
-  text-align: center;
-  text-decoration: none;
-  display: inline-block; }
-a:hover, a:active { /* background-color: rgba(0,0,0,0); */
-  text-decoration: underline;
-  outline: 0; }
+a       { background: transparent; transition: all 0.3s ease; }
+a:focus { outline: thin dotted;    transition: all 0.3s ease; }
+a:link, a:visited { /*background-color: #f44336;*/  color: white; text-align: center; display: inline-block; text-decoration: none; }
+a:hover, a:active { /*background-color: rgba(0,0,0,1);*/  text-decoration: underline; outline: 0; }
+
+.bgcolor {
+  
+}
+.bg-orig {
+  /* penises */
+}
+.bg {
+    position: absolute;     /* ??? */
+    margin: 0 20px;
+    width: 100%;
+    background-image: url(https://images.unsplash.com/photo-1536264911542-668b0180d5a1?ixlib=rb-0.3.5&q=85&fm=jpg&crop=entropy&cs=srgb&ixid=eyJhcHBfaWQiOjE0NTg5fQ&s=a9a32743f06349efc39aeae90f047e9f);
+    opacity: 0.2;           /* ??? */
+    background-size: cover;
+    background-position: 50% 50%;
+/*    background-clip: text;
+    height: 200vh;
+    font-weight: bold;
+    font-size: 25rem; /**/
+/*    -webkit-text-fill-color: transparent; /**/
+/*    position: relative;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;  /**/
+    overflow: hidden;
+/*    
+    &:before {
+        content: '';
+        background-image: inherit;
+        background-size: cover;
+        background-position: 50% 50%;
+        position: absolute;
+        top:0;  right:0;    bottom:0;   left: 0;  /**/
+        z-index: -2;
+ /*   }
+/**/
+}
 
 body {
     position: absolute;         /* nic ==============================================================*/
-/*    top: 0px;                   /* nic ==============================================================*/
+/*    top: 0px;                 /* nic */
+    align: center;              /* nic */
+    text-align: center;         /* nic */
     display: block; /* flex; */    
     width: 100%;                /* nic ==============================================================*/
-    overflow-x: hidden;         /* nic ==============================================================*/
+    overflow/*-x*/: hidden;         /* nic ==============================================================*/
     background-color: #141414;
     color: #848484;
     align-items: stretch;       /**/
     justify-content: center;    /**/
     font-family: "Source Sans Pro", "Open Sans", sans-serif;
     font-size: 14px;
-    line-height: 20px; 
+    line-height: 20px;
     min-height: 30vh;
 }
-#site-content { overflow: hidden; }
+#site-content { overflow: hidden; } /* obsolete, delete? */
 
 /* header ===============================================================================*/
 header {
-/*  display: flex; /*  ???  */
+/*  display: block; /*flex; /*???*/
   margin: 20px; /**/
 /*  position: relative;   /**/
+  height: 115px;
   width: 100%;
   min-width: 720px;
+  border-bottom: 1px solid rgba(230, 255, 255, 0.15); /* holy shit */
   *zoom: 1;
-  z-index: 88; /* common block, floats in front of most stuff */ 
+  z-index: 88; /* common block, floats in front of most stuff */
 }
-header:after {
+/*header:after {
   content: " ";
   clear: both;
   display: block;
@@ -48,19 +83,20 @@ header:after {
 }
 header .container {
   *zoom: 1;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.15); 
-}
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15); /* holy craaap */
+/*}
 header .container:after {
   content: " ";
-/*  clear: both; */
-  display: block;
+/*  clear: both; /**/
+/*  display: block;
   position: relative;
   overflow: hidden;
   height: 0; /* HEADER HEIGHT could be hardcoded here ============================================================== */
-}
+/*}
+/**/
 
 /* container ========================================================================== */
-.container {
+.container, footer {
   display: flex;            /* ??? */
   width: 100%;
   mid-width: 720px;         /* ??? */
@@ -75,49 +111,16 @@ header .container:after {
   clear: both;
 /*  display: block;     /* ??? */
   overflow: hidden;
-  height: 0; }
+  height: 0; 
+}
 
 @media (min-width: 768px) { .container { width: 750px; } }
 @media (min-width: 992px) { .container { width: 970px; } }
 @media (min-width: 1200px) { .container { width: 1170px; } }
-
 .container-fluid { margin:0 auto; padding:0; *zoom:1; }
 .container-fluid:after { content:" "; clear:both; display:block; overflow:hidden; height:0; }
 
-.bg {
-    position: absolute;     /* ??? */
-    margin: 0 20px;
-    width: 100%;
-    padding: 0;
-    z-index: -2;
-/*    top: 0; /**/
-    background-image: url(https://images.unsplash.com/photo-1536264911542-668b0180d5a1?ixlib=rb-0.3.5&q=85&fm=jpg&crop=entropy&cs=srgb&ixid=eyJhcHBfaWQiOjE0NTg5fQ&s=a9a32743f06349efc39aeae90f047e9f);
-    opacity
-    background-size: cover;
-    background-position: 50% 50%;
-/*    background-clip: text;
-    height: 200vh;
-    font-weight: bold;
-    font-size: 50rem;
-    -webkit-text-fill-color: transparent;
-    position: relative;
-    display: flex;
-    align-items: flex-start;
-    justify-content: center;
-    overflow: hidden;
-    
-    &:before {
-        content: '';
-        background-image: inherit;
-        background-size: cover;
-        background-position: 50% 50%;
-        position: absolute;
-        top:0;  right:0;    bottom:0;   left: 0;
-        z-index: -2;
-    }
-/**/
-}
-
+/* img ======================================================================================= */
 img { border: 0; }
 
 /* mouseovers ================================================================================ */
