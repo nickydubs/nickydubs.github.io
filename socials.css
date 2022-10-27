@@ -20,7 +20,8 @@ a:hover, a:active { /*background-color: rgba(0,0,0,1);*/  text-decoration: under
 /*    position: absolute;     /* ??? */
     margin: 0 20px;
     width: 100%;
-    background: url(https://images.unsplash.com/photo-1536264911542-668b0180d5a1?ixlib=rb-0.3.5&q=85&fm=jpg&crop=entropy&cs=srgb&ixid=eyJhcHBfaWQiOjE0NTg5fQ&s=a9a32743f06349efc39aeae90f047e9f) center center cover no-repeat; /* fixed;     /**/        
+/*    background: url(https://images.unsplash.com/photo-1536264911542-668b0180d5a1?ixlib=rb-0.3.5&q=85&fm=jpg&crop=entropy&cs=srgb&ixid=eyJhcHBfaWQiOjE0NTg5fQ&s=a9a32743f06349efc39aeae90f047e9f) center center cover no-repeat; /* fixed;     /**/        
+ background: url(dummy/slide-1.jpg) center center cover no-repeat; /**/
 /*    opacity: 0.5;           /* ??? */
 /*  background-position: 50% 50%;
     background-size: cover;
@@ -28,13 +29,10 @@ a:hover, a:active { /*background-color: rgba(0,0,0,1);*/  text-decoration: under
     background-attachment: fixed; 
     background-clip: text;/**/
     height: 200vh;
-    font-weight: bold;
-    font-size: 25rem; /**/
     -webkit-text-fill-color: transparent; /**/
 /*/*    position: relative;           /**/
     align-items: flex-start;
     justify-content: center;  /**/
-    overflow: hidden;
 /*    
     &:before {
         content: '';
@@ -52,10 +50,10 @@ body {
 /*    position: absolute;               /* nic ==============================================================*/
     display: block; /* flex; */
     width: 100%;                        /* nic ==============================================================*/
-    overflow/*-x*/: hidden;             /* nic ==============================================================*/
+    overflow-x: hidden;             /* nic ==============================================================*/
     background-size: cover;             /* nic */
     background-color: #14141408;        /* nic */
-    color: #84848408;                   /* nic */
+    color: #848484;                   /**/
     align-items: stretch;       /**/
     justify-content: center;    /**/
     top:0; right:0; bottom:0; left:0;   /* nic */
@@ -66,7 +64,7 @@ body {
     line-height: 20px;
     min-height: 30vh;
 }
-#site-content { overflow: hidden; } /* obsolete, delete? */
+#site-content { overflow: hidden; } /* hides scrollbar, delete? */
 
 /* header ===============================================================================*/
 header {
@@ -120,7 +118,7 @@ header .container:after {
   content: " ";
   clear: both;
 /*  display: block;     /* ??? */
-  overflow: hidden;
+  overflow: hidden;     /* ???*/
   height: 0; 
 }
 
@@ -137,11 +135,11 @@ img { border: 0; }
 .slider { position: relative; }
 
 /* mouseovers ================================================================================ */
-#branding {
+#branding, #everglow {
   float: left;        /* left, right or none!! (no center) */
   display: block;       /* keep */
-  position: relative;   /**/
-  margin: 20px 0 0 20px;
+/*  position: relative;   /**/
+  margin: 40px 0 0 40px;
   color: inherit;
   text-decoration: none;
   transition: all 0.3s ease-in-out;
@@ -157,11 +155,15 @@ img { border: 0; }
                 -5px -5px 10px blue;
     border: 6px solid rgba(230,255,255, 0.05);   /**/
 }
-#branding:hover, #branding:active { animation: orangepulse 12s infinite; }
+#everglow:hover, #everglow:active { animation: everglow 12s infinite; }
+@keyframes everglow {
+    50%  { box-shadow: 0px 0px 200px 200px rgba(255, 69, 0, 0.1); }
+}
+#branding:hover, #branding:active { animation: orangepulse 2s infinite; }
 @keyframes orangepulse {
-    0%   { box-shadow: 0px 0px 10px 10px rgba(253, 89, 39, 0.4); }
-    50%  { box-shadow: 0px 0px 200px 200px rgba(255, 69, 0, 0.8); }
-    100% { box-shadow: 0px 0px 10px 10px rgba(253, 89, 39, 0.4); }
+    0%   { box-shadow: 0px 0px 10px 10px rgba(253, 89, 39, 0.9); }
+    50%  { box-shadow: 0px 0px 200px 200px rgba(255, 69, 0, 0.1); }
+    100% { box-shadow: 0px 0px 10px 10px rgba(253, 89, 39, 0.9); }
 }
 
 small { display: inline-block;
@@ -178,7 +180,7 @@ small { display: inline-block;
 
 /* Social links ============================================================ */
 .social-links {
-    margin: 12px 139px;         /* centers the div box */
+    margin: 16px 130px;         /* centers the div box */
     height: 118px;             /* better hard code it */
     width: 100%;
     display: block;/*flex;      /* hmm? */
