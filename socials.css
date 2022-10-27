@@ -56,8 +56,9 @@ header .container {
 }
 header .container:after {
   content: " ";
-  clear: both;
+/*  clear: both; */
   display: block;
+  position: relative;
   overflow: hidden;
   height: 0; /* HEADER HEIGHT could be hardcoded here ============================================================== */
 }
@@ -145,7 +146,6 @@ small { display: inline-block;
     width: 60px;
     height: 60px;
     margin: 0 0.5rem;
-    padding: 0;
     color: white;
     border-radius: 50%;
     cursor: pointer;
@@ -166,7 +166,7 @@ small { display: inline-block;
                 inset -1px -1px 2px black,
                 5px 5px 10px #90a4ae,
                 -5px -5px 10px white; /* #fd5927; */
-    border: 6px solid rgba(255,255,255);
+    border: 6px solid rgba(255,255,255,1);
     animation: glowpulse 1.2s infinite;
 }
 @keyframes glowpulse {
