@@ -7,7 +7,7 @@ a:link, a:visited { /*background-color: #f44336;*/ color:white; text-align:cente
 a:hover, a:active { /*background-color: rgba(0,0,0,1);*/  text-decoration:underline; outline:0; }
 
 .bg2 {  /* penises */
-    background: url(https://images.unsplash.com/photo-1536264911542-668b0180d5a1?ixlib=rb-0.3.5&q=85&fm=jpg&crop=entropy&cs=srgb&ixid=eyJhcHBfaWQiOjE0NTg5fQ&s=a9a32743f06349efc39aeae90f047e9f) center center cover no-repeat; /* fixed;     /**/        
+    background: url(https://images.unsplash.com/photo-1536264911542-668b0180d5a1?ixlib=rb-0.3.5&q=85&fm=jpg&crop=entropy&cs=srgb&ixid=eyJhcHBfaWQiOjE0NTg5fQ&s=a9a32743f06349efc39aeae90f047e9f) center center auto no-repeat; /* fixed;     /**/        
 }
 .bg-color {  background: -webkit-linear-gradient(0, #4f4f4f, #4f4f4f) top left, -webkit-linear-gradient(0, #4f4f4f, #4f4f4f) top right, -webkit-linear-gradient(135deg, transparent 5px, #4f4f4f 0) bottom right, -webkit-linear-gradient(0, #4f4f4f, #4f4f4f) bottom left;
             background: linear-gradient(0, #4f4f4f, #4f4f4f) top left, linear-gradient(0, #4f4f4f, #4f4f4f) top right, linear-gradient(315deg, transparent 5px, #4f4f4f 0) bottom right, linear-gradient(0, #4f4f4f, #4f4f4f) bottom left;
@@ -18,14 +18,10 @@ a:hover, a:active { /*background-color: rgba(0,0,0,1);*/  text-decoration:underl
 .bg {
     padding: 0 20px;    /* margin? */
     width: 100%;
-    background: url(https://images.unsplash.com/photo-1536264911542-668b0180d5a1?ixlib=rb-0.3.5&q=85&fm=jpg&crop=entropy&cs=srgb&ixid=eyJhcHBfaWQiOjE0NTg5fQ&s=a9a32743f06349efc39aeae90f047e9f) center center cover no-repeat; /* fixed;     /**/        
-/* background: url(dummy/slide-1.jpg) center center cover no-repeat; /*fixed; /**/
+/*    background: url(https://images.unsplash.com/photo-1536264911542-668b0180d5a1?ixlib=rb-0.3.5&q=85&fm=jpg&crop=entropy&cs=srgb&ixid=eyJhcHBfaWQiOjE0NTg5fQ&s=a9a32743f06349efc39aeae90f047e9f) center center auto no-repeat; /* fixed;     /**/        
+/*  background: url(dummy/slide-1.jpg) center center auto no-repeat; /*fixed; /**/
 /*    opacity: 0.5;           /* ??? */
-/*  background-position: center center;
-    background-size: cover;
-    background-repeat: no-repeat;
-    background-attachment: fixed; 
-    background-clip: text;
+/*  background-position: center center;	background-size:auto;	background-repeat:no-repeat;	background-attachment:fixed;	background-clip: text;
     height: 200vh;
  /*   -webkit-text-fill-color: transparent; /**/
 /*/*    position: relative;           /**/
@@ -35,7 +31,7 @@ a:hover, a:active { /*background-color: rgba(0,0,0,1);*/  text-decoration:underl
     &:before {
         content: '';
         background-image: inherit;  /**/
- /*        background-size: cover;
+ /*        background-size: auto;
        background-position: 50% 50%;
         position: absolute;
         top:0; right:0; bottom:0; left:0;  /* nic */
@@ -47,14 +43,15 @@ a:hover, a:active { /*background-color: rgba(0,0,0,1);*/  text-decoration:underl
 html, body {
 	height: 100%;
     width: 100%;
-    margin: 0;
-	padding: 0;
+	min-width: 768px;
+    margin: 0px;
+	padding: 0px;
 	overflow-x: hidden;	/* hide horizontal scrollbar */
     }
 body {
 /*    position: absolute;               /* nic ==============================================================*/
     display: block; /* flex; */
-    background-size: cover;             /* nic */
+    background-size: auto;             /* nic */
     background-color: #141414;
     color: #848484;
 	align-items: stretch;       /**/
@@ -68,62 +65,31 @@ body {
     min-height: 30vh;
 }
 .hide-scrollbar { overflow: hidden; } /* delete? */
+.slider { position: relative; }
+img { border: 0; }
 
-/* header ===============================================================================*/
-header {
+
+/* BLOCKS (header, footer, .container) ===============================================================================*/
+header { 	height: 120px; }
+footer { 	height: 360px; min-height: 360px; }
+.container{ height: 100%; min-height: 5400px; }
+
+header,
+footer,
+.container {
   display: block; /*flex; /*???*/
-    padding: 20px auto; /**/
-/*  position: relative;   /**/
-  height: 115px;
   width: 100%;
-  min-width: 720px;
-  border-bottom: 1px solid rgba(230, 255, 255, 0.15); /* holy shit */
+  min-width: 768px;  
+  padding: 22px; /**/
+  text-align: center; 
   *zoom: 1;
   z-index: 88; /**/
+  border-bottom: 1px solid rgba(230, 255, 255, 0.15); /* holy shit */
 }
-/*header:after {
-  content: " ";
-  clear: both;
-  display: block;
-  overflow: hidden;
-  height: 0; 
-}
-header .container {
-  *zoom: 1;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.15);       /* == holy craaap this line == */
-/*}
-header .container:after {
-  content: " ";
-/*  clear: both; /**/
-/*  display: block;
-  position: relative;
-  overflow: hidden;
-  height: 0; /* HEADER HEIGHT could be hardcoded here ============================================================== */
-/*}
-/**/
 
-/*  ========================================================================== */
-.container, footer {  /*  position: relative;       /* delete? pointless without top/bottom/left/right command ? */
-  display: block; /*flex;            /* ??? */
-  width: 100%;
-  min-width: 720px;         /* ??? */
-  height: 540px;            /* ??? */
-  min-height: 360px;         /* ??? */
-  margin: 20px 0;
-  text-align: center;
-/*  padding: 0 20px;         /*****/
-  *zoom: 1;
-  z-index: 88;              /**/
-  /*  padding: 30px 20px 30px 20px;     /* Nic ======================================================================*/
-  text-align: center;
-}
-.container:after {
-  content: " ";
-  clear: both;
-/*  display: block;     /* ??? */
-  overflow: hidden;     /* ???*/
-  height: 0; 
-}
+header:after, 
+footer:after, 
+.container:after {	content:" "; clear:both; display:block; position:relative; overflow:hidden; height:0; }
 
 @media (min-width: 768px) { .container { width: 750px; } }
 @media (min-width: 992px) { .container { width: 970px; } }
@@ -131,78 +97,92 @@ header .container:after {
 .container-fluid { margin: 0 auto; padding:0; *zoom:1; }
 .container-fluid:after { content:" "; clear:both; display:block; overflow:hidden; height:0; }
 
-/* img ======================================================================================= */
-img { border: 0; }
 
-/* slider ======================================================================================= */
-.slider { position: relative; }
-
-/* mouseovers ================================================================================ */
-#branding, #everglow {
+/* glowing animated mouseovers ================================================================================ */
+#branding, 
+#everglow {
   float: left;        /* left, right or none!! (no center) */
   display: block;       /* keep */
   position: absolute;   /**/
-  margin: 20px 0 0 20px;
+  padding: 18px 0 0 18px;	/* margin? */
   color: inherit;
   text-decoration: none;
   transition: all 0.3s ease;
   border-radius: 4px;
   z-index: 98;
 }
-#branding img, #everglow img {
+#branding img, 
+#everglow img {
     display: block;
     border-radius: 4px;
     box-shadow: inset 1px 1px 2px rgba(0, 0, 0, 1),
-                inset -1px -1px 2px rgba(253, 89, 39, 0.4),
-                5px 5px 10px red,
-                -5px -5px 10px blue;
+                inset -1px -1px 2px rgba(253, 255, 255, 1),
+				5px 5px 20px 20px rgba(255, 69, 0, 0.1), 
+				-5px -5px 20px 20px rgba(253, 89, 39, 0.1),
+				5px 5px 10px 10px red,
+                -5px -5px 10px 10px blue,
+				0px 0px 2px 2px rgba(255, 45, 145, 1),
+				0px 0px 1px 1px rgba(255, 69, 69, 0.1);
+
     border: 6px solid rgba(230,255,255, 0.05);   /**/
     z-index: 98;
 }
 #everglow:hover, #everglow:active { animation: everglow 12s infinite; }
 @keyframes everglow {
-    50%  { box-shadow: 0px 0px 1080px 1080px rgba(255, 69, 0, 0.01); }
-}
-#branding:hover, #branding:active { animation: orangepulse 2s infinite; }
-@keyframes orangepulse {
-    0%   { box-shadow: 0px 0px 10px 10px rgba(253, 89, 39, 0.9); }
-    50%  { box-shadow: 0px 0px 200px 200px rgba(255, 69, 0, 0.1); }
-    100% { box-shadow: 0px 0px 10px 10px rgba(253, 89, 39, 0.9); }
+	50% { 	box-shadow: inset 1px 1px 2px rgba(253, 89, 39, 1),
+						inset -1px -1px 2px rgba(30, 30, 30, 1),
+						5px 5px 20px 20px rgba(253, 89, 39, 0.1), 
+						-5px -5px 20px 20px rgba(255, 69, 0, 0.1),
+						5px 5px 15px 15px blue,
+						-5px -5px 15px 15px red,
+						0px 0px 2160px 2160px rgba(255, 69, 69, 0.01),
+						0px 0px 1080px 1080px rgba(255, 45, 145, 0.1);
+		}
 }
 
-small { position:absolute;
-    display: inline-block;
+#branding:hover, #branding:active { animation: orangepulse 2s infinite; }
+@keyframes orangepulse {
+    0%   { box-shadow:	0 0 10px 10px rgba(253, 89, 39, 1); }
+	
+    50%  { box-shadow:	inset 1px 1px 2px rgba(253, 89, 39, 1),
+						inset -1px -1px 2px rgba(30, 30, 30, 1),
+						5px 5px 20px 20px rgba(253, 89, 39, 0.1), 
+						-5px -5px 20px 20px rgba(255, 69, 0, 0.1),
+						5px 5px 10px 10px blue,
+						-5px -5px 10px 10px red;
+;	}
+    100% { box-shadow: 0 0 10px 10px rgba(245, 45, 145, 1); }
+}
+
+small { position: relative;	/*absolute;	/**/
+    	display: block;
         margin: 2px 0; /**/
         font-size: 11px;
         line-height: 13px;
-        background: transparent; 
-}
-.site-description {
-    display: inline-block;
-    color: white;
-    text-shadow: 1px 1px 1px #333333; /**/
+        background: transparent;
+    	color: white;
+    	text-shadow: 1px 1px 2px #80808080; /**/
 }
 
 /* Social links ============================================================ */
 .social-links {
-/*    position: absolute;     /* DELETE? */
-    padding: 32px;         /* centers the div box */
+/*    display: block;	/*flex; 							/* delete? */
+    position: absolute; 		/* important! */
+    padding: 32px;         		/*  */
     height: 120px;             /* better hard code it */
     width: 100%;
     min-width: 720px;
-/*    display: block;/*flex;      /* hmm? */
-    position: absolute; /* important! */
-    z-index: 98;        /* ? */
-/*    padding: 12px 139px;
-/*    align-items: stretch;         /**/
-    justify-content: center;  /**/
+/*    padding: 36px 139px;		/**/
+/*    align-items: stretch;    	/**/     
+    justify-content: center;  	/**/
+    z-index: 98;				/**/
 }
 .social-icon {
-    display: flex;      /* keep */
-    position: relative; /* very important */
-    width: 60px;
-    height: 60px;
-    min-width: 60px;        /**/
+    display: flex;      	/* keep */
+    position: relative; 	/* very important */
+/*	align-items: center;	/* center icons vertically?? */
+	top: 5px;				/* center icons vertically */
+    width: 60px;	min-width: 60px;	height: 60px;	min-height: 60px;	/**/
     margin: 0 0.5rem;       /**/
     color: white;
     border-radius: 50%;
@@ -260,7 +240,7 @@ small { position:absolute;
 /*    text-transform: uppercase; */
     transform: translate(-50%, -100%);
     transition: all 0.3s ease;       /**/
-    z-index: 99;
+    z-index: 99;	/* top layer */
   }
   .tooltip:after {
     display: block;
@@ -369,7 +349,7 @@ small { position:absolute;
                 width: 100%;
                 min-height: 540px;
                 background-color: #171717;
-                background-size: cover;       /* <- <- <--------------------- */
+                background-size: cover; /* auto; <- <- <--------------------- */
 }
 
 .slide-title {
