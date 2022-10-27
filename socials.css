@@ -20,10 +20,10 @@ a:hover, a:active { /*background-color: rgba(0,0,0,1);*/  text-decoration: under
     padding: 0 20px;    /* margin? */
     width: 100%;
 /*    background: url(https://images.unsplash.com/photo-1536264911542-668b0180d5a1?ixlib=rb-0.3.5&q=85&fm=jpg&crop=entropy&cs=srgb&ixid=eyJhcHBfaWQiOjE0NTg5fQ&s=a9a32743f06349efc39aeae90f047e9f) center center cover no-repeat; /* fixed;     /**/        
- background: url(dummy/slide-1.jpg) center center cover no-repeat; /* fixed; /**/
+ background: url(dummy/slide-1.jpg) center center cover no-repeat fixed; /**/
 /*    opacity: 0.5;           /* ??? */
-/*  background-position: 50% 50%;
-    background-size: cover;
+  background-position: 50% 50%;
+/*    background-size: cover;
     background-repeat: no-repeat;
     background-attachment: fixed; 
     background-clip: text;/**/
@@ -68,7 +68,7 @@ body {
 /* header ===============================================================================*/
 header {
   display: block; /*flex; /*???*/
-/*  margin: 20px; /**/
+    padding: 20px auto; /**/
 /*  position: relative;   /**/
   height: 115px;
   width: 100%;
@@ -153,6 +153,7 @@ img { border: 0; }
                 5px 5px 10px red,
                 -5px -5px 10px blue;
     border: 6px solid rgba(230,255,255, 0.05);   /**/
+    z-index: 98;
 }
 #everglow:hover, #everglow:active { animation: everglow 12s infinite; }
 @keyframes everglow {
@@ -165,7 +166,8 @@ img { border: 0; }
     100% { box-shadow: 0px 0px 10px 10px rgba(253, 89, 39, 0.9); }
 }
 
-small { display: inline-block;
+small { position:absolute;
+    display: inline-block;
 /*        margin: 2px 0; /**/
         font-size: 11px;
         line-height: 13px;
@@ -180,15 +182,16 @@ small { display: inline-block;
 /* Social links ============================================================ */
 .social-links {
 /*    position: absolute;     /* DELETE? */
-    margin: 18px 130px;         /* centers the div box */
+    margin: 20px auto;         /* centers the div box */
     height: 120px;             /* better hard code it */
     width: 100%;
+    min-width: 720px;
 /*    display: block;/*flex;      /* hmm? */
     position: absolute; /* important! */
     z-index: 98;        /* ? */
 /*    padding: 12px 139px;
 /*    align-items: stretch;         /**/
-/*    justify-content: space-evenly;  /**/
+    justify-content: center;  /**/
 }
 .social-icon {
     display: flex;      /* keep */
