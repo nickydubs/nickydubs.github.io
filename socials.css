@@ -19,14 +19,14 @@ a:hover, a:active { /*background-color: rgba(0,0,0,1);*/  text-decoration: under
 .bg {
     padding: 0 20px;    /* margin? */
     width: 100%;
-/*    background: url(https://images.unsplash.com/photo-1536264911542-668b0180d5a1?ixlib=rb-0.3.5&q=85&fm=jpg&crop=entropy&cs=srgb&ixid=eyJhcHBfaWQiOjE0NTg5fQ&s=a9a32743f06349efc39aeae90f047e9f) center center cover no-repeat; /* fixed;     /**/        
- background: url(dummy/slide-1.jpg) center center cover no-repeat fixed; /**/
+    background: url(https://images.unsplash.com/photo-1536264911542-668b0180d5a1?ixlib=rb-0.3.5&q=85&fm=jpg&crop=entropy&cs=srgb&ixid=eyJhcHBfaWQiOjE0NTg5fQ&s=a9a32743f06349efc39aeae90f047e9f) center center cover no-repeat; /* fixed;     /**/        
+/* background: url(dummy/slide-1.jpg) center center cover no-repeat; /*fixed; /**/
 /*    opacity: 0.5;           /* ??? */
-  background-position: 50% 50%;
-/*    background-size: cover;
+/*  background-position: center center;
+    background-size: cover;
     background-repeat: no-repeat;
     background-attachment: fixed; 
-    background-clip: text;/**/
+    background-clip: text;
     height: 200vh;
  /*   -webkit-text-fill-color: transparent; /**/
 /*/*    position: relative;           /**/
@@ -45,15 +45,20 @@ a:hover, a:active { /*background-color: rgba(0,0,0,1);*/  text-decoration: under
 /**/
 }
 
+html, body {
+	height: 100%;
+    width: 100%;
+    margin: 0;
+	padding: 0;
+	overflow-x: hidden;	/* hide horizontal scrollbar */
+    }
 body {
 /*    position: absolute;               /* nic ==============================================================*/
     display: block; /* flex; */
-    width: 100%;                        /* nic ==============================================================*/
-    overflow-x: hidden;             /* nic ==============================================================*/
     background-size: cover;             /* nic */
-    background-color: #141414;        /* nic */
-    color: #848484;                   /**/
-    align-items: stretch;       /**/
+    background-color: #141414;
+    color: #848484;
+	align-items: stretch;       /**/
     justify-content: center;    /**/
     top:0; right:0; bottom:0; left:0;   /* nic */
 /*    align: center;                    /* nic */
@@ -63,7 +68,7 @@ body {
     line-height: 20px;
     min-height: 30vh;
 }
-#site-content { overflow: hidden; } /* hides scrollbar, delete? */
+.hide-scrollbar { overflow: hidden; } /* delete? */
 
 /* header ===============================================================================*/
 header {
