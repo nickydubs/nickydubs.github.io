@@ -72,7 +72,7 @@ img { border: 0; }
 /* BLOCKS (header, footer, .container) ===============================================================================*/
 header { 	height: 120px; }
 footer { 	height: 360px; min-height: 360px; }
-.container{ height: 100%; min-height: 5400px; }
+.container{ height: 100%; min-height: 540px; }
 
 header,
 footer,
@@ -80,7 +80,7 @@ footer,
   display: block; /*flex; /*???*/
   width: 100%;
   min-width: 768px;  
-  padding: 22px; /**/
+  padding: 20px; 	/**/
   text-align: center; 
   *zoom: 1;
   z-index: 88; /**/
@@ -104,7 +104,7 @@ footer:after,
   float: left;        /* left, right or none!! (no center) */
   display: block;       /* keep */
   position: absolute;   /**/
-  padding: 18px 0 0 18px;	/* margin? */
+  padding: 20px 0 0 20px;	/* margin? */
   color: inherit;
   text-decoration: none;
   transition: all 0.3s ease;
@@ -156,7 +156,7 @@ footer:after,
 
 small { position: relative;	/*absolute;	/**/
     	display: block;
-        margin: 2px 0; /**/
+/*        margin: 2px 0; /**/
         font-size: 11px;
         line-height: 13px;
         background: transparent;
@@ -180,10 +180,11 @@ small { position: relative;	/*absolute;	/**/
 .social-icon {
     display: flex;      	/* keep */
     position: relative; 	/* very important */
-/*	align-items: center;	/* center icons vertically?? */
-	top: 5px;				/* center icons vertically */
+	align-items: center;	/* center icons vertically?? */
+/*	top: 5px;				/* center icons vertically */
     width: 60px;	min-width: 60px;	height: 60px;	min-height: 60px;	/**/
     margin: 0 0.5rem;       /**/
+	padding-top: 5px;		/**/
     color: white;
     border-radius: 50%;
     cursor: pointer;
