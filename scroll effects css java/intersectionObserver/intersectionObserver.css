@@ -1,0 +1,35 @@
+body, html {
+  background: #212121;
+}
+.container {
+  display: flex;
+  flex-wrap: wrap;
+  width: 1000vw;
+  height: 1000vh;
+}
+.test {
+  flex: 0 0 10vw;
+  height: 10vh;
+  background: gold;
+  transition: 500ms background-color;
+  margin: 0;
+  will-change: background-color;
+  &.is-visible {
+    background: hotpink;
+  }
+}
+
+.scroll {
+  position: fixed;
+  top: 50%; left: 50%;
+  transform: translate(-50%,-50%);
+  text-transform: uppercase;
+  text-align: center;
+  a {
+    display: block;
+    text-transform: lowercase;
+    font-size: .5em;
+    color: #fff;
+    font-weight: normal;
+  }
+}
