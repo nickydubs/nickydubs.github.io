@@ -6,19 +6,19 @@ a:focus { outline: thin dotted;    transition: all 0.3s ease; }
 a:link, a:visited { /*background-color: #f44336;*/ color:white; text-align:center; display:inline-block; text-decoration:none; }
 a:hover, a:active { /*background-color: rgba(0,0,0,1);*/  text-decoration:underline; outline:0; }
 
-.bg2 {  /* penises */
+.bg2 {  /* huge photo of mountains. penises */
     background: url(https://images.unsplash.com/photo-1536264911542-668b0180d5a1?ixlib=rb-0.3.5&q=85&fm=jpg&crop=entropy&cs=srgb&ixid=eyJhcHBfaWQiOjE0NTg5fQ&s=a9a32743f06349efc39aeae90f047e9f) center center auto no-repeat; /* fixed;     /**/        
 }
-.bg-color {  background: -webkit-linear-gradient(0, #4f4f4f, #4f4f4f) top left, -webkit-linear-gradient(0, #4f4f4f, #4f4f4f) top right, -webkit-linear-gradient(135deg, transparent 5px, #4f4f4f 0) bottom right, -webkit-linear-gradient(0, #4f4f4f, #4f4f4f) bottom left;
+.bg-gradient {  background: -webkit-linear-gradient(0, #4f4f4f, #4f4f4f) top left, -webkit-linear-gradient(0, #4f4f4f, #4f4f4f) top right, -webkit-linear-gradient(135deg, transparent 5px, #4f4f4f 0) bottom right, -webkit-linear-gradient(0, #4f4f4f, #4f4f4f) bottom left;
             background: linear-gradient(0, #4f4f4f, #4f4f4f) top left, linear-gradient(0, #4f4f4f, #4f4f4f) top right, linear-gradient(315deg, transparent 5px, #4f4f4f 0) bottom right, linear-gradient(0, #4f4f4f, #4f4f4f) bottom left;
             background-position: 55% 55%;
             background-repeat: no-repeat;
             background-size: cover;
  }
 .bg {
-    padding: 0 20px;    /* margin? */
+    padding: 0 20px;
+	margin: 0 20px;
     width: 100%;
-/*    background: url(https://images.unsplash.com/photo-1536264911542-668b0180d5a1?ixlib=rb-0.3.5&q=85&fm=jpg&crop=entropy&cs=srgb&ixid=eyJhcHBfaWQiOjE0NTg5fQ&s=a9a32743f06349efc39aeae90f047e9f) center center auto no-repeat; /* fixed;     /**/        
 /*  background: url(dummy/slide-1.jpg) center center auto no-repeat; /*fixed; /**/
 /*    opacity: 0.5;           /* ??? */
 /*  background-position: center center;	background-size:auto;	background-repeat:no-repeat;	background-attachment:fixed;	background-clip: text;
