@@ -37,24 +37,26 @@ a:hover, a:active { /*background-color: rgba(0,0,0,1);*/  text-decoration:underl
  /*   }	/**/
 }
 
-html, body {
+html {
 	height: 100%;
     width: 100%;
-	min-width: 750px;	max-width: 970px;
-	min-height: 540px;
+/*	min-width: 750px;	
+	min-height: 540px;	/**/
     margin: 0;
 	padding: 0;
+	justify-content: center;    /**/
 }
 body {	/* position: absolute;			/* nic ==============================================================*/
     display: block; 					/* flex; */
-    background-size: auto;             /* nic */
+    max-width: 970px;
+	background-size: cover;             /* nic */
     background-color: #141414;
     color: #848484;
 	align-items: stretch;       /**/
     justify-content: center;    /**/
     top:0; right:0; bottom:0; left:0;   /* nic */
 	padding: 0 20px;              		/* nic ========================================*/
-    text-align: center;                 /* nic */
+/*	text-align: center;                 /* nic */
     font-family: "Source Sans Pro", "Open Sans", sans-serif;
     font-size: 14px;
     line-height: 20px;
