@@ -1,6 +1,29 @@
 /* Project_Name: Nicky Dubs github page (based on Themezy Band Template)
  * Email: nickydubsmusic@gmail.com * URL: http://nickydubs.com */
 
+html {
+    margin: 0;
+	padding: 0;
+	justify-content: center;    /**/
+}
+body {	/* position: absolute;			/* nic ==============================================================*/
+    padding: 0 20px;              		/* nic ========================================*/
+	margin: 0;
+	min-width: 768px;
+	max-width: 970px;
+	background-size: cover;             /* nic */
+    background-color: #141414;
+    color: #848484;
+	align-items: stretch;       /**/
+    justify-content: center;    /**/
+    font-family: "Source Sans Pro", "Open Sans", sans-serif;
+    font-size: 14px;
+    line-height: 20px;
+	overflow-x: hidden;	/* hide horizontal scrollbar */
+}
+.hide-scrollbar { overflow: hidden; } /* delete? */
+img { border: 0; }
+
 a       { background: transparent; transition: all 0.3s ease; }
 a:focus { outline: thin dotted;    transition: all 0.3s ease; }
 a:link, a:visited { /*background-color: #f44336;*/ color:white; text-align:center; display:inline-block; text-decoration:none; }
@@ -15,16 +38,14 @@ a:hover, a:active { /*background-color: rgba(0,0,0,1);*/  text-decoration:underl
             background-repeat: no-repeat;
             background-size: cover;
  }
-.bg {	/*	position: relative;	/**/
-	/*padding: 0 20px;	/**/
+.bg {
 	margin: 20px;
     width: 100%;	min-width: 750px;	max-width: 970px;
 	min-height: 540px;
 /*  background: url(dummy/slide-1.jpg) center center auto no-repeat; /*fixed; /**/
 /*    opacity: 0.5;           /* ??? */
  /*   -webkit-text-fill-color: transparent; /**/
-/*
-    align-items: stretch;
+/*    align-items: stretch;
     justify-content: center;  /**/
 /*    &:before {
         content: '';
@@ -37,48 +58,13 @@ a:hover, a:active { /*background-color: rgba(0,0,0,1);*/  text-decoration:underl
  /*   }	/**/
 }
 
-html {
-	height: 100%;
-    width: 100%;
-/*	min-width: 750px;	
-	min-height: 540px;	/**/
-    margin: 0;
-	padding: 0;
-	justify-content: center;    /**/
-}
-body {	/* position: absolute;			/* nic ==============================================================*/
-    display: block; 					/* flex; */
-    max-width: 970px;
-	background-size: cover;             /* nic */
-    background-color: #141414;
-    color: #848484;
-	align-items: stretch;       /**/
-    justify-content: center;    /**/
-    top:0; right:0; bottom:0; left:0;   /* nic */
-	padding: 0 20px;              		/* nic ========================================*/
-/*	text-align: center;                 /* nic */
-    font-family: "Source Sans Pro", "Open Sans", sans-serif;
-    font-size: 14px;
-    line-height: 20px;
-	overflow-x: hidden;	/* hide horizontal scrollbar */
-}
-.hide-scrollbar { overflow: hidden; } /* delete? */
-img { border: 0; }
-
-
 /* BLOCKS (header, footer, .container) ===============================================================================*/
-header { 	min-height: 120px; }
-footer { 	min-height: 360px; }
-.container{ height: 100%; min-height: 540px; }
-
 header,
 footer,
-.container {
-  display: block; /*flex; /*???*/
-  width: 100%;
-  min-width: 750px;	max-width: 970px;
+.container { display: block;
+  min-width: 768px;
   padding: 20px; 	/*===============================================*/
-  text-align: center; 
+  justify-content: center;
   *zoom: 1;
   z-index: 88; /**/
   border-bottom: 1px solid rgba(230, 255, 255, 0.15); /* holy shit line under header */
@@ -91,6 +77,7 @@ footer,
   -webkit-transition-delay: .6s;
           transition-delay: .6s;
 }
+.container{ min-height: 540px; }
 
 header:after, 
 footer:after, 
@@ -102,6 +89,34 @@ footer:after,
 .container-fluid { margin: 0 auto; padding:0; *zoom:1; }
 .container-fluid:after { content:" "; clear:both; display:block; overflow:hidden; height:0; }
 
+.bg2 {  /* huge photo of mountains. penis */
+    background: url(https://images.unsplash.com/photo-1536264911542-668b0180d5a1?ixlib=rb-0.3.5&q=85&fm=jpg&crop=entropy&cs=srgb&ixid=eyJhcHBfaWQiOjE0NTg5fQ&s=a9a32743f06349efc39aeae90f047e9f) center center auto no-repeat; /* fixed;     /**/        
+}
+.bg-gradient {  background: -webkit-linear-gradient(0, #4f4f4f, #4f4f4f) top left, -webkit-linear-gradient(0, #4f4f4f, #4f4f4f) top right, -webkit-linear-gradient(135deg, transparent 5px, #4f4f4f 0) bottom right, -webkit-linear-gradient(0, #4f4f4f, #4f4f4f) bottom left;
+            background: linear-gradient(0, #4f4f4f, #4f4f4f) top left, linear-gradient(0, #4f4f4f, #4f4f4f) top right, linear-gradient(315deg, transparent 5px, #4f4f4f 0) bottom right, linear-gradient(0, #4f4f4f, #4f4f4f) bottom left;
+            background-position: 55% 55%;
+            background-repeat: no-repeat;
+            background-size: cover;
+ }
+.bg {
+	margin: 20px;
+    width: 100%;	min-width: 750px;	max-width: 970px;
+	min-height: 540px;
+/*  background: url(dummy/slide-1.jpg) center center auto no-repeat; /*fixed; /**/
+/*    opacity: 0.5;           /* ??? */
+ /*   -webkit-text-fill-color: transparent; /**/
+/*    align-items: stretch;
+    justify-content: center;  /**/
+/*    &:before {
+        content: '';
+        background-image: inherit;  /**/
+ /*        background-size: auto;
+       background-position: 50% 50%;
+        position: absolute;
+        top:0; right:0; bottom:0; left:0;  /* nic */
+        z-index: -2;
+ /*   }	/**/
+}
 
 /* glowing animated mouseovers ================================================================================ */
 #branding, 
@@ -132,8 +147,8 @@ footer:after,
                 inset -1px -1px 2px rgba(253, 255, 255, 1),
 	/*			5px 5px 10px 10px   rgba(255, 69, 0, 0.1), 
 				-5px -5px 10px 10px rgba(253, 89, 39, 0.1),	/**/
-				5px 5px 10px 10px red,
-                -5px -5px 10px 10px blue,
+/* 				5px 5px 10px 10px red,
+               -5px -5px 10px 10px blue,	/**/
 				0px 0px 2px 2px rgba(255, 45, 145, 1),
 				0px 0px 1px 1px rgba(255, 69, 69, 0.1);
 
