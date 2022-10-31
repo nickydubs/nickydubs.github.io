@@ -4,7 +4,7 @@
 [hidden], template { display: none; }
 html, button, input, select, textarea { font-family: sans-serif; }
 
-html { -webkit-locale: "en";
+html { /*	-webkit-locale: "en";	*/
 	/*	justify-content: center;    /**/
 	text-align: center;         /**/
     background-color: #141414;
@@ -33,7 +33,7 @@ a:link, a:visited { /*background-color: #f44336;*/ color:white; text-align:cente
 a:hover, a:active { /*background-color: rgba(0,0,0,1);*/  text-decoration:underline; outline:0; }
 
 b {      font-weight: bold; }
-strong { font-weight: 900; }
+strong { font-weight: 900;  }
 
 h1 { font-size: 1.5em;  margin:0;   line-height:normal; }
 h2 { font-size: 1.2em; 	margin:0;   line-height:normal; }
@@ -53,6 +53,7 @@ table {
 .center { margin: 0 auto; }
 .hide-scrollbar { overflow: hidden; } /* delete? */
 .pad30 { padding: 30px; }
+.border6 { border: 10px solid rgba(253, 89, 39, 0.2); }
 
 /* BLOCKS (header, footer, .container) ===============================================================================*/
 header,
@@ -65,7 +66,7 @@ footer,
   text-align: center;
   *zoom: 1;
 /*  z-index: 88; /**/
-  border-bottom: 1px solid rgba(230, 255, 255, 0.15); /* holy shit line under header */
+  border-bottom: 2px solid rgba(230, 255, 255, 0.2); /* holy shit line under header */
 }
 
 .container{ min-height: 540px; }
@@ -109,8 +110,8 @@ footer:after,
     transition: all 0.3s ease;
     z-index: -99;	/**/
 }
-#branding img, 
-#everglow img {
+#branding, 
+#everglow {
     display: block;
     border-radius: 6px;
     border: 6px solid rgba(230,255,255, 1);   /**/
@@ -124,8 +125,8 @@ footer:after,
 				0px 0px 1px 1px rgba(255, 69, 69, 0.1);
 /*    z-index: 98;	/**/
 }
-#everglow img:hover, 
-#everglow img:active { animation: everglow 12s infinite; }
+#everglow:hover, 
+#everglow:active { animation: everglow 12s infinite; }
 @keyframes everglow {
 	50% { 	box-shadow: inset 1px 1px 2px 	rgba(253, 89, 39, 1),
 						inset -1px -1px 2px rgba(30, 30, 30, 1),
@@ -138,7 +139,8 @@ footer:after,
 		}
 }
 
-#branding:hover, #branding:active { animation: orangepulse 2s infinite; }
+#branding:hover, 
+#branding:active { animation: orangepulse 2s infinite; }
 @keyframes orangepulse {
     0%   { box-shadow:	0 0 10px 10px rgba(253, 89, 39, 1); }
     50%  { box-shadow:	inset 1px 1px 2px rgba(253, 89, 39, 1),
