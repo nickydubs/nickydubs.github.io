@@ -107,7 +107,7 @@ footer:after,
     border-radius: 6px;
 	text-decoration: none;
     transition: all 0.3s ease;
-    z-index: -99;	/**/
+/*    z-index: -99;	/**/
 }
 #branding img, 
 #everglow img {
@@ -163,7 +163,7 @@ small { /*position: relative;	/*absolute;	/**/
 /* Social links ============================================================ */
 .social-links {
     position: absolute; 		/* important! */
-	display: flex;
+/*	display: flex;	/**/
     margin: 0 auto;         		/* centers items */
     min-height: 120px;           /* better hard code it */
 /*    padding: 36px 139px;		/**/
