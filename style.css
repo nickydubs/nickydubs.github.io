@@ -29,35 +29,12 @@ select,
 textarea {
   font-family: sans-serif; }
 
-h1 {
-  font-size: 1.5em;
-  margin: 0.8em 0;
-  line-height: normal; }
-
-h2 {
-  font-size: 1.17em;
-  margin: 1em 0;
-  line-height: normal; }
-
-h3 {
-  font-size: 1em;
-  margin: 1.33em 0;
-  line-height: normal; }
-
-h4 {
-  font-size: 0.8em;
-  margin: 1.67em 0;
-  line-height: normal; }
-
-h5 {
-  font-size: 0.7em;
-  margin: 2.33em 0;
-  line-height: normal; }
-
-h6 {
-  font-size: 0.6em;
-  margin: 2.6em 0;
-  line-height: normal; }
+h1 { font-size: 1.5em;  margin: 0.8em 0;    line-height: normal; }
+h2 { font-size: 1.17em; margin: 1em 0;  line-height: normal; }
+h3 { font-size: 1em;    margin: 1.33em 0; line-height: normal; }
+h4 { font-size: 0.8em;  margin: 1.67em 0;  line-height: normal; }
+h5 { font-size: 0.7em;  margin: 2.33em 0;  line-height: normal; }
+h6 { font-size: 0.6em;  margin: 2.6em 0;  line-height: normal; }
 
 abbr[title] {
   border-bottom: 1px dotted; }
