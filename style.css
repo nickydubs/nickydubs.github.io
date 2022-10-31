@@ -162,17 +162,16 @@ small { /*position: relative;	/*absolute;	/**/
 
 /* Social links ============================================================ */
 .social-links {
-/*	display: flex;	/**/
-    margin: 16px auto;         		/* centers items */
-/*    align-items: stretch;    	/**/
+    margin: 15px auto;         	/* centers items */
     justify-content: center;  	/**/
 /*    z-index: 98;				/**/
 }
 .social-icon {
     display: flex;      	/* keep */
     position: relative; 	/* very important */
-    width: 60px;	height: 60px;	/**/
-    margin: 0 0.5rem;       /**/
+    width: 60px;
+	height: 60px;			/**/
+    margin: 0 6px;          /**/
 	padding-top: 7px;		/* yessss this centers the icons ******************************************/
     color: white;
     border-radius: 50%;
@@ -221,7 +220,7 @@ small { /*position: relative;	/*absolute;	/**/
     position: absolute;
     top: 7px;
     left: 50%;
-    padding: 3px 4px; /*0.8rem 1rem; */
+    padding: 3px 3px; /*0.8rem 1rem; */
     border-radius: 4px; /*12px;*/
     font-size: 11px; /*0.8rem;*/
     font-weight: bold;
