@@ -4,8 +4,8 @@
 [hidden], template { display: none; }
 html, button, input, select, textarea { font-family: sans-serif; }
 
-html { /*
-	justify-content: center;    /**/
+html { -webkit-locale: "en";
+	/*	justify-content: center;    /**/
 	text-align: center;         /**/
     background-color: #141414;
     color: white;
