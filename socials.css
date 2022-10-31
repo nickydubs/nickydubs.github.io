@@ -61,7 +61,7 @@ footer:after,
             background-repeat: no-repeat;
             background-size: cover;
  }
-.bg {    background: url("dummy/slide-1.jpg") 0% 0% cover repeat scroll;
+.bg {    background-image: url("dummy/slide-1.jpg"); /*	0% 0% cover repeat scroll;	/**/
 /*  background: url("dummy/slide-1.jpg") center center auto no-repeat; /*fixed; /**/
 /*    opacity: 0.5;           /* ??? */
  /*   -webkit-text-fill-color: transparent; /**/
