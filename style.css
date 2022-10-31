@@ -4,7 +4,7 @@
 [hidden], template { display: none; }
 html, button, input, select, textarea { font-family: sans-serif; }
 
-html { /* margin: 0 auto;				/* keeps things centered (default=8px) */
+html { /* margin: 0 auto;	    /**/
 	justify-content: center;    /**/
 	text-align: center;         /**/
     background-color: #141414;
@@ -108,7 +108,7 @@ footer:after,
     border-radius: 6px;
 	text-decoration: none;
     transition: all 0.3s ease;
-/*    z-index: -99;	/**/
+    z-index: -99;	/**/
 }
 #branding img, 
 #everglow img {
@@ -163,11 +163,8 @@ small { /*position: relative;	/*absolute;	/**/
 
 /* Social links ============================================================ */
 .social-links {
-    position: absolute; 		/* important! */
 /*	display: flex;	/**/
     margin: 0 auto;         		/* centers items */
-    min-height: 120px;           /* better hard code it */
-/*    padding: 36px 139px;		/**/
 /*    align-items: stretch;    	/**/
     justify-content: center;  	/**/
 /*    z-index: 98;				/**/
