@@ -14,7 +14,7 @@ html {	/*margin: 0 auto;	padding: 0;		/**/
 }
 body { /*position: absolute;			/* nic ==============================================================*/
 	padding: 0 20px;              		/* nic ========================================*/
-/*	margin: 0 auto;							/* default=8px */
+	margin: 0 auto;							/* default=8px */
 	min-width: 768px;
 	max-width: 970px;
 	background-size: cover;             /* nic */
@@ -82,7 +82,7 @@ footer:after,
             background-size: cover;
  }
 .bg { background-image: url("/dummy/slide-1.jpg");
-	margin: 0 20px; 
+/*	margin: 0 20px; 				/* this keeps things centered */
 /*    opacity: 0.5;           /* ??? */
  /*   -webkit-text-fill-color: transparent; /**/
 /*    align-items: stretch;
@@ -164,7 +164,7 @@ small { /*position: relative;	/*absolute;	/**/
 .social-links {
     position: absolute; 		/* important! */
 	display: flex;
-/*    padding: 15px;         		/*  ========================================== */
+    margin: 0 auto;         		/* centers items */
     min-height: 120px;           /* better hard code it */
 /*    padding: 36px 139px;		/**/
 /*    align-items: stretch;    	/**/
