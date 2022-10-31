@@ -53,7 +53,7 @@ footer:after,
 .container-fluid:after { content:" "; clear:both; display:block; overflow:hidden; height:0; }
 
 .bg2 {  /* huge photo of mountains. penis */
-    background: url(https://images.unsplash.com/photo-1536264911542-668b0180d5a1?ixlib=rb-0.3.5&q=85&fm=jpg&crop=entropy&cs=srgb&ixid=eyJhcHBfaWQiOjE0NTg5fQ&s=a9a32743f06349efc39aeae90f047e9f) 0% 0% auto no-repeat; /* fixed;     /**/        
+    background: url("https://images.unsplash.com/photo-1536264911542-668b0180d5a1?ixlib=rb-0.3.5&q=85&fm=jpg&crop=entropy&cs=srgb&ixid=eyJhcHBfaWQiOjE0NTg5fQ&s=a9a32743f06349efc39aeae90f047e9f") 0% 0% cover no-repeat; /* fixed;     /**/        
 }
 .bg-gradient {  background: -webkit-linear-gradient(0, #4f4f4f, #4f4f4f) top left, -webkit-linear-gradient(0, #4f4f4f, #4f4f4f) top right, -webkit-linear-gradient(135deg, transparent 5px, #4f4f4f 0) bottom right, -webkit-linear-gradient(0, #4f4f4f, #4f4f4f) bottom left;
             background: linear-gradient(0, #4f4f4f, #4f4f4f) top left, linear-gradient(0, #4f4f4f, #4f4f4f) top right, linear-gradient(315deg, transparent 5px, #4f4f4f 0) bottom right, linear-gradient(0, #4f4f4f, #4f4f4f) bottom left;
@@ -61,11 +61,8 @@ footer:after,
             background-repeat: no-repeat;
             background-size: cover;
  }
-.bg {
-	margin: 20px;
-   	min-width: 750px;	max-width: 970px;
-	justify-content: center;
-/*  background: url(dummy/slide-1.jpg) center center auto no-repeat; /*fixed; /**/
+.bg {    background: url("dummy/slide-1.jpg") 0% 0% cover no-repeat;
+/*  background: url("dummy/slide-1.jpg") center center auto no-repeat; /*fixed; /**/
 /*    opacity: 0.5;           /* ??? */
  /*   -webkit-text-fill-color: transparent; /**/
 /*    align-items: stretch;
