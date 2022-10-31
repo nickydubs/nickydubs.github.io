@@ -1,6 +1,7 @@
 /* Nicky Dubs github page (based on Themezy Band Template) * Email: nickydubsmusic@gmail.com * URL: http://nickydubs.com */
 html {	margin: 0;	padding: 0;
 	justify-content: center;    /**/
+	text-align: center;
 }
 body { position: absolute;			/* nic ==============================================================*/
     padding: 0 20px;              		/* nic ========================================*/
@@ -82,7 +83,7 @@ footer:after,
 #everglow {
   float: left;        /* left, right or none!! (no center) */
   display: block;       /* keep */
-  position: absolute;   /**/
+/*  position: absolute;   /**/
   padding: 20px 0 0 20px;	/* padding? margin? */
   color: inherit;
   text-decoration: none;
@@ -102,7 +103,6 @@ footer:after,
                -5px -5px 10px 10px blue,	/**/
 				0px 0px 2px 2px rgba(255, 45, 145, 1),
 				0px 0px 1px 1px rgba(255, 69, 69, 0.1);
-
     border: 6px solid rgba(230,255,255, 0.5);   /**/
     z-index: 98;
 }
