@@ -82,22 +82,23 @@ footer:after,
 
 /* glowing animated mouseovers ================================================================================ */
 #branding, 
-#everglow {
-  float: left;        /* left, right or none!! (no center) */
-  display: block;       /* keep */
+#everglow {  float: left;	/* left, right or none!! (no center) */
+/*  display: block;       /* keep */
 /*  position: absolute;   /**/
-  padding: 20px 0 0 20px;	/* padding? margin? */
+/*	margin:0;
+/*padding: 20px 0 0 20px;	/* padding? margin? */
   color: inherit;
   text-decoration: none;
   transition: all 0.3s ease;
   border-radius: 6px;
-  z-index: 98;
+/*  z-index: 98;	/**/
 }
 #branding img, 
 #everglow img {
     display: block;
     border-radius: 6px;
-    box-shadow: inset 1px 1px 2px   rgba(0, 0, 0, 1),
+    border: 6px solid rgba(230,255,255, 0.5);   /**/
+	box-shadow: inset 1px 1px 2px   rgba(0, 0, 0, 1),
                 inset -1px -1px 2px rgba(253, 255, 255, 1),
 	/*			5px 5px 10px 10px   rgba(255, 69, 0, 0.1), 
 				-5px -5px 10px 10px rgba(253, 89, 39, 0.1),	/**/
@@ -105,11 +106,10 @@ footer:after,
                -5px -5px 10px 10px blue,	/**/
 				0px 0px 2px 2px rgba(255, 45, 145, 1),
 				0px 0px 1px 1px rgba(255, 69, 69, 0.1);
-    border: 6px solid rgba(230,255,255, 0.5);   /**/
-    z-index: 98;
+/*    z-index: 98;	/**/
 }
-#everglow:hover, 
-#everglow:active { animation: everglow 12s infinite; }
+#everglow img:hover, 
+#everglow img:active { animation: everglow 12s infinite; }
 @keyframes everglow {
 	50% { 	box-shadow: inset 1px 1px 2px 	rgba(253, 89, 39, 1),
 						inset -1px -1px 2px rgba(30, 30, 30, 1),
@@ -153,7 +153,7 @@ small { position: relative;	/*absolute;	/**/
 /*    padding: 36px 139px;		/**/
 /*    align-items: stretch;    	/**/
     justify-content: center;  	/**/
-    z-index: 98;				/**/
+/*    z-index: 98;				/**/
 }
 .social-icon {
     display: flex;      	/* keep */
@@ -173,14 +173,6 @@ small { position: relative;	/*absolute;	/**/
                 5px 5px 10px red,
                 -5px -5px 10px blue;
     border: 6px solid rgba(230,255,255, 1); /* keep */
-  -webkit-transform: scale(1);
-      -ms-transform: scale(1);
-          transform: scale(1);
-  opacity: 1;
-  -webkit-transition: .3s ease;
-          transition: .3s ease;
-  -webkit-transition-delay: .6s;
-          transition-delay: .6s;
 }
 /* Hover Effect & tooltip */
 .social-icon:hover {
