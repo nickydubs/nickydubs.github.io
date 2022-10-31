@@ -4,7 +4,8 @@ html {	margin: 0;	padding: 0;
 	text-align: center;
 }
 body { position: absolute;			/* nic ==============================================================*/
-    padding: 0 20px;              		/* nic ========================================*/
+	align: center;
+	padding: 0 20px;              		/* nic ========================================*/
 	margin: 0;
 	min-width: 768px;
 	max-width: 970px;
