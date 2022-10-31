@@ -82,7 +82,7 @@ footer:after,
             background-size: cover;
  }
 .bg { background-image: url("/dummy/slide-1.jpg");
-	margin: 0 20px; 				/* this keeps things centered */
+	margin: 0 auto; 				/* this keeps things centered */
 /*    opacity: 0.5;           /* ??? */
  /*   -webkit-text-fill-color: transparent; /**/
 /*    align-items: stretch;
