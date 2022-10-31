@@ -12,6 +12,7 @@ body { position: absolute;			/* nic ============================================
     color: #848484;
 	align-items: stretch;       /**/
     justify-content: center;    /**/
+	text-align: center;
     font-family: "Source Sans Pro", "Open Sans", sans-serif;
     font-size: 14px;
     line-height: 20px;
@@ -144,19 +145,17 @@ small { position: relative;	/*absolute;	/**/
 /* Social links ============================================================ */
 .social-links {
     position: absolute; 		/* important! */
-    padding: 15px;         		/*  ========================================== */
+	display: flex;
+/*    padding: 15px;         		/*  ========================================== */
     min-height: 120px;           /* better hard code it */
-    min-width: 750px;
-    max-width: 970px;
 /*    padding: 36px 139px;		/**/
-/*    align-items: stretch;    	/**/     
+/*    align-items: stretch;    	/**/
     justify-content: center;  	/**/
     z-index: 98;				/**/
 }
 .social-icon {
     display: flex;      	/* keep */
     position: relative; 	/* very important */
-/*	align-items: center;	/* center icons vertically */
     width: 60px;	height: 60px;	/**/
     margin: 0 0.5rem;       /**/
 	padding-top: 7px;		/* yessss this centers the icons ******************************************/
@@ -213,11 +212,11 @@ small { position: relative;	/*absolute;	/**/
 .tooltip {
 /*    display: block; */
     position: absolute;
-    top: 0;
+    top: 7px;
     left: 50%;
-    padding: 4px 5px; /*0.8rem 1rem; */
-    border-radius: 6px; /*12px;*/
-    font-size: 12px; /*0.8rem;*/
+    padding: 3px 4px; /*0.8rem 1rem; */
+    border-radius: 4px; /*12px;*/
+    font-size: 11px; /*0.8rem;*/
     font-weight: bold;
     opacity: 0;
     pointer-events: none;
@@ -235,7 +234,7 @@ small { position: relative;	/*absolute;	/**/
     height: 0;
     content: "";
     border: solid;
-/*    border-width: 5px 5px 0 5px; /*10px 10px 0 10px;*/
+    border-width: 5px 5px 0 5px; /*10px 10px 0 10px;*/
 /*    border-color: rgba(255, 69, 0,  0.1); /* transparent; */
     opacity: 1;
     transform: translate(-50%, 100%);
