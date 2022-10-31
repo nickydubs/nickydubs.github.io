@@ -14,7 +14,7 @@ html {	/*margin: 0 auto;	padding: 0;		/**/
 }
 body { /*position: absolute;			/* nic ==============================================================*/
 	padding: 0 20px;              		/* nic ========================================*/
-	margin: 0;				/* default=8px */
+	margin: 0 auto;				/* default=8px */
 	min-width: 768px;
 	max-width: 970px;
 	background-size: cover;             /* nic */
