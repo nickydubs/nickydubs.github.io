@@ -164,7 +164,7 @@ small { /*position: relative;	/*absolute;	/**/
 /* Social links ============================================================ */
 .social-links {
 /*	display: flex;	/**/
-    margin: 0 auto;         		/* centers items */
+    margin: 16px auto;         		/* centers items */
 /*    align-items: stretch;    	/**/
     justify-content: center;  	/**/
 /*    z-index: 98;				/**/
