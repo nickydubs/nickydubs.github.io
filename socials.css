@@ -1,4 +1,5 @@
 /* Nicky Dubs github page (based on Themezy Band Template) * Email: nickydubsmusic@gmail.com * URL: http://nickydubs.com */
+/*	:root, * { margin:0; padding:0; }	*/
 html {	/*margin: 0;	padding: 0;		/**/
 	justify-content: center;    /**/
 	text-align: center;
@@ -6,7 +7,7 @@ html {	/*margin: 0;	padding: 0;		/**/
 }
 body { /*position: absolute;			/* nic ==============================================================*/
 	padding: 0 20px;              		/* nic ========================================*/
-	margin: 0;
+	margin: 0 20px;							/* default=8px */
 	min-width: 768px;
 	max-width: 970px;
 	background-size: cover;             /* nic */
@@ -57,12 +58,10 @@ footer:after,
 }
 .bg-gradient {  background: -webkit-linear-gradient(0, #4f4f4f, #4f4f4f) top left, -webkit-linear-gradient(0, #4f4f4f, #4f4f4f) top right, -webkit-linear-gradient(135deg, transparent 5px, #4f4f4f 0) bottom right, -webkit-linear-gradient(0, #4f4f4f, #4f4f4f) bottom left;
             background: linear-gradient(0, #4f4f4f, #4f4f4f) top left, linear-gradient(0, #4f4f4f, #4f4f4f) top right, linear-gradient(315deg, transparent 5px, #4f4f4f 0) bottom right, linear-gradient(0, #4f4f4f, #4f4f4f) bottom left;
-            background-position: 0% 0%;
-            background-repeat: no-repeat;
             background-size: cover;
  }
-.bg {   margin: 0 20px; 
-	background-image: url("/dummy/slide-1.jpg"); /*	0% 0% cover repeat scroll;	/**/
+.bg { background-image: url("/dummy/slide-1.jpg");
+	margin: 0 20px; 
 /*    opacity: 0.5;           /* ??? */
  /*   -webkit-text-fill-color: transparent; /**/
 /*    align-items: stretch;
@@ -78,23 +77,22 @@ footer:after,
 }
 
 /* glowing animated mouseovers ================================================================================ */
-#branding, 
-#everglow {  float: left;	/* left, right or none!! (no center) */
+#logo {  float: left;	/* left, right or none!! (no center) */
 /*  display: block;       /* keep */
 /*  position: absolute;   /**/
 /*	margin:0;
-/*padding: 20px 0 0 20px;	/* padding? margin? */
-  color: inherit;
-  text-decoration: none;
-  transition: all 0.3s ease;
-  border-radius: 6px;
-/*  z-index: 98;	/**/
+    color: inherit;	/**/
+	border: 2px;
+    border-radius: 6px;
+	text-decoration: none;
+    transition: all 0.3s ease;
+    z-index: -99;	/**/
 }
 #branding img, 
 #everglow img {
     display: block;
     border-radius: 6px;
-    border: 6px solid rgba(230,255,255, 0.5);   /**/
+    border: 6px solid rgba(230,255,255, 1);   /**/
 	box-shadow: inset 1px 1px 2px   rgba(0, 0, 0, 1),
                 inset -1px -1px 2px rgba(253, 255, 255, 1),
 	/*			5px 5px 10px 10px   rgba(255, 69, 0, 0.1), 
@@ -131,13 +129,13 @@ footer:after,
     100% { box-shadow: 0 0 10px 10px rgba(245, 45, 145, 1); }
 }
 
-small { position: relative;	/*absolute;	/**/
-    	display: block;
-        margin: 0; /**/
+small { /*position: relative;	/*absolute;	/**/
+/*    	display: block;
+        margin: 0; 
         font-size: 12px;
         line-height: 14px;
         background: transparent;
-    	color: white;
+    	color: white;	/**/
     	text-shadow: 1px 1px 2px #808080; /**/
 }
 
