@@ -12,8 +12,7 @@ html { /*	-webkit-locale: "en";	/**/
     -ms-text-size-adjust: 100%;
 }
 body { 
-/*	padding: 0 30px;        	/* nic ========================================*/
-	margin: 0 auto;				/* (default=8px) */
+/*experiment...	margin: 0 auto;				/* (default=8px) */
 	width: 750px;
     background-color: inherit; 	/*	#141414;	/**/
     color: #848484;				/* light grey */
@@ -23,6 +22,8 @@ body {
     font-family: "Source Sans Pro", "Open Sans", sans-serif;
     font-size: 14px;
     line-height: 20px;
+    -webkit-animation: fadeIn 1s;
+    animation: fadeIn 1s;
 /*	overflow-x: hidden;			/* hide horizontal scrollbar */
 }
 
@@ -41,19 +42,14 @@ h4 { font-size: 0.8em;  margin:0;   line-height:normal; }
 h5 { font-size: 0.7em;  margin:0;   line-height:normal; }
 h6 { font-size: 0.6em;  margin:0;   line-height:normal; }
 
-img { border:0; }
-.lit-frame {     border-radius: 6px;
-    border: 6px solid rgba(230,255,255, 0.9);   			/* blueish white */
-    box-shadow:	inset 2px 2px 5px   rgba(0, 0, 0, 1),			/* black */
-                inset -2px -2px 5px rgba(255, 255, 255, 1),		/* white */
-	     		5px 5px 10px 10px rgba(255,0,0,0.9),					/* red */
-               -5px -5px 10px 10px rgba(0,0,255,0.9);				/* blue */
-    display: block;
-    -webkit-animation: fadeIn 1s;
+img { border:0;
+	/* next 3 are together*/
+	/*display: block;							/**/
+	-webkit-animation: fadeIn 1s;
     animation: fadeIn 1s;
- }
-small { /*  background: transparent;	/**/
-    	text-shadow: 1px 1px 2px #808080; /**/
+}
+small { /*  background: transparent;						/**/
+	text-shadow: 1px 1px 2px rgba(0,0,0,1); 				/**/
 }
 table {
   border-collapse: collapse;
@@ -61,34 +57,24 @@ table {
 }
 
 /* utility tags =================================================================*/
-.center { margin: 0 auto; }
+.center { 	margin: 0 auto; }
+.fadeFX {	display: block;	-webkit-animation: fadeIn 1s;	animation: fadeIn 1s;	}
 .hide-scrollbar { overflow-x: hidden; } /* hide horizontal scrollbar */
 .pad30 { padding: 30px; }
 .lit-frame {     border-radius: 6px;
-    border: 6px solid rgba(230,255,255, 0.9);   			/* blueish white */
-    box-shadow:	inset 2px 2px 5px   rgba(0, 0, 0, 1),			/* black */
-                inset -2px -2px 5px rgba(255, 255, 255, 1),		/* white */
-	     		5px 5px 10px 10px rgba(255,0,0,0.9),					/* red */
-               -5px -5px 10px 10px rgba(0,0,255,0.9);				/* blue */
-    display: block;
+    border: 6px solid rgba(230,255,255,0.9);   				/* blueish white */
+    box-shadow:	inset 2px 2px 5px   rgba(0,0,0,1),			/* black */
+                inset -2px -2px 5px rgba(255,255,255,1),	/* white */
+	     		5px 5px 10px 10px rgba(255,0,0,0.9),		/* red */
+				-5px -5px 10px 10px rgba(0,0,255,0.9);		/* blue */
+	/* next 3 are together*/
+	display: block;
     -webkit-animation: fadeIn 1s;
     animation: fadeIn 1s;
  }
-.orangebox { border-radius: 6px;
-    border: 	6px solid rgba(253, 89, 39, 0.9); 			/* light orange */ 
-    box-shadow: inset 1px 1px 2px   rgba(0, 0, 0, 1),			/* black */
-                inset -1px -1px 2px rgba(255, 255, 255, 1),		/* white */
-		5px 5px 10px 10px red,					/* red */
-                -5px -5px 10px 10px blue;				/* blue */
-
-}
-.lightbluebox { border-radius: 6px;
-    border: 6px solid rgba(230,255,255, 0.9);   			/* blueish white */
-    box-shadow:	inset 1px 1px 2px   rgba(0, 0, 0, 1),			/* black */
-                inset -1px -1px 2px rgba(255, 255, 255, 1),		/* white */
-	        5px 5px 10px 10px red,					/* red */
-                -5px -5px 10px 10px blue;				/* blue */
-}
+.blackborder {	border: 6px solid rgba(0,0,0,1);			/* black  */			}
+.blueborder {	border: 6px solid rgba(230,255,255,0.9);   	/* blueish white */		}
+.orangeborder {	border: 6px solid rgba(253,89,39,0.9);		/* light orange */		}
 
 /* BLOCKS (header, footer, .container) ===============================================================================*/
 header,
@@ -150,7 +136,8 @@ footer:after,
 /*		-5px -5px 10px 10px rgba(253, 89, 39, 0.1),		/* light orange */
 /*		0px 0px 2px 2px rgba(255, 45, 145, 1),			/* pink 2 */
 /*		0px 0px 1px 1px rgba(255, 69, 69, 0.1);			/* pinky orangey */
-    transition: all 0.6s ease;
+    -webkit-transition: all 0.6s ease;
+	transition: all 0.6s ease;
 /*    z-index: 98;	/**/
 }
 
@@ -173,10 +160,10 @@ footer:after,
 .everglow:hover, 
 .everglow:active { animation: everglow 8s infinite; }
 @keyframes everglow {
-	50% { 	box-shadow: inset 1px 1px 2px 	rgba(253, 89, 39, 1),	/* light orange */
-			    inset -1px -1px 2px rgba(30, 30, 30, 1),	/* dark grey */
-/*			    5px 5px 20px 20px rgba(253, 89, 39, 0.1), 	/* light orange */
-/*			    -5px -5px 20px 20px rgba(255, 69, 0, 0.1),  /* orange */
+	50% { 	box-shadow: inset 1px 1px 2px 	rgba(253,89,39,1),	/* light orange */
+			    inset -1px -1px 2px rgba(30,30,30,1),	/* dark grey */
+/*			    5px 5px 20px 20px rgba(253,89,39,0.1), 	/* light orange */
+/*			    -5px -5px 20px 20px rgba(255,69,0,0.1),  /* orange */
 /*			    5px 5px 10px 10px 	blue	,		/* red */
 /*			    -5px -5px 10px 10px red	,		/* blue */
 			    0px 0px 4320px 4320px rgba(255, 69, 69, 0.01), /* pinky orangey */
@@ -221,12 +208,13 @@ footer:after,
 }
 /* Hover Effect & tooltip */
 .social-icon:hover {
-    transition: all 0.6s ease; 
     box-shadow: inset 1px 1px 2px #90a4ae,
                 inset -1px -1px 2px black,
                 5px 5px 10px #90a4ae,
                 -5px -5px 10px white; /* #fd5927; */
     border: 6px solid rgba(255,255,255,1);
+	-webkit-transition: all 0.6s ease; 
+    transition: all 0.6s ease; 
     animation: glowpulse 1.2s infinite;
 }
 @keyframes glowpulse {
@@ -260,6 +248,7 @@ footer:after,
     pointer-events: none;
 /*    text-transform: uppercase; */
     transform: translate(-50%, -100%);
+	-webkit-transition: all 0.3s ease;
     transition: all 0.3s ease;
     z-index: 99;	/* top layer */
   }
@@ -359,7 +348,7 @@ footer:after,
     min-height: 40px;          /*  ???  ----------------*/
 }
 .contact-form textarea:focus {
-    border: 6px solid rgba(255, 88, 54, 1);     /* nic */
+    border: 6px solid rgba(255,88,54,1);     /* nic */
 }
 
 
