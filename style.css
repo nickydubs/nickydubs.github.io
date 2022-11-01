@@ -112,11 +112,11 @@ footer:after,
 .bg2 { background-image: url("/dummy/slide-2.jpg"); }
 
 /* glowing animated mouseovers ================================================================================ */
-#logo {  float: left;	/* left, right or none!! (no center) */
+.logo {  float: left;	/* left, right or none!! (no center) */
 /*    z-index: -99;	/**/
 }
-#branding, 
-#everglow {
+.branding, 
+.everglow {
     border-radius: 6px;
     border: 6px solid rgba(230,255,255, 0.9);   			/* blueish white */
     box-shadow:	inset 1px 1px 2px   rgba(0, 0, 0, 1),			/* black */
@@ -132,8 +132,8 @@ footer:after,
 /*    z-index: 98;	/**/
 }
 
-#branding:hover, 
-#branding:active { animation: orangepulse 2s infinite; }
+.branding:hover, 
+.branding:active { animation: orangepulse 2s infinite; }
 @keyframes orangepulse {
     0%   { box-shadow:	0 0 10px 10px rgba(253, 89, 39, 1);		/* light orange */
 	}
@@ -148,8 +148,8 @@ footer:after,
 	}
 }
 
-#everglow:hover, 
-#everglow:active { animation: everglow 8s infinite; }
+.everglow:hover, 
+.everglow:active { animation: everglow 8s infinite; }
 @keyframes everglow {
 	50% { 	box-shadow: inset 1px 1px 2px 	rgba(253, 89, 39, 1),	/* light orange */
 			    inset -1px -1px 2px rgba(30, 30, 30, 1),	/* dark grey */
