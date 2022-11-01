@@ -89,7 +89,7 @@ footer:after,
 .container:after {	content:" "; clear:both; position:relative; overflow:hidden; height:0; }	/**/
 
 /*=====================================================================================================================*/
-.bg2 { /* huge penis of mountains */ background-image: url("https://images.unsplash.com/photo-1536264911542-668b0180d5a1?ixlib=rb-0.3.5&q=85&fm=jpg&crop=entropy&cs=srgb&ixid=eyJhcHBfaWQiOjE0NTg5fQ&s=a9a32743f06349efc39aeae90f047e9f");	/**/        
+.bg-bigmountain { /* huge penis of mountains */ background-image: url("https://images.unsplash.com/photo-1536264911542-668b0180d5a1?ixlib=rb-0.3.5&q=85&fm=jpg&crop=entropy&cs=srgb&ixid=eyJhcHBfaWQiOjE0NTg5fQ&s=a9a32743f06349efc39aeae90f047e9f");	/**/        
 }
 .bg-gradient {  background: -webkit-linear-gradient(0, #4f4f4f, #4f4f4f) top left, -webkit-linear-gradient(0, #4f4f4f, #4f4f4f) top right, -webkit-linear-gradient(135deg, transparent 5px, #4f4f4f 0) bottom right, -webkit-linear-gradient(0, #4f4f4f, #4f4f4f) bottom left;
             background: linear-gradient(0, #4f4f4f, #4f4f4f) top left, linear-gradient(0, #4f4f4f, #4f4f4f) top right, linear-gradient(315deg, transparent 5px, #4f4f4f 0) bottom right, linear-gradient(0, #4f4f4f, #4f4f4f) bottom left;
@@ -109,6 +109,7 @@ footer:after,
         z-index: -2;
  /*   }	/**/
 }
+.bg2 { background-image: url("/dummy/slide-2.jpg"); }
 
 /* glowing animated mouseovers ================================================================================ */
 #logo {  float: left;	/* left, right or none!! (no center) */
