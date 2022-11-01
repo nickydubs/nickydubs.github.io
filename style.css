@@ -75,6 +75,9 @@ table {
 .blackborder {	border: 6px solid rgba(0,0,0,1);			/* black  */			}
 .blueborder {	border: 6px solid rgba(230,255,255,0.9);   	/* blueish white */		}
 .orangeborder {	border: 6px solid rgba(253,89,39,0.9);		/* light orange */		}
+.shadow { 	    box-shadow:	2px 2px 5px 5px   rgba(0,0,0,1),			/* black */
+                			-2px -2px 5px 5px rgba(255,255,255,1);	/* white */
+ }
 
 /* BLOCKS (header, footer, .container) ===============================================================================*/
 header,
