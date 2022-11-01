@@ -181,7 +181,7 @@ small { /*position: relative;  /**/
     width: 60px;
     height: 60px;			/**/
     margin: 0 6px;          /**/
-    align-items: center;/*padding-top: 7px;		/* yessss this centers the icons ******************************************/
+    padding-top: 7px;		/* yessss this centers the icons ******************************************/
     color: white;
     border-radius: 50%;
     cursor: pointer;
