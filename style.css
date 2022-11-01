@@ -11,8 +11,7 @@ html { /*	-webkit-locale: "en";	/**/
     -webkit-text-size-adjust: 100%;
     -ms-text-size-adjust: 100%;
 }
-body { 
-/*experiment...	margin: 0 auto;				/* (default=8px) */
+body { margin: 0 auto;				/* (default=8px) VERY IMPORTANT */
 	width: 750px;
     background-color: inherit; 	/*	#141414;	/**/
     color: #848484;				/* light grey */
@@ -58,7 +57,8 @@ table {
 
 /* utility tags =================================================================*/
 .center { 	margin: 0 auto; }
-.fadeFX {	display: block;	-webkit-animation: fadeIn 1s;	animation: fadeIn 1s;	}
+.fx-fade {	display: block;	-webkit-animation: fadeIn 0.3s;	animation: fadeIn 0.3s;	}
+.fx-easeall {    display: block;	-webkit-transition: all 1s ease;	transition: all 1s ease;	}
 .hide-scrollbar { overflow-x: hidden; } /* hide horizontal scrollbar */
 .pad30 { padding: 30px; }
 .lit-frame {     border-radius: 6px;
@@ -75,8 +75,8 @@ table {
 .blackborder {	border: 6px solid rgba(0,0,0,1);			/* black  */			}
 .blueborder {	border: 6px solid rgba(230,255,255,0.9);   	/* blueish white */		}
 .orangeborder {	border: 6px solid rgba(253,89,39,0.9);		/* light orange */		}
-.shadow { 	    box-shadow:	2px 2px 5px 5px   rgba(0,0,0,1),			/* black */
-                			-2px -2px 5px 5px rgba(255,255,255,1);	/* white */
+.shadow { 	    box-shadow:	2px 2px 10px 10px	rgba(0,0,0,0.5),			/* black */
+                			-2px -2px 10px 10px rgba(255,255,255,0.5);	/* white */
  }
 
 /* BLOCKS (header, footer, .container) ===============================================================================*/
@@ -90,7 +90,7 @@ footer,
   text-align: center;
   *zoom: 1;
 /*  z-index: 88; /**/
-  border-bottom: 2px solid rgba(20, 20, 20, 0.9); /* holy shit line under header */
+  border-bottom: 10px solid rgba(20,20,20,0.9); /* holy shit line under header */
 }
 .container{ min-height: 540px; }
 
@@ -127,25 +127,26 @@ footer:after,
 /*    z-index: -99;	/**/
 }
 .branding, 
-.everglow {
+.everglow { 
     border-radius: 6px;
-    border: 6px solid rgba(230,255,255, 0.9);   			/* blueish white */
-    box-shadow:	inset 2px 2px 5px   rgba(0, 0, 0, 1),			/* black */
-                inset -2px -2px 5px rgba(255, 255, 255, 1),		/* white */
-	     		5px 5px 10px 10px rgba(255,0,0,0.9),					/* red */
-               -5px -5px 10px 10px rgba(0,0,255,0.9);				/* blue */
+    border: 6px solid rgba(230,255,255,0.9);   			/* blueish white */
+    box-shadow:	inset 2px 2px 5px   rgba(0,0,0,1),			/* black */
+                inset -2px -2px 5px rgba(255,255,255,1),		/* white */
+	     		5px 5px 10px 10px 	rgba(255,0,0,0.9),					/* red */
+               -5px -5px 10px 10px 	rgba(0,0,255,0.9);				/* blue */
 
-/*		5px 5px 10px 10px   rgba(255, 69, 0, 0.1), 		/* orange */
-/*		-5px -5px 10px 10px rgba(253, 89, 39, 0.1),		/* light orange */
-/*		0px 0px 2px 2px rgba(255, 45, 145, 1),			/* pink 2 */
-/*		0px 0px 1px 1px rgba(255, 69, 69, 0.1);			/* pinky orangey */
-    -webkit-transition: all 0.6s ease;
+/*		5px 5px 10px 10px   rgba(255,69,0,0.1), 		/* orange */
+/*		-5px -5px 10px 10px rgba(253,89,39,0.1),		/* light orange */
+/*		0px 0px 2px 2px rgba(255,45,145,1),				/* pink 2 */
+/*		0px 0px 1px 1px rgba(255,69,69,0.1);			/* pinky orangey */
+    display: block;
+	-webkit-transition: all 0.6s ease;
 	transition: all 0.6s ease;
 /*    z-index: 98;	/**/
 }
 
-.branding:hover, 
-.branding:active { animation: orangepulse 2s infinite; }
+.branding img:hover, 
+.branding img:active { animation: orangepulse 2s infinite; }
 @keyframes orangepulse {
     0%   { box-shadow:	0 0 10px 10px rgba(253, 89, 39, 1);		/* light orange */
 	}
@@ -160,8 +161,8 @@ footer:after,
 	}
 }
 
-.everglow:hover, 
-.everglow:active { animation: everglow 8s infinite; }
+.everglow img:hover, 
+.everglow img:active { animation: everglow 8s infinite; }
 @keyframes everglow {
 	50% { 	box-shadow: inset 1px 1px 2px 	rgba(253,89,39,1),	/* light orange */
 			    inset -1px -1px 2px rgba(30,30,30,1),	/* dark grey */
