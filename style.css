@@ -6,7 +6,7 @@ html, button, input, select, textarea { font-family: sans-serif; }
 
 html { /*	-webkit-locale: "en";	/**/
 	text-align: center;         /**/
-    background-color: #141414;
+    background-color: #141414;	/**/
     color: white;
     -webkit-text-size-adjust: 100%;
     -ms-text-size-adjust: 100%;
@@ -133,7 +133,7 @@ footer:after,
 }
 .branding img, 
 .everglow img,
-.glowpulse img { 
+.glowpulse img { position: relative;	/* this is the only thing really different from social-links visuals so I added it here */
     border-radius: 6px;
     border: 	6px solid rgba(230,255,255,0.9);   			/* blueish white */
     box-shadow:	inset 1px 1px 2px   rgba(0,0,0,1),			/* black */
