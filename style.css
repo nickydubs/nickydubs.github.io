@@ -96,7 +96,7 @@ footer,
   text-align: center;
   *zoom: 1;
 /*  z-index: 88; /**/
-  border-bottom: 20px solid rgba(20,20,20,0.69); /* holy shit line under header */
+  border-bottom: 20px solid rgba(20,20,20,0.8); /* holy shit line under header ============================================================*/
 }
 .container{ min-height: 540px; }
 
