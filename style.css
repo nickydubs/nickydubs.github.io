@@ -134,7 +134,7 @@ footer:after,
 .branding img, 
 .everglow img,
 .glowpulse img { position: relative;	/* this is the only thing really different from social-links visuals so I added it here */
-/*    border-radius: 6px;		/* delete the weird border that grows */
+    border-radius: 6px;		/* delete the weird border that grows */
 /*    border: 	6px solid rgba(230,255,255,0.9);   			/* blueish white */
     box-shadow:	inset 1px 1px 2px   rgba(0,0,0,1),			/* black */
                 inset -1px -1px 2px rgba(255,255,255,1),		/* white */
@@ -214,7 +214,7 @@ footer:after,
                 inset -1px -1px 2px black,
                 5px 5px 10px #90a4ae,
                 -5px -5px 10px white; /* #fd5927; */
-    border: 6px solid rgba(255,255,255,1);
+/*    border: 6px solid rgba(255,255,255,1); 		/* this fucker */
     -webkit-transition: all 0.6s ease; 
     transition: all 0.6s ease; 
     animation: glowpulse 1.2s infinite;
