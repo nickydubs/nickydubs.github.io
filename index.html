@@ -438,7 +438,7 @@ footer img { vertical-align: middle; }
 		<p class="lead">I've always wanted my music to be accessible for free, but I won't stop you from helping with my bills if you want to. In fact, I'd be <strong>extremely grateful</strong> if you did! Plus, the more you donate, the more the world will change, quantifiably!!
 			<strong>$1,000,000 = 1 world-change unit</strong>, which I assure you is real and guarantees a one-minute drum solo or song of your choice... and one wish!!! Choose wisely! Muahahaha.
 			<br><br>Thank you so much for supporting me on my lifelong musical journey!!</p>
-		<div class="cards cards--3">
+		<div class="cards">
 			<article class="card">
 				<span class="card__icon"><i class="fa fa-bandcamp" aria-hidden="true"></i></span>
 				<h3>Bandcamp</h3>
@@ -455,8 +455,7 @@ footer img { vertical-align: middle; }
 					<button class="btn" type="submit">Donate with PayPal</button>
 				</form>
 			</article>
-			<!-- PARKED until tips@nickydubs.com is confirmed working (delete this line and the "END PARKED" line to bring it back).
-			     The e-Transfer email is stored reversed and only assembled when a human clicks, so scrapers never see it.
+			<!-- The e-Transfer email is stored reversed and only assembled when a human clicks, so scrapers never see it. -->
 			<article class="card">
 				<span class="card__icon"><i class="fa fa-exchange" aria-hidden="true"></i></span>
 				<h3>Interac e-Transfer</h3>
@@ -464,7 +463,6 @@ footer img { vertical-align: middle; }
 				<code class="addr" data-mail-out>hidden from bots · tap below</code>
 				<button class="btn btn--ghost" type="button" data-mail="moc.sbudykcin@spit"><i class="fa fa-eye" aria-hidden="true"></i><span>Show &amp; copy email</span></button>
 			</article>
-			END PARKED -->
 			<article class="card">
 				<span class="card__icon"><i class="fa fa-cube" aria-hidden="true"></i></span>
 				<h3>Donate onchain</h3>
@@ -822,7 +820,8 @@ footer img { vertical-align: middle; }
 		btn.removeAttribute('data-mail');
 		btn.dataset.copy = mail;
 		btn.querySelector('.fa').className = 'fa fa-copy';
-		bindCopy(btn, 'Copy email');
+		btn.querySelector('span').textContent = 'Copy email';
+		bindCopy(btn);
 		btn.click();
 	}, { once: true }));
 
