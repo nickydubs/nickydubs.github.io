@@ -1,234 +1,855 @@
 <!DOCTYPE html>
-<html lang="en" style="background-image: url("/images/metatile.png") repeat;">
+<html lang="en">
 <head>
-	<meta charset="UTF-8">	<meta http-equiv="X-UA-Compatible" content="IE=edge">	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
-	
-	<title>Nicky Dubs donations page, music, merch store & referral links</title>
-	<link rel="shortcut icon"	href="favicon.ico"><link rel="icon" href="https://nickydubs.github.io/animated_favicon1.gif" type="image/gif">
-	<link rel="stylesheet" 		href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,600,700,900" type="text/css">
-	<link rel="stylesheet" 		href="fonts/font-awesome.min.css" type="text/css">
-	<link rel="stylesheet" 		href="style.css">
-	
-	<![if lt IE 9]>	<script defer src="js/ie-support/html5.js"></script>	<script defer src="js/ie-support/respond.js"></script>	<![endif]>
-	<script defer src="https://use.fontawesome.com/c6464c3092.js"></script>
-	<script defer src="js/jquery-1.11.1.min.js"></script>
-	<script defer src="js/plugins.js"></script>
-	<script defer src="js/app.js"></script>
-	<script defer src="js/clipboard.js"></script>
-	<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1648873403857305" crossorigin="anonymous"></script>
-</head><!-- end head -->
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nicky Dubs | Basshead drummer &amp; looping wizard</title>
+<meta name="description" content="Nicky Dubs: basshead drummer, looping wizard and air wiggler. Free music, ways to support, and links.">
+<link rel="icon" href="favicon.ico">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Inter:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+<style>
+/* ── Palette: logo blue + logo orange on deep ink. Swap these to try other looks. ── */
+:root {
+	--ink: #070915;
+	--ink-2: #0d1130;
+	--text: #eef0ff;
+	--muted: #9aa0c3;
+	--blue: #3d5afe;
+	--orange: #ff7a3d;
+	--cyan: #34d6ff;
+	--glass: rgba(255, 255, 255, 0.045);
+	--glass-line: rgba(255, 255, 255, 0.09);
+	--display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+	--body: "Inter", "Segoe UI", system-ui, sans-serif;
+	--prog: 0;
+	color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+	margin: 0;
+	background: var(--ink);
+	color: var(--text);
+	font: 16px/1.6 var(--body);
+	overflow-x: clip;
+	-webkit-font-smoothing: antialiased;
+}
+a { color: inherit; }
+img { max-width: 100%; }
 
-<!-- BODY, bg & HEADER --------------------------------------------------------------------------->
-<body class="bg-gradient shadow">
-<div class="bg">
+/* ── Background: drifting light orbs + Metatron's cube that spins & grows with scroll ── */
+.sky { position: fixed; inset: 0; z-index: -1; overflow: hidden; pointer-events: none;
+	background: radial-gradient(120% 80% at 50% 0%, var(--ink-2), var(--ink) 70%); }
+.orb { position: absolute; width: 70vmax; aspect-ratio: 1; border-radius: 50%; opacity: 0.4; will-change: transform; }
+.orb--blue   { background: radial-gradient(circle, var(--blue), transparent 62%); left: -25vmax; top: -20vmax; }
+.orb--orange { background: radial-gradient(circle, var(--orange), transparent 62%); right: -30vmax; top: 30vh; opacity: 0.22; }
+.orb--cyan   { background: radial-gradient(circle, var(--cyan), transparent 60%); left: 20vw; bottom: -45vmax; opacity: 0.16; }
+/* Metatron's cube (drawn in JS, morphs into a tesseract as you scroll) + its faint glowing "memory tail" */
+.cube, .cube-trail { position: absolute; inset: 0; width: 100%; height: 100%; }
+.cube-trail { opacity: 0.9; } /* quarter-res canvas stretched to full screen = soft glow, no CSS filter cost */
 
-<header>
-	
-<div style="float:left;">
-  <a href="http://nickydubs.com" class="glowpulse button"><img src="images/nicky dubs logo oilers.png" style="width:83px; height:75px;" alt="nickydubs.com"></a>
-<br><br>
-  <a href="http://nickydubs.com"><small>NickyDubs.com</small></a>
-</div><!-- end .branding img -->
+/* Scroll progress bar */
+.progress { position: fixed; top: 0; left: 0; height: 3px; width: 100%; z-index: 10;
+	transform-origin: left; transform: scaleX(0); will-change: transform;
+	background: linear-gradient(90deg, var(--blue), var(--cyan), var(--orange)); }
 
-<div class="social-links">
-    <a href="https://youtube.com/huckmode" class="social-icon social-icon--youtube"><i class="fa fa-youtube"></i><div class="tooltip">YouTube</div></a>
-    <a href="https://soundcloud.com/nicky-dubs/sets/2022mix" class="social-icon social-icon--soundcloud"><i class="fa fa-soundcloud"></i><div class="tooltip">SoundCloud</div></a>
-    <a href="https://instagram.com/nicky.dubs" class="social-icon social-icon--instagram"><i class="fa fa-instagram"></i><div class="tooltip">Instagram</div></a>
-<!--    <a href="https://facebook.com/NickyDubsMusic" class="social-icon social-icon--facebook"><i class="fa fa-facebook"></i><div class="tooltip">Facebook</div></a>
-    <a href="https://twitter.com/NickyDubsMusic" class="social-icon social-icon--twitter"><i class="fa fa-twitter"></i><div class="tooltip">Twitter</div></a>
-    <a href="https://twitch.tv/NickyDubs_" class="social-icon social-icon--twitch"><i class="fa fa-twitch" aria-hidden="true"></i><div class="tooltip">Twitch</div></a>
--->    <a href="https://linktr.ee/NickyDubs" class="social-icon social-icon--linktree"><i class="fa fa-tree" aria-hidden="true"></i><div class="tooltip">Linktree</div></a>
-<!--	<a href="https://nickydubs.github.io" class="social-icon social-icon--github"><i class="fa fa-github"></i><div class="tooltip">GitHub</div></a> -->
-</div><!-- end social-links -->
+/* ── Scenes ── */
+.scene { position: relative; min-height: 100svh; display: grid; place-items: center;
+	padding: 96px 20px; overflow: clip; }
+.scene__inner { position: relative; z-index: 1; width: 100%; max-width: 880px; text-align: center;
+	will-change: transform, opacity, filter; }
+.ghost { position: absolute; left: 50%; top: 50%; z-index: 0; pointer-events: none; white-space: nowrap;
+	font: 800 clamp(6rem, 24vw, 22rem)/1 var(--display); letter-spacing: -0.04em;
+	color: transparent; -webkit-text-stroke: 1.5px rgba(255, 255, 255, 0.09);
+	transform: translate(-50%, -50%); will-change: transform, opacity; }
+.eyebrow { margin: 0 0 10px; color: var(--orange); font: 600 0.8rem/1 var(--body);
+	letter-spacing: 0.22em; text-transform: uppercase; }
+h2 { margin: 0 0 18px; font: 800 clamp(2.2rem, 6vw, 4rem)/1.05 var(--display); letter-spacing: -0.02em;
+	background: linear-gradient(180deg, #fff, #b9c3ff); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.lead { max-width: 620px; margin: 0 auto 36px; color: var(--muted); font-size: 1.05rem; }
+.lead strong { color: var(--text); font-weight: 600; }
 
-<!--<nav class="main-navigation">
-	<button type="button" class="toggle-menu"><i class="fa fa-bars"></i></button>
-	<ul class="menu"><li class="menu-item current-menu-item"><a href="index.html">Home</a></li>	<li class="menu-item"><a href="about.html">About</a></li>
-		<li class="menu-item"><a href="gallery.html">Gallery</a></li>	<li class="menu-item"><a href="download.html">Download</a></li>
-		<li class="menu-item"><a href="blog.html">Blog</a></li>		<li class="menu-item"><a href="contact.html">Contact</a></li>
- 	</ul><!-- end menu -->
-<!-- </nav><!-- end main-navigation -->
-<!-- <div class="mobile-menu" style="margin: 0;"></div> -->
+/* Hero */
+.hero h1 { margin: 0; }
+.logo { display: block; width: min(340px, 72vw); height: auto; margin: 0 auto;
+	filter: drop-shadow(0 0 40px rgba(61, 90, 254, 0.45)) drop-shadow(0 0 90px rgba(255, 122, 61, 0.18));
+	will-change: transform; } /* heartbeat is driven from JS: slow at rest, quicker + bigger as the cursor nears */
+.hero .ghost { font-size: clamp(4rem, 15vw, 15rem); }
+.tagline { margin: 18px 0 0; color: var(--muted); font: 500 clamp(0.95rem, 2.4vw, 1.15rem)/1.4 var(--body); letter-spacing: 0.04em; }
+.tagline b { color: var(--orange); font-weight: 600; }
+.tagline span { white-space: nowrap; }
+.scroll-cue { position: absolute; bottom: 28px; left: 50%; translate: -50% 0; width: 26px; height: 42px;
+	border: 2px solid rgba(255, 255, 255, 0.35); border-radius: 14px; }
+.scroll-cue::after { content: ""; position: absolute; left: 50%; top: 8px; width: 4px; height: 8px; margin-left: -2px;
+	border-radius: 2px; background: var(--text); animation: cue 1.8s ease-in-out infinite; }
+@keyframes cue { 0% { opacity: 0; transform: translateY(0); } 30% { opacity: 1; } 100% { opacity: 0; transform: translateY(14px); } }
 
-</header>
+/* ── Social icons (the stars of the show) ── */
+.socials { display: flex; flex-wrap: wrap; justify-content: center; gap: 20px; margin-top: 34px; }
+.sicon {
+	--brand: #fff; --mx: 0px; --my: 0px; --sc: 1;
+	position: relative; display: grid; place-items: center; width: 64px; height: 64px;
+	border-radius: 50%; color: #fff; font-size: 28px; text-decoration: none;
+	background: radial-gradient(circle at 30% 25%, rgba(255, 255, 255, 0.38), transparent 46%), var(--brand);
+	box-shadow: 0 10px 26px -10px var(--brand), inset 0 0 0 1px rgba(255, 255, 255, 0.22);
+	transform: translate(var(--mx), var(--my)) scale(var(--sc));
+	scale: 0;
+	transition: transform 0.35s cubic-bezier(0.2, 0.9, 0.3, 1.4), box-shadow 0.35s ease,
+		scale 0.6s cubic-bezier(0.2, 0.9, 0.3, 1.5) calc(var(--i) * 90ms + 250ms);
+}
+.is-ready .sicon { scale: 1; }
+.sicon .fa { position: relative; z-index: 1; transition: text-shadow 0.3s ease; }
+/* soundwave rings */
+.sicon::before, .sicon::after { content: ""; position: absolute; inset: 0; border-radius: 50%;
+	border: 2px solid var(--brand); opacity: 0; pointer-events: none; }
+.sicon:hover, .sicon:focus-visible { --sc: 1.14; outline: none; animation: chroma 1.2s ease-in-out infinite; }
+.sicon:hover .fa, .sicon:focus-visible .fa { text-shadow: -2px 0 var(--cyan), 2px 0 var(--orange); }
+.sicon:hover::before, .sicon:focus-visible::before { animation: ring 1.2s ease-out infinite; }
+.sicon:hover::after,  .sicon:focus-visible::after  { animation: ring 1.2s ease-out 0.6s infinite; }
+@keyframes ring { from { transform: scale(1); opacity: 0.75; } to { transform: scale(1.9); opacity: 0; } }
+/* the old red/blue glow pulse, reborn in logo blue + orange */
+@keyframes chroma {
+	0%, 100% { box-shadow: -7px -4px 20px -2px var(--blue), 7px 4px 20px -2px var(--orange), 0 0 0 2px rgba(255, 255, 255, 0.9); }
+	50%      { box-shadow: 7px -5px 26px 0 var(--blue), -7px 5px 26px 0 var(--orange), 0 0 0 2px rgba(255, 255, 255, 0.9); }
+}
+.tip { position: absolute; bottom: 100%; left: 50%; z-index: 2; padding: 5px 10px; border-radius: 999px;
+	background: var(--brand); color: #fff; font: 600 12px/1 var(--body); white-space: nowrap;
+	opacity: 0; pointer-events: none; transform: translate(-50%, 6px) scale(0.8);
+	transition: opacity 0.25s ease, transform 0.3s cubic-bezier(0.2, 0.9, 0.3, 1.4); }
+.tip::after { content: ""; position: absolute; top: 100%; left: 50%; margin-left: -4px;
+	border: 4px solid transparent; border-top-color: var(--brand); }
+.sicon:hover .tip, .sicon:focus-visible .tip { opacity: 1; transform: translate(-50%, -12px) scale(1); }
+.sicon--youtube    { --brand: #ff0033; }
+.sicon--soundcloud { --brand: #ff5500; }
+.sicon--instagram  { --brand: #e1306c;
+	background: radial-gradient(circle at 30% 25%, rgba(255, 255, 255, 0.38), transparent 46%),
+		radial-gradient(circle at 30% 107%, #fdf497 0%, #fd5949 45%, #d6249f 60%, #285aeb 90%); }
+.sicon--linktree   { --brand: #2fb36b; }
+.sicon--bandcamp   { --brand: #1da0c3; }
 
-	
-<!-- orig background img, slides list, slider, container 2  =============================================== -->
-<!-- <div class="slider"><ul class="slides"><li data-background="dummy/slide-1.jpg">	-->
-<!-- ================================================================================== -->
-<div class="container button"><span></span>
-<h3 class="slide-subtitle">Now accepting donations</h3>		
-  <small>All major payment types supported via Square Pay</small>
-  
-<p class="slide-desc" style="font-size:12pt; line-height:14pt; float:right; display:block; text-align:center; alignt-items:center;">
-	Message from Nicky Dubs the basshead beatboxer, looping wizard and drumming monster:
-	<br>I've always wanted my music to be accessible for free but I won't stop you from helping with my bills if you want to.  
-	<br>In fact, I would be extremely grateful if you did!  Plus, the more you donate the more the world will change, quantifiably!!
-	<br>1 million dollars equals 1 world-change unit which I assure you is real and guarantees a one-minute drum solo or song of your choice.
-	<br>... and one wish!!!  choose wisely!  muahahaha
-	<br>Thank you so much for supporting me on my lifeshlong musical journey!!
+/* ── Listen ── */
+.player { overflow: hidden; border-radius: 22px; border: 1px solid var(--glass-line); background: var(--glass);
+	box-shadow: 0 30px 80px -30px rgba(61, 90, 254, 0.5); }
+.player iframe { display: block; width: 100%; height: 380px; border: 0; }
+.tracks { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin: -12px 0 24px; padding: 0; list-style: none; }
+.track { padding: 9px 16px; border-radius: 999px; cursor: pointer;
+	background: var(--glass); border: 1px solid var(--glass-line); color: var(--text);
+	font: 600 0.9rem/1 var(--body); transition: border-color 0.25s ease, background 0.25s ease, transform 0.25s ease; }
+.track:hover, .track:focus-visible { transform: translateY(-2px); border-color: rgba(52, 214, 255, 0.5); outline: none; }
+.track.is-on { border-color: var(--orange); background: rgba(255, 122, 61, 0.12); box-shadow: 0 8px 22px -12px var(--orange); }
+.track small { margin-left: 6px; color: var(--orange); font-size: 0.68rem; letter-spacing: 0.08em; text-transform: uppercase; }
 
+/* ── Watch ── */
+.vids { display: grid; grid-template-columns: 1fr 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 14px; }
+.vid { position: relative; overflow: hidden; padding: 0; aspect-ratio: 16 / 9; border-radius: 18px; cursor: pointer;
+	border: 1px solid var(--glass-line); background: #000; color: #fff; text-align: left;
+	transition: transform 0.35s cubic-bezier(0.2, 0.9, 0.3, 1.3), border-color 0.3s ease, box-shadow 0.3s ease; }
+.vid--tall { grid-row: span 2; aspect-ratio: auto; }
+.vid img, .vid iframe { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; border: 0; }
+.vid img { opacity: 0.8; transition: opacity 0.3s ease, transform 0.6s ease; }
+.vid::before { content: "\f04b"; position: absolute; left: 50%; top: 50%; z-index: 1; display: grid; place-items: center;
+	width: 54px; height: 54px; margin: -27px 0 0 -27px; padding-left: 4px; border-radius: 50%;
+	font: 20px/1 FontAwesome; background: rgba(255, 0, 51, 0.9); box-shadow: 0 8px 24px -6px #ff0033;
+	transition: transform 0.3s cubic-bezier(0.2, 0.9, 0.3, 1.5); }
+.vid__title { position: absolute; left: 0; right: 0; bottom: 0; z-index: 1; padding: 26px 14px 12px;
+	background: linear-gradient(transparent, rgba(0, 0, 0, 0.85)); font: 600 0.88rem/1.3 var(--body); }
+.vid:hover, .vid:focus-visible { transform: translateY(-4px); border-color: rgba(255, 0, 51, 0.6);
+	box-shadow: 0 20px 50px -24px #ff0033; outline: none; }
+.vid:hover img { opacity: 1; transform: scale(1.05); }
+.vid:hover::before { transform: scale(1.15); }
+.vid.is-playing::before, .vid.is-playing .vid__title { display: none; }
+.vids__more { margin-top: 22px; }
+@media (max-width: 640px) {
+	.vids { grid-template-columns: 1fr 1fr; grid-template-rows: none; }
+	.vid--tall { grid-column: span 2; grid-row: auto; aspect-ratio: 9 / 12; }
+	.vid:not(.vid--tall)::before { top: 38%; width: 40px; height: 40px; margin: -20px 0 0 -20px; font-size: 15px; }
+	.vid:not(.vid--tall) .vid__title { padding: 18px 10px 8px; font-size: 0.74rem; }
+}
 
-  <div style="float:left; text-align:center; align-items:center; display:inline;">
-	<a href="https://nicky-dubs.square.site/product/tips/9" class="glowpulse">
-	    <img src="https://n.anycodes.com/mimg/merimg/b_143952989614.png?v=141016" style="width:64px; height:64px;" alt="Square Payments"></a>
-	<br><br>
-	  <a href="https://nicky-dubs.square.site/product/tips/9"><small>Square Payments</small>
-	  </a>
+/* ── Live + bio ── */
+.bio { display: grid; grid-template-columns: 1fr 1.15fr; gap: 26px; align-items: center; margin-bottom: 22px; text-align: left; }
+.bio__photo { margin: 0; position: relative; overflow: hidden; border-radius: 22px; border: 1px solid var(--glass-line);
+	box-shadow: 0 30px 70px -30px rgba(255, 122, 61, 0.45); }
+.bio__photo img { display: block; width: 100%; height: auto; }
+.bio__photo figcaption { position: absolute; left: 12px; bottom: 12px; padding: 5px 10px; border-radius: 999px;
+	background: rgba(0, 0, 0, 0.6); font-size: 0.75rem; color: var(--muted); }
+.bio__lead { margin: 0 0 14px; color: var(--muted); font-size: 1.05rem; }
+.bio__lead strong { color: var(--text); }
+.bio__facts { list-style: none; margin: 0 0 16px; padding: 0; display: grid; gap: 9px; font-size: 0.92rem; color: var(--muted); }
+.bio__facts small { color: #6f76a0; font-size: 0.78em; white-space: nowrap; }
+.bio__facts b { display: block; color: var(--orange); font: 600 0.7rem/1.4 var(--body); letter-spacing: 0.16em; text-transform: uppercase; }
+.bio blockquote { margin: 0; padding-left: 14px; border-left: 2px solid var(--cyan); color: var(--text); font-style: italic; font-size: 0.95rem; }
+.bio cite { display: block; margin-top: 4px; color: var(--muted); font-size: 0.8rem; font-style: normal; }
+.cards.cards--3 { grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr)); }
+.poster { width: 100%; border-radius: 12px; }
+
+/* ── Beat pad ── */
+.pad { max-width: 560px; margin: 0 auto; padding: 18px; border-radius: 26px;
+	background: linear-gradient(160deg, #161a3a, #0b0e22); border: 1px solid var(--glass-line);
+	box-shadow: 0 40px 90px -40px rgba(61, 90, 254, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.06); }
+.pad__bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 10px 16px; margin-bottom: 16px; }
+.pad__kits { display: flex; gap: 8px; }
+.pad__fx { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 0.82rem; font-weight: 600; }
+.pad__fx input { width: 84px; accent-color: var(--orange); }
+.pad__cut:hover { border-color: #ff3b5c; }
+.pad__grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+.pad__btn { --c: var(--blue); position: relative; aspect-ratio: 1; padding: 0; border: 0; border-radius: 14px; cursor: pointer;
+	background: linear-gradient(180deg, #23284f, #171b3a); color: var(--text);
+	box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.45), inset 0 0 0 1px rgba(255, 255, 255, 0.06), 0 0 0 0 var(--c);
+	touch-action: manipulation; user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent;
+	transition: box-shadow 0.25s ease; }
+.pad__btn::after { content: ""; position: absolute; left: 10px; right: 10px; bottom: 9px; height: 3px; border-radius: 3px;
+	background: var(--c); opacity: 0.85; box-shadow: 0 0 10px var(--c); }
+.pad__btn:hover, .pad__btn:focus-visible { outline: none;
+	box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.45), inset 0 0 0 1px var(--c), 0 0 22px -6px var(--c); }
+.pad__btn[data-c="d"] { --c: var(--blue); }
+.pad__btn[data-c="k"] { --c: var(--orange); }
+.pad__btn[data-c="h"] { --c: #ff4f7b; }
+.pad__btn[data-c="b"] { --c: var(--cyan); }
+.pad__btn[data-c="u"] { --c: #22c55e; }
+.pad__key { position: absolute; top: 8px; right: 10px; color: var(--muted); font: 600 0.7rem/1 var(--body); }
+.pad__name { position: absolute; left: 10px; bottom: 18px; font: 600 clamp(0.62rem, 2.4vw, 0.8rem)/1.1 var(--body); text-align: left; }
+
+/* ── Coming soon ── */
+.soon { display: flex; align-items: center; gap: 18px; max-width: 880px; margin: 40px auto 0; padding: 0 20px;
+	color: var(--orange); font: 600 0.8rem/1.3 var(--body); letter-spacing: 0.18em; text-transform: uppercase; text-align: center; }
+.soon::before, .soon::after { content: ""; flex: 1; height: 1px; background: linear-gradient(90deg, transparent, var(--orange), transparent); }
+#shop { opacity: 0.92; }
+.price { margin-left: 6px; color: var(--orange); font-size: 1rem; }
+
+@media (max-width: 760px) {
+	.bio { grid-template-columns: 1fr; }
+}
+
+/* ── Support cards ── */
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr)); gap: 18px; text-align: left; }
+.card { position: relative; display: flex; flex-direction: column; gap: 10px; padding: 26px;
+	/* solid tint instead of backdrop blur: a blur over an always-animating background re-renders every frame */
+	border-radius: 22px; background: rgba(16, 20, 52, 0.72); border: 1px solid var(--glass-line);
+	transition: transform 0.35s cubic-bezier(0.2, 0.9, 0.3, 1.3), border-color 0.3s ease, box-shadow 0.3s ease; }
+.card:hover { transform: translateY(-6px); border-color: rgba(255, 122, 61, 0.45);
+	box-shadow: 0 24px 60px -24px rgba(255, 122, 61, 0.45); }
+.card__icon { display: grid; place-items: center; width: 46px; height: 46px; border-radius: 14px; font-size: 20px;
+	background: linear-gradient(135deg, var(--blue), #7a5cff); box-shadow: 0 8px 20px -8px var(--blue); }
+.card h3 { margin: 6px 0 0; font: 800 1.35rem/1.2 var(--display); }
+.card p { margin: 0; color: var(--muted); font-size: 0.95rem; }
+.card form { margin: auto 0 0; }
+.card form .btn { width: 100%; }
+.card > .btn { margin-top: auto; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; margin-top: auto;
+	padding: 12px 20px; border: 0; border-radius: 999px; cursor: pointer;
+	background: linear-gradient(135deg, var(--orange), #ff4f7b); color: #fff;
+	font: 600 0.95rem/1 var(--body); text-decoration: none;
+	box-shadow: 0 10px 24px -10px var(--orange); transition: transform 0.25s ease, box-shadow 0.25s ease, filter 0.25s ease; }
+.btn:hover, .btn:focus-visible { transform: translateY(-2px); filter: brightness(1.08);
+	box-shadow: 0 14px 30px -10px var(--orange); outline: none; }
+.btn--ghost { background: transparent; box-shadow: inset 0 0 0 1px var(--glass-line); }
+.btn--ghost:hover, .btn--ghost:focus-visible { box-shadow: inset 0 0 0 1px var(--cyan), 0 10px 26px -12px var(--cyan); }
+.card .fine { font-size: 0.85rem; }
+.card .fine a { color: var(--cyan); }
+.addr { display: block; padding: 10px 12px; border-radius: 12px; background: rgba(0, 0, 0, 0.35);
+	font: 500 0.78rem/1.4 ui-monospace, "Cascadia Code", Consolas, monospace; word-break: break-all; color: #cfd6ff; }
+.btn.is-copied { background: linear-gradient(135deg, #22c55e, #16a34a); }
+
+/* ── Referral links ── */
+.refs { list-style: none; margin: 0 auto; padding: 0; max-width: 620px; display: grid; gap: 12px; }
+.refs a { display: flex; align-items: center; gap: 14px; padding: 18px 22px; border-radius: 18px;
+	background: var(--glass); border: 1px solid var(--glass-line); text-decoration: none; text-align: left;
+	transition: transform 0.3s cubic-bezier(0.2, 0.9, 0.3, 1.3), border-color 0.3s ease, background 0.3s ease; }
+.refs a:hover, .refs a:focus-visible { transform: translateX(6px); border-color: rgba(52, 214, 255, 0.45);
+	background: rgba(52, 214, 255, 0.06); outline: none; }
+.refs .name { font: 800 1.1rem/1.2 var(--display); }
+.refs .meta { color: var(--muted); font-size: 0.88rem; }
+.refs .fa { margin-left: auto; color: var(--cyan); transition: transform 0.3s ease; }
+.refs a:hover .fa { transform: translateX(4px); }
+.disclose { margin: -14px auto 28px; max-width: 560px; color: var(--muted); font-size: 0.85rem; }
+
+/* ── Footer ── */
+footer { padding: 40px 20px 56px; text-align: center; color: var(--muted); font-size: 0.85rem; }
+footer .socials { margin: 0 0 22px; gap: 14px; }
+footer .sicon { width: 46px; height: 46px; font-size: 20px; }
+footer p { margin: 6px 0; }
+footer img { vertical-align: middle; }
+
+@media (max-width: 640px) {
+	.scene { padding: 80px 16px; }
+	.card { padding: 22px; }
+	.socials { gap: 12px; }
+	.sicon { width: 56px; height: 56px; font-size: 24px; }
+}
+@media (prefers-reduced-motion: reduce) {
+	*, *::before, *::after { animation: none !important; transition-duration: 0.01ms !important; }
+	.orb { transform: none !important; }
+	html { scroll-behavior: auto; }
+}
+</style>
+</head>
+<body>
+
+<div class="sky" aria-hidden="true">
+	<div class="orb orb--blue"></div>
+	<div class="orb orb--orange"></div>
+	<div class="orb orb--cyan"></div>
+	<canvas class="cube-trail"></canvas>
+	<canvas class="cube"></canvas>
 </div>
+<div class="progress" aria-hidden="true"></div>
 
+<main>
 
-	
-<div style="float:left; display:block;">
-	<a href="https://nicky-dubs.square.site/product/tips/9" class="glowpulse">
-	  <img src="https://n.anycodes.com/mimg/merimg/b_143952989614.png?v=141016" style="width:64px; height:64px;" alt="Square Payments"></a>
-	
-	<span style="line-height:32px; align-items:center; margin:0 6px;"></span>
-		<span>Square Payments</span>
-
-</p> <!-- END square pay button shit -->
-
-	
-
-<a href="https://paypal.me/nickydubsmusic" class="shadow">
-	<h4 class="slide-subtitle">PayPal</h4>
-	<br><form action="https://www.paypal.com/donate" method="post" target="_top">
-	<input type="hidden" name="hosted_button_id" value="4KKZ6486EC3NJ">
-	<input type="image" src="https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif" border="0" name="submit" title="Donate via PayPal">
-	<!--<img src="https://www.paypal.com/en_CA/i/scr/pixel.gif" width="1" height="1" border="0" alt="Donate via Paypal">-->
-	</form>
-</a>
-	
-<br><br>
-<br><br>
-	
-<div class="shadow button" style="border:16px; padding:10px; border-radius:10px;">
-  <h5 class="slide-subtitle">Crypto</h5><!-- a href="https://rb.gy/zg1jpv" class="button cut-corner">Donate Crypto</a><br>  -->
-<table align="center" style="align-items:center;">
-<!-- 	<tr><td style="line-height:16px; font-size:14px; text-align:center;">Universal wallet</td></tr>
--->
-	<br><br>
-	<tr><td style="padding:10px; 
-		    line-height:14px; 
-		    text-size:12px;  font-size:12px; 
-		    display:inline-flex; 
-		    align-items:center; 
-		    background:transparent; 
-		    border-color:transparent;">
-		<small>0x42Fd5B1e7173A108D11cda3A5ab85bfDF3C76a60 -- doubledicks</small></td>
-    	    <td style="padding:10px; text-size:14px; font-weight: bold;">
-		<button onclick=copyStringToClipboard("0x42Fd5B1e7173A108D11cda3A5ab85bfDF3C76a60")>Copy<img src="https://nickydubs.github.io/images/copy.png" style="height:30px; width:30px; padding:6px; display:;"></img></button>
-		<br><i class="fas fa-copy" onclick=copyStringToClipboard("0x42Fd5B1e7173A108D11cda3A5ab85bfDF3C76a60")></i>
-			<br><input type="image" src="images/copy.png" style="border:0; width:20px; height:20px;" name="copy" title="Copy address" onclick=copyStringToClipboard("0x42Fd5B1e7173A108D11cda3A5ab85bfDF3C76a60")></input>
-		</td>
-	</td></tr>
-</table>
-</div>
-
-<div class="blackborder">
-<h4 class="slide-subtitle">Referral Links</h4>
-<br><a href="https://bybit.com/en-US/invite?ref=NXGE7D">ByBit Exchange</a>
-<br><a href="https://binance.com/en/register?ref=120067791">Binance Exchange</a>
-<br><a href="https://bitbuy.ca/en/sign-up/?c=4YUB4PPZ0Y">BitBuy.ca</a>
-<br><a href="https://tradingview.com/gopro/?share_your_love=huckmode">TradingView</a>
-<!--<br><a href="https://app.mogo.ca/go?referral_code=YSKE71D5">Mogo crypto credit card</a>-->
-<!--<br><a href="https://pantherswap.com/?ref=kjmdrp97aobgs4pg3vbe95qbfep5e4vbweo4sqmnv">PantherSwap</a>-->
-</div>
-
-</div> <!-- end container -->
-
-<!-- </li> <!-- end list w/ bg img -->
-<!-- slide 2 etc 
-	<li class="lazy-bg" data-background="dummy/slide-2.jpg"><div class="container">
-		<h2 class="slide-title">Tah-tah there, chomos</h2>
-		<h3 class="slide-subtitle">RIP Fedsmoker</h3>
-		<p class="slide-desc"><br></p>
-		<a href="#" class="button cut-corner">Click me for nothing!</a>
-	</div></li>
-
-<!-- </ul> <!-- end all slides -->
-<!-- </div> <!-- end slider -->
-
-<!--------------------------------------------------------------------------------------------------------------------->
-<!--<main class="main-content"> -->
-<!--<div class="fullwidth-block testimonial-section">
-	<div class="container">
-		<div class="quote-slider">
-			<ul class="slides">	<li><blockquote>	<p></p>	<cite></cite>	<span></span>	</blockquote></li>
-								<li><blockquote>	<p></p>	<cite></cite>	<span></span>	</blockquote></li>
-			</ul>
- </div></div></div>
-
-<!--------------------------------------------------------------------------------------------------------------------->
-<!--<div class="fullwidth-block upcoming-event-section" data-bg-color="#191919">
-	  <div class="container">
-			<h2 class="section-title">Upcoming events</h2>
-			<div class="event-nav">	<a class="prev" id="event-prev" href="#"><i class="fa fa-caret-left"></i></a>
-	    							<a class="next" id="event-next" href="#"><i class="fa fa-caret-right"></i></a>
-			</div>
-
-<!--<div class="event-carousel">
-		<div class="event">
- 			<div class="entry-date">	<div class="date">23</div>	<span class="month">Jun</span>
-			</div>	<h2 class="entry-title">	<a href="#">bonerlink e-dink e-dinky-dink</a>	</h2>	<p>p e n i s</p>
-		</div>
-		<div class="event">
-			<div class="entry-date"></div>	<a href="#">Take a plop!</a> on a <b>penis</b>
-	    	</div> 
-</div> <!-- end .event-carousel -->
-
-<!--</div></div> <!-- end .container & .fullwidth-block -->
-
-<!--------------------------------------------------------------------------------------------------------------------->
-<!--<div class="fullwidth-block why-chooseus-section">
-	  <div class="container">	<h2 class="section-title">Why choose us?</h2>
-		<div class="row">
-			<div class="col-md-4">	<div class="feature">	<figure class="cut-corner">	<img src="dummy/medium-image-1.jpg" alt="">	</figure>	<h3 class="feature-title">Diiiiiicks</h3>	<p>double-boner</p>	</div></div>
-			<div class="col-md-4">	<div class="feature">	<figure class="cut-corner">	<img src="dummy/medium-image-2.jpg" alt="">	</figure>	<h3 class="feature-title">Diiiiiicks</h3>	<p>double-boner</p>	</div></div>
-	    </div>
-      </div>
+<!-- 0: Hero -->
+<section class="scene hero" id="top">
+	<span class="ghost" aria-hidden="true">NICKY DUBS</span>
+	<div class="scene__inner">
+		<h1><img class="logo" src="images/nickydubs-logo.png" width="640" height="584" alt="Nicky Dubs"></h1>
+		<p class="tagline"><span>Drumkit Demolisher</span> <b>·</b> <span>Looping Wizard</span> <b>·</b> <span>One&#8209;Man Band</span> <b>·</b> <span>Basshead</span> <b>·</b> <span>Air Wiggler</span></p>
+		<nav class="socials" aria-label="Nicky Dubs on social media">
+			<a class="sicon sicon--soundcloud" style="--i:0" href="https://soundcloud.com/nicky-dubs/sets/2022mix" target="_blank" rel="noopener"><i class="fa fa-soundcloud" aria-hidden="true"></i><span class="tip">SoundCloud</span></a>
+			<a class="sicon sicon--youtube" style="--i:1" href="https://youtube.com/huckmode" target="_blank" rel="noopener"><i class="fa fa-youtube-play" aria-hidden="true"></i><span class="tip">YouTube</span></a>
+			<a class="sicon sicon--bandcamp" style="--i:2" href="https://nickydubs.bandcamp.com" target="_blank" rel="noopener"><i class="fa fa-bandcamp" aria-hidden="true"></i><span class="tip">Bandcamp</span></a>
+			<a class="sicon sicon--instagram" style="--i:3" href="https://instagram.com/nicky.dubs" target="_blank" rel="noopener"><i class="fa fa-instagram" aria-hidden="true"></i><span class="tip">Instagram</span></a>
+			<a class="sicon sicon--linktree" style="--i:4" href="https://linktr.ee/NickyDubs" target="_blank" rel="noopener"><i class="fa fa-tree" aria-hidden="true"></i><span class="tip">Linktree</span></a>
+		</nav>
 	</div>
-<!-- end .container & .why-chooseus-section -->
- 
-<!-- </main> <!-- end .main-content -->
+	<a class="scroll-cue" href="#listen" aria-label="Scroll to music"></a>
+</section>
 
-<!-- Footer, container 3 ====================================================================== -->
-<footer>	<!-- class="site-footer" style="padding:10px;">	
-			<div class="container"><address><p>495 Brainard St. Detroit, MI 48201 <br><a href="tel:354543543">(563) 429 234 890</a>
-				<br> <a href="mailto:nickydubsmusic@gmail.com">nickydubsmusic@gmail.com</a></p></address>	-->
-<!--
-<div><form action="#" class="newsletter-form">
-	<center><input type="email" placeholder="Enter your email to join newsletter...">
-		<input type="submit" class="button cut-corner" value="Subscribe">
-	</center>
-</form></div> <!-- end .newsletter-form -->
-<br>
-<!-- .social-links =========================================================================================== --->				
-<div class="social-links">
-	<a href="https://youtube.com/huckmode" class="social-icon social-icon--youtube"><i class="fa fa-youtube"></i><div class="tooltip">YouTube</div></a>
-	<a href="https://soundcloud.com/nicky-dubs/sets/2022mix" class="social-icon social-icon--soundcloud"><i class="fa fa-soundcloud"></i><div class="tooltip">SoundCloud</div></a>
-	<a href="https://instagram.com/nicky.dubs" class="social-icon social-icon--instagram"><i class="fa fa-instagram"></i><div class="tooltip">Instagram</div></a>
-<!--	<a href="https://facebook.com/NickyDubsMusic" class="social-icon social-icon--facebook"><i class="fa fa-facebook"></i><div class="tooltip">Facebook</div></a>
-	<a href="https://twitter.com/NickyDubsMusic" class="social-icon social-icon--twitter"><i class="fa fa-twitter"></i><div class="tooltip">Twitter</div></a>
-	<a href="https://twitch.tv/NickyDubs_" class="social-icon social-icon--twitch"><i class="fa fa-twitch" aria-hidden="true"></i><div class="tooltip">Twitch</div></a>
--->	<a href="https://linktr.ee/NickyDubs" class="social-icon social-icon--linktree"><i class="fa fa-tree" aria-hidden="true"></i><div class="tooltip">Linktree</div></a>
-	<!--<a href="https://nickydubs.github.io" class="social-icon social-icon--github"><i class="fa fa-github"></i><div class="tooltip">GitHub</div></a> -->
-</div><!-- end social links -->
+<!-- 1: Listen -->
+<section class="scene" id="listen">
+	<span class="ghost" aria-hidden="true">LISTEN</span>
+	<div class="scene__inner">
+		<p class="eyebrow">01 · Listen</p>
+		<h2>Free music. Always.</h2>
+		<p class="lead">Air-wiggling scripts, sealed inside snapshots of time: sequences of bass, breaks and feelings that hopefully capture what being alive felt like right then. Juicy, dancey, lovingly polished. <strong>Start here:</strong></p>
+		<ul class="tracks">
+			<li><button class="track is-on" type="button" data-track="https://soundcloud.com/nicky-dubs/cdfso">CDFSO</button></li>
+			<li><button class="track" type="button" data-track="https://soundcloud.com/nicky-dubs/tessela-hackney-parrot-nicky-dubs-remix">Hackney Parrot<small>remix</small></button></li>
+			<li><button class="track" type="button" data-track="https://soundcloud.com/nicky-dubs/movin-on">Movin' On</button></li>
+			<li><button class="track" type="button" data-track="https://soundcloud.com/nicky-dubs/pma-ft-paisteez-corvid-lorax-1">PMA</button></li>
+			<li><button class="track" type="button" data-track="https://soundcloud.com/nicky-dubs/waiting">Waiting</button></li>
+			<li><button class="track" type="button" data-track="https://soundcloud.com/nicky-dubs/salt">SALT</button></li>
+			<li><button class="track" type="button" data-track="https://soundcloud.com/nicky-dubs/sets/2022mix">2022 mix</button></li>
+		</ul>
+		<div class="player">
+			<iframe title="Nicky Dubs on SoundCloud" loading="lazy" allow="autoplay"
+				src="https://w.soundcloud.com/player/?url=https%3A//soundcloud.com/nicky-dubs/cdfso&color=%23ff7a3d&auto_play=false&hide_related=true&show_comments=false&show_user=true&show_reposts=false&visual=true"></iframe>
+		</div>
+	</div>
+</section>
 
-<!-- footer tail -->
-<div>	
-	<span style="line-height:28px; align-items:center; margin:0 6px;"><img src="images/verified-icon.png" style="display:inline;"></span><span>Verified Brave Creator</span>
-	<br>NICKY DUBS. All rights reserved.
-	<br><br><a href="http://english-1631965171.spampoison.com"><img src="images/spampoison.gif" alt="spam poison"></a>
-	<br><br><br><br><br><br><br><br>
-	<br><br><br><br><br><br><br><br><iframe src="tunnex/index.html" style="border:2px solid red;" title="tunnex"></iframe>
-	<br><br><br>But what does it all mean?  Just always remember, never get fooled by the winklesnarf!! don't worry, you'll be laughin' and snorkeling in picklefish skintarts winning winskillshwangkin-puffing-slinktopuss and harpooning lionfish all day shlong.  save the reefs!  Wow-Turd-farts-and-falls.  
-	<br><br>Testicoomplete.
-	<br><br>
-</div><!-- end footer tail -->
+<!-- 2: Watch (thumbnails only; the YouTube player loads when clicked, so the page stays light) -->
+<section class="scene" id="watch">
+	<span class="ghost" aria-hidden="true">WATCH</span>
+	<div class="scene__inner">
+		<p class="eyebrow">02 · Watch</p>
+		<h2>Drums, live and loud</h2>
+		<div class="vids">
+			<button class="vid vid--tall" type="button" data-yt="I7ymljV4Lik"><img src="https://i.ytimg.com/vi/I7ymljV4Lik/hqdefault.jpg" alt="" loading="lazy"><span class="vid__title">Jungle drummer live on the sidewalk</span></button>
+			<button class="vid" type="button" data-yt="MvLqXY_XaTQ"><img src="https://i.ytimg.com/vi/MvLqXY_XaTQ/hqdefault.jpg" alt="" loading="lazy"><span class="vid__title">Dropping fire live @ Intention 2019</span></button>
+			<button class="vid" type="button" data-yt="0jTEs5MpeA0"><img src="https://i.ytimg.com/vi/0jTEs5MpeA0/hqdefault.jpg" alt="" loading="lazy"><span class="vid__title">DnB drumming clip</span></button>
+			<button class="vid" type="button" data-yt="r5fTxNMm380"><img src="https://i.ytimg.com/vi/r5fTxNMm380/hqdefault.jpg" alt="" loading="lazy"><span class="vid__title">Movin' On, live</span></button>
+			<button class="vid" type="button" data-yt="ojLBkuk9cP4"><img src="https://i.ytimg.com/vi/ojLBkuk9cP4/hqdefault.jpg" alt="" loading="lazy"><span class="vid__title">Bulls on Parade x Africa @ RBF 2018</span></button>
+		</div>
+		<a class="btn btn--ghost vids__more" href="https://youtube.com/huckmode" target="_blank" rel="noopener"><i class="fa fa-youtube-play" aria-hidden="true"></i>More on YouTube</a>
+	</div>
+</section>
 
-</footer><!-- end footer -->
+<!-- 3: Live + bio -->
+<section class="scene" id="live">
+	<span class="ghost" aria-hidden="true">LIVE</span>
+	<div class="scene__inner">
+		<p class="eyebrow">03 · Live</p>
+		<h2>Catch me live</h2>
+		<div class="bio">
+			<figure class="bio__photo">
+				<img src="images/live-reign-bough-fiddle.jpg" width="960" height="639" alt="Nicky Dubs performing live at Reign Bough Fiddle" loading="lazy">
+				<figcaption>Live at Reign Bough Fiddle</figcaption>
+			</figure>
+			<div class="bio__text">
+				<p class="bio__lead"><strong>Edmonton drummer turned basshead.</strong> Acoustic drums meet festival bass music, built live with loops.</p>
+				<ul class="bio__facts">
+					<li><b>Roots</b>Raised on Edmonton Folk Fest; converted at Shambhala 2005</li>
+					<li><b>Bands</b>Tiger Coffee (founding member), Strange Planes, Duophonics, Thug Shells, Poppa Squats, Landon Bushell, Ann Vriend, Goddessa (as her one-man backup band)</li>
+					<li><b>Festivals</b>Astral Harvest <small>'18 '19</small> · Jamtron <small>'16–'18</small> · Reign Bough Fiddle <small>'18 '19</small> · Vibes <small>'21–'23</small> · InterSECT <small>'21–'23</small> · Zion Noiz <small>'16 '17</small> · North Country Fair <small>'23–'26, with Tiger Coffee</small> · Odyssey Gathering · Heart of the City</li>
+					<li><b>Opened for</b>Dub FX · Benny Page · Ed Solo</li>
+					<li><b>Collabs</b>Paul Paisteez (RIP) · Corvid Lorax</li>
+				</ul>
+				<blockquote>"My eyes were glued to him the whole time out of pure fascination." <cite>KB Hannah, Odyssey Gathering</cite></blockquote>
+			</div>
+		</div>
+		<div class="cards cards--3">
+			<article class="card">
+				<span class="card__icon"><i class="fa fa-music" aria-hidden="true"></i></span>
+				<h3>Sunday Open Jam</h3>
+				<p>Every Sunday at <strong>River City Revival</strong>, co-hosted by my band Tiger Coffee. Bring your instrument, your voice, or just your ears.</p>
+				<!-- Drop this week's poster in as images/jam-poster.jpg and it shows up here automatically. -->
+				<img class="poster" src="images/jam-poster.jpg" alt="This week's Sunday Open Jam poster" loading="lazy" hidden onload="this.hidden=false" onerror="this.remove()">
+				<a class="btn btn--ghost" href="https://instagram.com/nicky.dubs" target="_blank" rel="noopener"><i class="fa fa-instagram" aria-hidden="true"></i>This week's poster</a>
+			</article>
+			<article class="card">
+				<span class="card__icon"><i class="fa fa-road" aria-hidden="true"></i></span>
+				<h3>Busking on a street near you</h3>
+				<p>A full drumkit and a subwoofer on the sidewalk. If you hear jungle coming from around the corner, come say hi.</p>
+				<a class="btn btn--ghost" href="https://instagram.com/nicky.dubs" target="_blank" rel="noopener"><i class="fa fa-map-marker" aria-hidden="true"></i>Where I'm at</a>
+			</article>
+			<article class="card">
+				<span class="card__icon"><i class="fa fa-calendar" aria-hidden="true"></i></span>
+				<h3>Book me</h3>
+				<p>Festivals, clubs, private parties, or one-man backup band duty.</p>
+				<!-- Booking email is stored reversed and only built on click, same as the e-Transfer one. -->
+				<a class="btn" href="#live" data-mail-link="moc.liamg@cisumsbudykcin"><i class="fa fa-envelope" aria-hidden="true"></i>Email me</a>
+			</article>
+		</div>
+	</div>
+</section>
 
-</div><!-- end bg layer -->
+<!-- 4: Play -->
+<section class="scene" id="play">
+	<span class="ghost" aria-hidden="true">PLAY</span>
+	<div class="scene__inner">
+		<p class="eyebrow">04 · Play</p>
+		<h2>Wiggle some air yourself</h2>
+		<p class="lead">Tap the pads or use your keyboard (<b>1–4 · Q–R · A–F · Z–V</b>). <strong>Right-click a pad</strong> to load your own sample.</p>
+		<div class="pad">
+			<div class="pad__bar">
+				<div class="pad__kits">
+					<button class="track is-on" type="button" data-kit="soul">Soul MPC</button>
+					<button class="track" type="button" data-kit="808">808 Trap</button>
+				</div>
+				<label class="pad__fx">Reverb <input type="range" min="0" max="1" step="0.01" value="0.25" data-fx="reverb"></label>
+				<label class="pad__fx">Delay <input type="range" min="0" max="1" step="0.01" value="0" data-fx="delay"></label>
+				<button class="track pad__cut" type="button">Cut FX</button>
+			</div>
+			<div class="pad__grid"></div>
+			<input class="pad__file" type="file" accept="audio/*" hidden>
+		</div>
+	</div>
+</section>
+
+<!-- 5: Support -->
+<section class="scene" id="support">
+	<span class="ghost" aria-hidden="true">SUPPORT</span>
+	<div class="scene__inner">
+		<p class="eyebrow">05 · Support</p>
+		<h2>Fuel the music</h2>
+		<p class="lead">I've always wanted my music to be accessible for free, but I won't stop you from helping with my bills if you want to. In fact, I'd be <strong>extremely grateful</strong> if you did! Plus, the more you donate, the more the world will change, quantifiably!!
+			<strong>$1,000,000 = 1 world-change unit</strong>, which I assure you is real and guarantees a one-minute drum solo or song of your choice... and one wish!!! Choose wisely! Muahahaha.
+			<br><br>Thank you so much for supporting me on my lifelong musical journey!!</p>
+		<div class="cards cards--3">
+			<article class="card">
+				<span class="card__icon"><i class="fa fa-bandcamp" aria-hidden="true"></i></span>
+				<h3>Bandcamp</h3>
+				<p>Buy the music itself. Downloads in full quality, and most of what you pay goes straight to me.</p>
+				<a class="btn" href="https://nickydubs.bandcamp.com" target="_blank" rel="noopener">Shop on Bandcamp</a>
+			</article>
+			<article class="card">
+				<span class="card__icon"><i class="fa fa-paypal" aria-hidden="true"></i></span>
+				<h3>PayPal</h3>
+				<p>Donate with PayPal or any card.</p>
+				<p class="fine">or <a href="https://paypal.me/nickydubsmusic" target="_blank" rel="noopener">paypal.me/nickydubsmusic</a></p>
+				<form action="https://www.paypal.com/donate" method="post" target="_top">
+					<input type="hidden" name="hosted_button_id" value="4KKZ6486EC3NJ">
+					<button class="btn" type="submit">Donate with PayPal</button>
+				</form>
+			</article>
+			<!-- PARKED until tips@nickydubs.com is confirmed working (delete this line and the "END PARKED" line to bring it back).
+			     The e-Transfer email is stored reversed and only assembled when a human clicks, so scrapers never see it.
+			<article class="card">
+				<span class="card__icon"><i class="fa fa-exchange" aria-hidden="true"></i></span>
+				<h3>Interac e-Transfer</h3>
+				<p>In Canada? Send it straight from your bank.</p>
+				<code class="addr" data-mail-out>hidden from bots · tap below</code>
+				<button class="btn btn--ghost" type="button" data-mail="moc.sbudykcin@spit"><i class="fa fa-eye" aria-hidden="true"></i><span>Show &amp; copy email</span></button>
+			</article>
+			END PARKED -->
+			<article class="card">
+				<span class="card__icon"><i class="fa fa-cube" aria-hidden="true"></i></span>
+				<h3>Donate onchain</h3>
+				<p>Any EVM chain: Ethereum, Base, Polygon, BNB Chain, Arbitrum &amp; more.</p>
+				<code class="addr">0x42Fd5B1e7173A108D11cda3A5ab85bfDF3C76a60</code>
+				<button class="btn btn--ghost" type="button" data-copy="0x42Fd5B1e7173A108D11cda3A5ab85bfDF3C76a60"><i class="fa fa-copy" aria-hidden="true"></i><span>Copy address</span></button>
+			</article>
+		</div>
+	</div>
+</section>
+
+<!-- ═══ Everything below this line is unfinished / mock-ups ═══ -->
+<div class="soon" role="separator"><span>Everything below here is coming soon. Stay tuned.</span></div>
+
+<section class="scene" id="shop">
+	<span class="ghost" aria-hidden="true">SHOP</span>
+	<div class="scene__inner">
+		<p class="eyebrow">Coming soon · Shop</p>
+		<h2>Beats &amp; gear</h2>
+		<div class="cards">
+			<article class="card">
+				<span class="card__icon"><i class="fa fa-headphones" aria-hidden="true"></i></span>
+				<h3>Beats</h3>
+				<p>Juicy, dancey, ready-to-wiggle beats to write over, lease or own.</p>
+				<a class="btn" href="store.html">Browse beats</a>
+			</article>
+			<article class="card card--rig">
+				<span class="card__icon"><i class="fa fa-lightbulb-o" aria-hidden="true"></i></span>
+				<h3>Kick Drum Light Rig <span class="price">$360</span></h3>
+				<p>An infinity mirror that clips into almost any kick drum, with sound-reactive LEDs that hit when you hit. Handmade by me.</p>
+				<a class="btn" href="store.html">Get one</a>
+			</article>
+		</div>
+	</div>
+</section>
+
+</main>
+
+<footer>
+	<nav class="socials" aria-label="Nicky Dubs on social media (footer)">
+		<a class="sicon sicon--soundcloud" style="--i:0" href="https://soundcloud.com/nicky-dubs/sets/2022mix" target="_blank" rel="noopener"><i class="fa fa-soundcloud" aria-hidden="true"></i><span class="tip">SoundCloud</span></a>
+		<a class="sicon sicon--youtube" style="--i:1" href="https://youtube.com/huckmode" target="_blank" rel="noopener"><i class="fa fa-youtube-play" aria-hidden="true"></i><span class="tip">YouTube</span></a>
+		<a class="sicon sicon--bandcamp" style="--i:2" href="https://nickydubs.bandcamp.com" target="_blank" rel="noopener"><i class="fa fa-bandcamp" aria-hidden="true"></i><span class="tip">Bandcamp</span></a>
+		<a class="sicon sicon--instagram" style="--i:3" href="https://instagram.com/nicky.dubs" target="_blank" rel="noopener"><i class="fa fa-instagram" aria-hidden="true"></i><span class="tip">Instagram</span></a>
+		<a class="sicon sicon--linktree" style="--i:4" href="https://linktr.ee/NickyDubs" target="_blank" rel="noopener"><i class="fa fa-tree" aria-hidden="true"></i><span class="tip">Linktree</span></a>
+	</nav>
+	<p><img src="images/verified-icon.png" alt=""> Verified Brave Creator</p>
+	<p>&copy; 2026 NICKY DUBS. All rights reserved.</p>
+	<p><a href="http://english-1631965171.spampoison.com"><img src="images/spampoison.gif" alt="spam poison"></a></p>
+</footer>
+
+<script>
+(() => {
+	const root = document.documentElement;
+	const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+	const clamp = (v, lo = 0, hi = 1) => Math.min(hi, Math.max(lo, v));
+
+	const smooth = (a, b, v) => { const t = clamp((v - a) / (b - a)); return t * t * (3 - 2 * t); };
+	let prog = 0;
+
+	// ── Metatron's cube: 13 circles (fruit of life) with every center joined to every other ──
+	const pts = [[0, 0]];
+	for (const r of [60, 120]) for (let k = 0; k < 6; k++) {
+		const a = Math.PI / 3 * k - Math.PI / 2;
+		pts.push([Math.cos(a) * r, Math.sin(a) * r]);
+	}
+	const outer = pts.slice(7);
+	// Built once and reused every frame: the canvas just re-strokes these with a new transform.
+	const metaLines = new Path2D(), metaCircles = new Path2D();
+	for (let i = 0; i < 13; i++) for (let j = i + 1; j < 13; j++) {
+		metaLines.moveTo(pts[i][0], pts[i][1]); metaLines.lineTo(pts[j][0], pts[j][1]);
+	}
+	for (const [x, y] of pts) { metaCircles.moveTo(x + 30, y); metaCircles.arc(x, y, 30, 0, Math.PI * 2); }
+
+	// ── Tesseract hiding inside it: a cube seen corner-on IS Metatron's outer hexagon + center.
+	// Axes x/y/z project onto three hexagon spokes; the 4th axis (w) starts flat and unfolds with scroll.
+	const tVerts = [];
+	for (let i = 0; i < 16; i++) tVerts.push([0, 1, 2, 3].map(b => (i >> b & 1) ? 1 : -1));
+	const tEdges = [];
+	for (let i = 0; i < 16; i++) for (let b = 0; b < 4; b++) { const j = i ^ (1 << b); if (j > i) tEdges.push([i, j]); }
+	const axes = [-90, 30, 150].map(d => [Math.cos(d * Math.PI / 180) * 60, Math.sin(d * Math.PI / 180) * 60]);
+	function tesseract(m, a1, a2) {
+		const c1 = Math.cos(a1), s1 = Math.sin(a1), c2 = Math.cos(a2), s2 = Math.sin(a2);
+		return tVerts.map(([x, y, z, w]) => {
+			[x, w] = [x * c1 - w * s1, x * s1 + w * c1];   // rotate in the x-w plane
+			[z, w] = [z * c2 - w * s2, z * s2 + w * c2];   // ...and the z-w plane
+			const k = 1 + 0.4 * m * w;                       // 4D perspective: inner + outer cube
+			return [k * (x * axes[0][0] + y * axes[1][0] + z * axes[2][0]),
+			        k * (x * axes[0][1] + y * axes[1][1] + z * axes[2][1])];
+		});
+	}
+
+	const cv = document.querySelector('.cube'), tv = document.querySelector('.cube-trail');
+	const cx = cv.getContext('2d'), tx = tv.getContext('2d');
+	let W = 0, H = 0, dpr = 1;
+	const TRAIL_RES = 0.25; // the glow canvas runs at quarter resolution: upscaling IS the blur, for free
+	function fit() {
+		dpr = lite ? 1 : Math.min(devicePixelRatio || 1, 1.5);
+		W = innerWidth; H = innerHeight;
+		cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+		tv.width = Math.round(W * TRAIL_RES); tv.height = Math.round(H * TRAIL_RES);
+	}
+
+	// One frozen moment of the figure, so the trail can replay recent ones.
+	function snapshot(t, phase) {
+		const m = smooth(0.12, 0.95, prog);
+		const big = Math.min(1.2 * Math.max(W, H), 1600) / 320 * (0.75 + prog * 1.4); // grows as you scroll...
+		const whole = Math.min(W, H) * 0.44 / 190;                                    // ...then pulls back to show the whole hypercube
+		return {
+			m,
+			rot: prog * 2.44 + t * Math.PI * 2 / 240,              // scroll spin + slow 4-minute drift
+			S: big + (whole - big) * smooth(0.55, 0.98, prog),
+			tp: tesseract(m, m * (0.6 + phase), m * (0.35 + phase * 0.62)),
+		};
+	}
+	function tessPath(st) {
+		if (!st.path) {
+			st.path = new Path2D();
+			for (const [i, j] of tEdges) { st.path.moveTo(st.tp[i][0], st.tp[i][1]); st.path.lineTo(st.tp[j][0], st.tp[j][1]); }
+		}
+		return st.path;
+	}
+	function place(ctx, st, k) {
+		ctx.setTransform(k, 0, 0, k, 0, 0);
+		ctx.translate(W / 2, H / 2);
+		ctx.rotate(st.rot);
+		ctx.scale(st.S, st.S);
+	}
+	function figure(ctx, st, alpha, lw) {
+		const px = lw / st.S;
+		ctx.lineWidth = px;
+		const mA = alpha * 0.55 * (1 - 0.75 * st.m);
+		if (mA > 0.004) {
+			ctx.globalAlpha = mA;
+			ctx.strokeStyle = 'rgb(110, 135, 255)';
+			ctx.stroke(metaLines);
+			ctx.globalAlpha = alpha * 0.45 * (1 - 0.9 * st.m);
+			ctx.strokeStyle = 'rgb(255, 122, 61)';
+			ctx.stroke(metaCircles);
+		}
+		const tA = alpha * 0.75 * smooth(0, 0.35, st.m);
+		if (tA > 0.004) {
+			ctx.lineWidth = px * 1.3;
+			ctx.globalAlpha = tA;
+			ctx.strokeStyle = 'rgb(140, 205, 255)';
+			ctx.stroke(tessPath(st));
+		}
+		ctx.globalAlpha = 1;
+	}
+
+	// Rare star twinkles on the outermost vertices.
+	let twinkle = null, nextTwinkle = 3;
+	function drawTwinkle(st, t) {
+		if (!twinkle && t > nextTwinkle) {
+			twinkle = { start: t, dur: 1.2 + Math.random() * 0.8, i: Math.floor(Math.random() * 16), warm: Math.random() < 0.5 };
+		}
+		if (!twinkle) return;
+		const u = (t - twinkle.start) / twinkle.dur;
+		if (u >= 1) { twinkle = null; nextTwinkle = t + 3 + Math.random() * 7; return; }
+		// before the morph: Metatron's outer ring; after it: the tesseract's corners
+		const [x, y] = st.m < 0.5 ? outer[twinkle.i % 6] : st.tp[twinkle.i];
+		const a = Math.sin(Math.PI * u) ** 2;
+		const col = twinkle.warm ? '255, 236, 170' : '255, 255, 255';
+		const r = 1 / st.S;
+		const g = cx.createRadialGradient(x, y, 0, x, y, 5 * r);
+		g.addColorStop(0, `rgba(${col}, ${0.35 * a})`);
+		g.addColorStop(1, `rgba(${col}, 0)`);
+		cx.fillStyle = g;
+		cx.beginPath(); cx.arc(x, y, 5 * r, 0, Math.PI * 2); cx.fill();
+		cx.fillStyle = `rgba(${col}, ${0.95 * a})`;
+		cx.fillRect(x - 0.6 * r, y - 0.6 * r, 1.2 * r, 1.2 * r);
+	}
+
+	// ── Logo heartbeat: slow + gentle at rest; grows and quickens as the cursor gets close ──
+	const logo = document.querySelector('.logo');
+	let pointer = null, near = 0, beatPhase = 0;
+	let logoX = 0, logoY = 0, logoW = 1; // page position, measured on resize only (no layout reads per frame)
+	function measureLogo() {
+		const r = logo.getBoundingClientRect();
+		logoX = r.left + r.width / 2; logoY = r.top + r.height / 2 + scrollY; logoW = logo.offsetWidth;
+	}
+	addEventListener('pointermove', e => { if (e.pointerType === 'mouse') pointer = [e.clientX, e.clientY]; }, { passive: true });
+	document.addEventListener('pointerleave', () => { pointer = null; });
+	const lubDub = f => Math.exp(-(((f - 0.06) / 0.045) ** 2)) + 0.55 * Math.exp(-(((f - 0.3) / 0.055) ** 2));
+	let lastScale = '';
+	function heartbeat(dt) {
+		let target = 0;
+		if (pointer) {
+			const d = Math.hypot(pointer[0] - logoX, pointer[1] - (logoY - scrollY));
+			target = 1 - smooth(logoW * 0.25, logoW * 0.25 + 520, d);
+		}
+		near += (target - near) * Math.min(1, dt * 2.5);           // ease, so it never jumps
+		beatPhase = (beatPhase + dt / (1.2 - 0.55 * near)) % 1;     // ~50 bpm resting → ~92 bpm up close
+		const s = (1 + 0.09 * near) * (1 + (0.014 + 0.04 * near) * lubDub(beatPhase));
+		const next = `scale(${s.toFixed(4)})`;
+		if (next !== lastScale) { logo.style.transform = next; lastScale = next; }
+	}
+
+	// ── The living loop ──
+	const history = [];
+	let last = performance.now(), phase = 0, tick = 0;
+	function live(now) {
+		const dt = Math.min(0.1, (now - last) / 1000);
+		last = now;
+		const t = now / 1000;
+		phase += dt * 0.22 * smooth(0.12, 0.95, prog);   // 4D tumble only runs once it's unfolding
+		const st = snapshot(t, phase);
+		const breathe = 0.32 * (1 + 0.06 * Math.sin(t * Math.PI * 2 / 11) + 0.025 * Math.sin(t * Math.PI * 2 / 4.3));
+
+		cx.setTransform(1, 0, 0, 1, 0, 0);
+		cx.clearRect(0, 0, cv.width, cv.height);
+		place(cx, st, dpr);
+		figure(cx, st, breathe, 1);
+		drawTwinkle(st, t);
+
+		// memory tail: replay the last ~half second of positions, fading, on the blurred canvas
+		if (!lite) {
+			if (++tick % 4 === 0) { history.unshift(st); if (history.length > 8) history.pop(); }
+			tx.setTransform(1, 0, 0, 1, 0, 0);
+			tx.clearRect(0, 0, tv.width, tv.height);
+			tx.globalCompositeOperation = 'lighter';
+			history.forEach((h, i) => { place(tx, h, TRAIL_RES); figure(tx, h, breathe * 0.22 * (1 - i / 8), 1.6); });
+			tx.globalCompositeOperation = 'source-over';
+		}
+
+		heartbeat(dt);
+		checkSpeed(t, dt);
+		requestAnimationFrame(live);
+	}
+
+	// Lite mode: if this device can't hold ~35fps for a few seconds, quietly drop the glow trail,
+	// the scroll blur and the extra pixel density. Everything else keeps running.
+	let lite = false, born = 0, frames = 0, slow = 0;
+	function checkSpeed(t, dt) {
+		if (lite || frames >= 240) return;
+		if (!born) born = t;
+		if (t - born < 1.5) return;   // ignore load-time hiccups
+		frames++;
+		if (dt > 1 / 35) slow++;
+		if (frames === 240 && slow > 100) {
+			lite = true;
+			tv.style.display = 'none';
+			fit();
+			queue();
+		}
+	}
+	function still() { // reduced motion: one calm frame, redrawn on scroll
+		cx.setTransform(1, 0, 0, 1, 0, 0);
+		cx.clearRect(0, 0, cv.width, cv.height);
+		const st = snapshot(0, 0);
+		place(cx, st, dpr);
+		figure(cx, st, 0.32, 1);
+	}
+	fit();
+	addEventListener('resize', () => { fit(); measureLogo(); if (reduce) still(); });
+	addEventListener('load', measureLogo);
+	if (reduce) still(); else requestAnimationFrame(live);
+
+	// Scroll-driven swoosh: each scene grows in from small + blurry, then grows past you and dissolves.
+	const scenes = [...document.querySelectorAll('.scene')].map(el => ({
+		el, inner: el.querySelector('.scene__inner'), ghost: el.querySelector('.ghost')
+	}));
+	let queued = false;
+	// Layout is measured once (and on resize); each scroll frame is pure math on scrollY plus style writes.
+	const orbs = [...document.querySelectorAll('.orb')].map((el, i) => ({ el, k: [60, -50, -35][i] }));
+	const bar = document.querySelector('.progress'), cue = document.querySelector('.scroll-cue');
+	let vh = 0, maxScroll = 0;
+	function measure() {
+		vh = innerHeight;
+		maxScroll = root.scrollHeight - vh;
+		for (const s of scenes) { s.top = s.el.offsetTop; s.h = s.el.offsetHeight; }
+	}
+	const setStyle = (el, prop, val, cache) => { if (cache[prop] !== val) { el.style[prop] = val; cache[prop] = val; } };
+	function frame() {
+		queued = false;
+		const y = scrollY;
+		prog = maxScroll > 0 ? clamp(y / maxScroll) : 0;
+		bar.style.transform = `scaleX(${prog.toFixed(4)})`;
+		cue.style.opacity = clamp(1 - prog * 25).toFixed(2);
+		if (reduce) { still(); return; }
+		for (const o of orbs) o.el.style.transform = `translate3d(0, ${(prog * o.k).toFixed(2)}vh, 0)`;
+		const blurOK = !lite && innerWidth > 640;
+		for (const s of scenes) {
+			const top = s.top - y, bottom = top + s.h;
+			if (bottom < -vh || top > 2 * vh) continue;
+			const c = s.cache || (s.cache = {}), gc = s.gcache || (s.gcache = {});
+			const enter = clamp((top - vh * 0.1) / (vh * 0.75));
+			const leave = clamp(1 - bottom / (vh * 0.6));
+			const scale = 1 - enter * 0.22 + leave * 0.14;
+			const blur = blurOK ? Math.round((enter + leave) * 8) : 0; // whole pixels: fewer re-rasters
+			setStyle(s.inner, 'transform', `translate3d(0, ${(enter * 70 - leave * 50).toFixed(1)}px, 0) scale(${scale.toFixed(3)})`, c);
+			setStyle(s.inner, 'opacity', clamp(1 - enter * 1.1 - leave * 1.1).toFixed(2), c);
+			setStyle(s.inner, 'filter', blur ? `blur(${blur}px)` : 'none', c);
+			if (s.ghost) {
+				const g = clamp((top + s.h / 2 - vh / 2) / ((vh + s.h) / 2), -1, 1);
+				setStyle(s.ghost, 'transform', `translate(-50%, -50%) translateX(${(g * 18).toFixed(2)}vw) scale(${(1 - g * 0.55).toFixed(3)})`, gc);
+				setStyle(s.ghost, 'opacity', (1 - Math.abs(g)).toFixed(2), gc);
+			}
+		}
+	}
+	const queue = () => { if (!queued) { queued = true; requestAnimationFrame(frame); } };
+	addEventListener('scroll', queue, { passive: true });
+	addEventListener('resize', () => { measure(); queue(); });
+	addEventListener('load', () => { measure(); queue(); });
+	new ResizeObserver(() => { measure(); queue(); }).observe(document.querySelector('main'));
+	measure();
+	frame();
+
+	// Icons pop in one by one.
+	requestAnimationFrame(() => document.body.classList.add('is-ready'));
+
+	// Magnetic icons: they lean toward the cursor.
+	if (!reduce && matchMedia('(hover: hover)').matches) {
+		document.querySelectorAll('.sicon').forEach(a => {
+			a.addEventListener('pointermove', e => {
+				const r = a.getBoundingClientRect();
+				a.style.setProperty('--mx', ((e.clientX - r.left - r.width / 2) * 0.35).toFixed(1) + 'px');
+				a.style.setProperty('--my', ((e.clientY - r.top - r.height / 2) * 0.35).toFixed(1) + 'px');
+			});
+			a.addEventListener('pointerleave', () => {
+				a.style.removeProperty('--mx');
+				a.style.removeProperty('--my');
+			});
+		});
+	}
+
+	// Track picker: swap what the SoundCloud player is loaded with.
+	const player = document.querySelector('.player iframe');
+	document.querySelectorAll('[data-track]').forEach(btn => btn.addEventListener('click', () => {
+		document.querySelectorAll('.track.is-on').forEach(b => b.classList.remove('is-on'));
+		btn.classList.add('is-on');
+		const src = new URL(player.src);
+		src.searchParams.set('url', btn.dataset.track);
+		src.searchParams.set('auto_play', 'true');
+		player.src = src.href;
+	}));
+
+	// Videos: swap the thumbnail for the real player only when clicked.
+	document.querySelectorAll('[data-yt]').forEach(v => v.addEventListener('click', () => {
+		if (v.classList.contains('is-playing')) return;
+		v.classList.add('is-playing');
+		v.innerHTML = `<iframe src="https://www.youtube-nocookie.com/embed/${v.dataset.yt}?autoplay=1&rel=0&playsinline=1" title="Nicky Dubs video" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe>`;
+	}));
+
+	// Booking email: same trick, built into a mailto only when clicked.
+	document.querySelectorAll('[data-mail-link]').forEach(a => a.addEventListener('click', e => {
+		e.preventDefault();
+		location.href = 'mailto:' + [...a.dataset.mailLink].reverse().join('') + '?subject=Booking%20Nicky%20Dubs';
+	}));
+
+	// e-Transfer email: un-reverse only on a real click, then show + copy it.
+	document.querySelectorAll('[data-mail]').forEach(btn => btn.addEventListener('click', () => {
+		const mail = [...btn.dataset.mail].reverse().join('');
+		btn.parentElement.querySelector('[data-mail-out]').textContent = mail;
+		btn.removeAttribute('data-mail');
+		btn.dataset.copy = mail;
+		btn.querySelector('.fa').className = 'fa fa-copy';
+		bindCopy(btn, 'Copy email');
+		btn.click();
+	}, { once: true }));
+
+	// Copy wallet address / e-Transfer email.
+	document.querySelectorAll('[data-copy]').forEach(btn => bindCopy(btn));
+	function bindCopy(btn, idleText) {
+		const label = btn.querySelector('span');
+		const idle = idleText || label.textContent;
+		btn.addEventListener('click', async () => {
+			const text = btn.dataset.copy;
+			try {
+				await navigator.clipboard.writeText(text);
+			} catch {
+				const t = document.createElement('textarea');
+				t.value = text;
+				document.body.append(t);
+				t.select();
+				document.execCommand('copy');
+				t.remove();
+			}
+			btn.classList.add('is-copied');
+			label.textContent = 'Copied!';
+			setTimeout(() => { btn.classList.remove('is-copied'); label.textContent = idle; }, 1600);
+		});
+	}
+})();
+</script>
+<script src="beatpad.js" defer></script>
 </body>
 </html>

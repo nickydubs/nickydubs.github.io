@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Store coming soon | Nicky Dubs</title>
+<meta name="robots" content="noindex">
+<link rel="icon" href="favicon.ico">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,800&family=Inter:wght@400;600&display=swap">
+<style>
+:root { --ink: #070915; --ink-2: #0d1130; --text: #eef0ff; --muted: #9aa0c3; --blue: #3d5afe; --orange: #ff7a3d; color-scheme: dark; }
+* { box-sizing: border-box; }
+body { margin: 0; min-height: 100svh; display: grid; place-items: center; padding: 40px 16px;
+	background: radial-gradient(70% 60% at 20% 10%, rgba(61, 90, 254, 0.35), transparent 70%),
+		radial-gradient(60% 50% at 85% 90%, rgba(255, 122, 61, 0.22), transparent 70%), var(--ink);
+	color: var(--text); font: 16px/1.6 "Inter", "Segoe UI", system-ui, sans-serif; text-align: center; }
+main { max-width: 520px; }
+img { width: 140px; height: auto; animation: beat 1.2s ease-in-out infinite; }
+@keyframes beat { 0%, 20%, 45%, 100% { transform: scale(1); } 6% { transform: scale(1.04); } 30% { transform: scale(1.02); } }
+h1 { margin: 18px 0 10px; font: 800 clamp(2rem, 7vw, 3rem)/1.05 "Bricolage Grotesque", sans-serif;
+	background: linear-gradient(180deg, #fff, #b9c3ff); -webkit-background-clip: text; background-clip: text; color: transparent; }
+p { margin: 0 0 26px; color: var(--muted); }
+.btns { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; }
+a { display: inline-flex; padding: 12px 22px; border-radius: 999px; color: #fff; font-weight: 600; text-decoration: none;
+	background: linear-gradient(135deg, var(--orange), #ff4f7b); box-shadow: 0 10px 24px -10px var(--orange); transition: transform 0.25s ease; }
+a:hover, a:focus-visible { transform: translateY(-2px); outline: none; }
+a.ghost { background: transparent; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.15); }
+@media (prefers-reduced-motion: reduce) { img { animation: none; } }
+</style>
+</head>
+<body>
+<main>
+	<img src="images/nickydubs-logo.png" width="640" height="584" alt="Nicky Dubs">
+	<h1>The store is almost ready</h1>
+	<p>Beats and the kick drum light rig are getting polished up. Come back soon! Want to show some love in the meantime? Every donation keeps the air wiggling.</p>
+	<div class="btns">
+		<a href="./#support">Support Nicky Dubs</a>
+		<a class="ghost" href="./">Back to the site</a>
+	</div>
+</main>
+</body>
+</html>
