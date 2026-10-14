@@ -195,6 +195,7 @@
 	// No DynamicsCompressorNode anywhere: Chrome's has a fixed ~6 ms look-ahead you can feel. The compressor and
 	// bitcrusher below are tiny AudioWorklets with zero look-ahead, and a tanh waveshaper catches the final peaks.
 	let ac, bus, keyBus, keySum, clickBus, sendBus, compIn, postComp, master, compNode = null, crushNode = null;
+	let recTap, loopIn, recNode = null, workletReady = null; // loop bank: what gets recorded, where loops play
 	let tempo = 120;
 	const hooks = []; // run when the tempo changes
 	const WORKLET = `
@@ -239,6 +240,34 @@
 			return true;
 		}
 	}
+	class Rec extends AudioWorkletProcessor { // records between two audio-clock times, sample-accurate
+		constructor() {
+			super(); this.on = Infinity; this.off = Infinity; this.L = []; this.R = []; this.n = 0;
+			this.port.onmessage = ({ data: m }) => {
+				if (m.start !== undefined) { this.on = m.start; this.off = Infinity; this.L = []; this.R = []; this.n = 0; }
+				if (m.stop !== undefined) this.off = m.stop;
+				if (m.cancel) { this.on = this.off = Infinity; this.L = []; this.R = []; this.n = 0; }
+			};
+		}
+		process(I) {
+			const inp = I[0], n = inp[0] ? inp[0].length : 128, t0 = currentTime, t1 = t0 + n / sampleRate;
+			if (t1 <= this.on) return true;
+			const a = Math.max(0, Math.round((this.on - t0) * sampleRate)), b = Math.min(n, Math.round((this.off - t0) * sampleRate));
+			if (b > a) {
+				const l = inp[0], r = inp[1] || inp[0];
+				this.L.push(l ? l.slice(a, b) : new Float32Array(b - a)); this.R.push(r ? r.slice(a, b) : new Float32Array(b - a));
+				this.n += b - a;
+			}
+			if (t1 >= this.off || this.n > sampleRate * 90) {
+				const L = new Float32Array(this.n), R = new Float32Array(this.n);
+				for (let k = 0, o = 0; k < this.L.length; o += this.L[k].length, k++) { L.set(this.L[k], o); R.set(this.R[k], o); }
+				this.port.postMessage({ L, R }, [L.buffer, R.buffer]);
+				this.on = this.off = Infinity; this.L = []; this.R = []; this.n = 0;
+			}
+			return true;
+		}
+	}
+	registerProcessor('nd-rec', Rec);
 	registerProcessor('nd-comp', Comp);
 	registerProcessor('nd-crush', Crush);`;
 
@@ -380,12 +409,17 @@
 		bus = ac.createGain(); keyBus = ac.createGain(); keySum = ac.createGain(); clickBus = ac.createGain(); sendBus = ac.createGain();
 		bus.connect(compIn); keyBus.connect(postComp); keyBus.connect(keySum); clickBus.connect(master);
 		bus.connect(sendBus); keyBus.connect(sendBus);
+		recTap = ac.createGain(); bus.connect(recTap); keyBus.connect(recTap); // "Pads" source: pads + their FX, never the loops or click
+		loopIn = ac.createGain(); loopIn.connect(compIn);
 		for (const id of ['rev', 'dly', 'crush', 'shift']) {
 			nodes[id] = { send: ac.createGain(), ret: ac.createGain() };
-			sendBus.connect(nodes[id].send); nodes[id].ret.connect(compIn);
+			sendBus.connect(nodes[id].send); nodes[id].ret.connect(compIn); nodes[id].ret.connect(recTap);
 			build(id);
 		}
-		ac.audioWorklet?.addModule(URL.createObjectURL(new Blob([WORKLET], { type: 'text/javascript' }))).then(() => {
+		workletReady = (ac.audioWorklet ? ac.audioWorklet.addModule(URL.createObjectURL(new Blob([WORKLET], { type: 'text/javascript' }))) : Promise.reject()).then(() => {
+			recNode = new AudioWorkletNode(ac, 'nd-rec', { outputChannelCount: [1] });
+			const sink = ac.createGain(); sink.gain.value = 0; // keeps the recorder running without making sound
+			chain(recTap, recNode, sink, ac.destination);
 			compNode = new AudioWorkletNode(ac, 'nd-comp', { numberOfInputs: 2, outputChannelCount: [2] });
 			compNode.connect(postComp); keySum.connect(compNode, 0, 1);
 			compNode.port.onmessage = e => meter(e.data);
@@ -598,7 +632,7 @@
 		const box = pad.querySelector('.metro');
 		if (!box) return { stop() {} };
 		const out = box.querySelector('.metro__bpm'), led = box.querySelector('.metro__led'), onBtn = box.querySelector('.metro__on');
-		let bpm = 120, running = false, timer = 0, next = 0, beat = 0, clicks = null, gain = null;
+		let bpm = 120, running = false, timer = 0, next = 0, beat = 0, clicks = null, gain = null, lastAt = 0, lastIdx = -1;
 		const show = () => { out.textContent = bpm.toFixed(1); if (tempo !== bpm) { tempo = bpm; hooks.forEach(f => f()); } };
 		const setBpm = v => { bpm = Math.min(300, Math.max(30, +v.toFixed(1))); show(); coarse.set(Math.floor(bpm), false); fine.set(+(bpm % 1).toFixed(1), false); };
 		const coarse = knob(box.querySelector('[data-knob="coarse"]'), { min: 30, max: 300, step: 1, keyStep: 1, value: 120, onInput: v => { bpm = v + fine.get(); show(); } });
@@ -620,10 +654,12 @@
 					led.animate([{ opacity: 1 }, { opacity: 0.15 }], { duration: 120 });
 					window.wiggler?.beat(accent);
 				}, Math.max(0, (at - ac.currentTime) * 1000));
+				lastAt = at; lastIdx = beat;
 				next += 60 / bpm; beat++;
 			}
 		}
 		async function start() {
+			if (running) return;
 			audio(); if (ac.state === 'suspended') await ac.resume();
 			clicks ||= await makeClicks();
 			if (!gain) { gain = ac.createGain(); gain.gain.value = 0.5; gain.connect(clickBus); }
@@ -645,7 +681,264 @@
 			setBpm(60000 / ((taps[taps.length - 1] - taps[0]) / (taps.length - 1)));
 		});
 		show();
-		return { stop, get bpm() { return bpm; } };
+		// The beat grid the loop bank locks to: first beat (or bar line, if `bar`) at or after `after`
+		function nextBeat(after, bar) {
+			const spb = 60 / bpm;
+			let k = Math.ceil((after - lastAt) / spb - 1e-6);
+			while (bar && (lastIdx + k) % 4 !== 0) k++;
+			return lastAt + k * spb;
+		}
+		return { stop, start, nextBeat, get running() { return running; }, get bpm() { return bpm; } };
+	})();
+
+	// ── Loop bank: 8 slots you record right here, RC-505 style ──
+	// Empty slot → count-in (a bar of click) → records from the downbeat → tap again to stop (snapped to whole
+	// beats) → it loops, locked to the beat grid. Then each tap is play/pause. Long-press or Del clears a slot.
+	const loops = (() => {
+		const box = pad.querySelector('.loops');
+		if (!box) return null;
+		const LKEYS = ['Digit5', 'Digit6', 'Digit7', 'Digit8', 'KeyT', 'KeyY', 'KeyU', 'KeyI'], LLAB = ['5', '6', '7', '8', 'T', 'Y', 'U', 'I'];
+		const REPS = [['1/4', 1], ['1/8', 0.5], ['1/16', 0.25], ['1/32', 0.125]];
+		const opt = { loop: true, count: true, rev: false, mic: false, rep: 1 };
+		const S = LLAB.map(() => ({ state: 'empty', buf: null, rbuf: null, anchor: 0, src: null, g: null, playAt: 0, off: 0 }));
+		let recSlot = -1, pending = null, delMode = false, micSrc = null, scratch = null, repeats = [];
+		const spb = () => 60 / tempo;
+
+		box.innerHTML = `<div class="loops__slots"></div><div class="loops__bar">
+			<button type="button" class="chip" data-o="loop" aria-pressed="true" title="On: slots loop. Off: one-shot, each tap plays it once">Loop</button>
+			<button type="button" class="chip" data-o="count" aria-pressed="true" title="Count-in: a bar of click first, recording starts on the downbeat and snaps to whole beats">Count-in</button>
+			<button type="button" class="chip" data-o="mic" aria-pressed="false" title="Record source: the pads (with FX), or your microphone">Src: Pads</button>
+			<button type="button" class="chip" data-o="rev" aria-pressed="false" title="Play the loops backwards">Rev</button>
+			<button type="button" class="chip chip--hold" data-o="scratch" title="Hold to scratch the loops">Scratch</button>
+			<button type="button" class="chip chip--hold" data-o="repeat" title="Hold to beat-repeat the loops; let go and they snap back in time">Repeat</button>
+			<button type="button" class="chip" data-o="rep" title="Beat-repeat size">1/8</button>
+			<button type="button" class="chip chip--del" data-o="del" aria-pressed="false" title="Tap Del, then the slot to clear (or long-press a slot)">Del</button>
+		</div>`;
+		const slotEls = LLAB.map((k, i) => {
+			const b = document.createElement('button');
+			b.type = 'button'; b.className = 'loop'; b.dataset.s = 'empty';
+			b.innerHTML = `<span class="loop__key">${k}</span><span class="loop__txt"></span>`;
+			b.setAttribute('aria-label', `Loop slot ${k}`);
+			box.querySelector('.loops__slots').append(b);
+			let hold = 0, held = false;
+			b.addEventListener('pointerdown', e => {
+				if (e.button) return;
+				e.preventDefault(); held = false;
+				hold = setTimeout(() => { held = true; clear(i); }, 650);
+				tap(i);
+			});
+			for (const ev of ['pointerup', 'pointerleave', 'pointercancel']) b.addEventListener(ev, () => clearTimeout(hold));
+			b.addEventListener('click', e => { if (e.detail === 0) tap(i); });
+			b.addEventListener('contextmenu', e => e.preventDefault());
+			return b;
+		});
+		const chip = o => box.querySelector(`[data-o="${o}"]`);
+
+		// ── Recording ──
+		async function ensureMic() {
+			if (micSrc) return true;
+			try {
+				const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
+				micSrc = ac.createMediaStreamSource(stream);
+				return true;
+			} catch {
+				alert("Couldn't open your microphone. Check the browser's permission for this site.");
+				return false;
+			}
+		}
+		function route() { // feed the recorder from the pads or the mic
+			if (!recNode) return;
+			try { recTap.disconnect(recNode); } catch {}
+			try { micSrc?.disconnect(recNode); } catch {}
+			(opt.mic && micSrc ? micSrc : recTap).connect(recNode);
+		}
+		// The mic hears you late: your ears get the click after the output latency, and the mic adds its own.
+		const micLag = () => opt.mic ? (ac.baseLatency || 0) + (ac.outputLatency || 0) + 0.01 : 0;
+		async function record(i) {
+			audio(); if (ac.state === 'suspended') await ac.resume();
+			try { await workletReady; } catch { alert('Recording needs a newer browser (AudioWorklet).'); return; }
+			if (opt.mic && !(await ensureMic())) return;
+			recNode.port.onmessage = e => onRecorded(e.data);
+			route();
+			let at;
+			if (opt.count) {
+				await metro.start();
+				at = metro.nextBeat(ac.currentTime + spb() * 3, true); // at least 3 clicks, then the next bar line
+			} else at = ac.currentTime + 0.01;
+			Object.assign(S[i], { state: 'armed', startAt: at });
+			recSlot = i;
+			recNode.port.postMessage({ start: at + micLag() });
+			setTimeout(() => { if (recSlot === i) window.wiggler?.hit('h', 1); }, Math.max(0, (at - ac.currentTime) * 1000));
+		}
+		function stopRec(i) {
+			const s = S[i], t = ac.currentTime;
+			if (t < s.startAt) { recNode.port.postMessage({ cancel: true }); s.state = 'empty'; recSlot = -1; return; } // still counting in
+			let end = t;
+			if (opt.count && metro.running) end = s.startAt + Math.max(1, Math.round((t - s.startAt) / spb())) * spb();
+			pending = { i, len: Math.round((end - s.startAt) * ac.sampleRate), end };
+			s.state = 'finishing';
+			recNode.port.postMessage({ stop: Math.max(end + micLag(), t) });
+		}
+		function onRecorded({ L, R }) {
+			const p = pending || { i: recSlot, len: L.length, end: ac.currentTime };
+			pending = null; recSlot = -1;
+			if (p.i < 0) return; // the slot was cleared mid-recording
+			const s = S[p.i], len = Math.min(p.len, L.length);
+			if (len < ac.sampleRate * 0.05) { s.state = 'empty'; return; } // nothing really recorded
+			const buf = ac.createBuffer(2, len, ac.sampleRate), rbuf = ac.createBuffer(2, len, ac.sampleRate);
+			[L, R].forEach((d, ch) => {
+				const fade = Math.min(64, len >> 2), c = d.subarray(0, len), r = rbuf.getChannelData(ch);
+				for (let k = 0; k < fade; k++) { c[k] *= k / fade; c[len - 1 - k] *= k / fade; } // de-click the loop seam
+				buf.copyToChannel(c, ch);
+				for (let k = 0; k < len; k++) r[k] = c[len - 1 - k];
+			});
+			Object.assign(s, { buf, rbuf, anchor: s.startAt, state: 'stopped' });
+			play(p.i, Math.max(p.end, ac.currentTime + 0.005)); // starts right where the recording ended, so it stays in time
+		}
+
+		// ── Playback, phase-locked to the loop's own downbeat so everything stays in time ──
+		const locked = () => metro.running || S.some(s => s.state === 'playing');
+		function play(i, at) {
+			const s = S[i];
+			stopVoice(s);
+			const t = at ?? (opt.count && metro.running ? metro.nextBeat(ac.currentTime + 0.01) : ac.currentTime + 0.005);
+			const dur = s.buf.duration;
+			let off = 0;
+			if (opt.loop && (at !== undefined || locked())) {
+				off = ((t - s.anchor) % dur + dur) % dur;
+				if (opt.rev) off = (dur - off) % dur;
+			} else s.anchor = t;
+			const src = ac.createBufferSource(), g = ac.createGain();
+			src.buffer = opt.rev ? s.rbuf : s.buf;
+			src.loop = opt.loop;
+			chain(src, g, loopIn);
+			src.start(t, off);
+			Object.assign(s, { src, g, playAt: t, off, state: 'playing' });
+			src.onended = () => { if (s.src === src) { s.src = null; s.state = 'stopped'; } };
+		}
+		function stopVoice(s) {
+			if (!s.src) return;
+			const t = ac.currentTime;
+			s.g.gain.setTargetAtTime(0, t, 0.005);
+			s.src.onended = null; s.src.stop(t + 0.03);
+			s.src = null;
+		}
+		function pause(i) { stopVoice(S[i]); S[i].state = 'stopped'; }
+		function clear(i) {
+			const s = S[i];
+			if (recSlot === i) { recNode?.port.postMessage({ cancel: true }); recSlot = -1; pending = null; }
+			stopVoice(s);
+			Object.assign(s, { state: 'empty', buf: null, rbuf: null });
+			slotEls[i].animate([{ filter: 'brightness(2.5)' }, { filter: 'none' }], { duration: 250 });
+		}
+		function tap(i) {
+			audio();
+			if (delMode) { clear(i); setDel(false); return; }
+			const s = S[i];
+			if (recSlot >= 0 && recSlot !== i) { if (S[recSlot].state !== 'finishing') stopRec(recSlot); return; }
+			if (s.state === 'empty') record(i);
+			else if (s.state === 'armed' || s.state === 'recording') stopRec(i);
+			else if (s.state === 'playing') opt.loop ? pause(i) : play(i, ac.currentTime + 0.005);
+			else if (s.state === 'stopped') opt.loop ? play(i) : play(i, ac.currentTime + 0.005);
+		}
+		function setDel(on) { delMode = on; chip('del').setAttribute('aria-pressed', on); box.classList.toggle('is-del', on); }
+
+		// ── Loop FX: reverse, scratch, beat repeat ──
+		const playing = () => S.map((s, i) => [s, i]).filter(([s]) => s.state === 'playing' && s.src);
+		const resync = () => { for (const [, i] of playing()) play(i, ac.currentTime + 0.01); };
+		function scratchOn() {
+			if (scratch || !playing().length) return;
+			const t = ac.currentTime, wob = ac.createOscillator(), depth = ac.createGain(), chop = ac.createOscillator(), cut = ac.createGain();
+			wob.frequency.value = tempo / 60 * 2; depth.gain.value = 0.85; // forward-back hand motion, twice a beat
+			chop.type = 'square'; chop.frequency.value = tempo / 60 * 4; cut.gain.value = 0.5; // crossfader chops on 16ths
+			wob.connect(depth);
+			for (const [s] of playing()) depth.connect(s.src.playbackRate);
+			loopIn.gain.setValueAtTime(0.5, t); chain(chop, cut, loopIn.gain);
+			wob.start(t); chop.start(t);
+			scratch = { wob, chop };
+			window.wiggler?.hit('h', 1.2);
+		}
+		function scratchOff() {
+			if (!scratch) return;
+			const t = ac.currentTime;
+			scratch.wob.stop(t); scratch.chop.stop(t); scratch = null;
+			loopIn.gain.cancelScheduledValues(t); loopIn.gain.setValueAtTime(1, t);
+			resync(); // the scratch drifted the loops; drop them back on the grid
+		}
+		function repeatOn() {
+			if (repeats.length) return;
+			const t = ac.currentTime + 0.005, slice = REPS[opt.rep][1] * spb();
+			for (const [s] of playing()) {
+				const dur = s.src.buffer.duration, pos = (s.off + (t - s.playAt)) % dur;
+				const start = Math.floor(pos / slice) * slice, end = Math.min(dur, start + slice);
+				const src = ac.createBufferSource(), g = ac.createGain();
+				src.buffer = s.src.buffer; src.loop = true; src.loopStart = start; src.loopEnd = end;
+				chain(src, g, loopIn); src.start(t, start);
+				s.g.gain.setTargetAtTime(0, t, 0.003); // the original keeps running silently underneath
+				repeats.push({ src, g, s });
+			}
+			if (repeats.length) window.wiggler?.hit('k', 1);
+		}
+		function repeatOff() {
+			const t = ac.currentTime;
+			for (const r of repeats) { r.g.gain.setTargetAtTime(0, t, 0.003); r.src.stop(t + 0.02); r.s.g?.gain.setTargetAtTime(1, t, 0.003); }
+			repeats = [];
+		}
+		const hold = (o, on, off) => {
+			const b = chip(o);
+			b.addEventListener('pointerdown', e => { e.preventDefault(); b.setAttribute('aria-pressed', 'true'); audio(); on(); });
+			for (const ev of ['pointerup', 'pointerleave', 'pointercancel']) b.addEventListener(ev, () => { if (b.getAttribute('aria-pressed') === 'true') { b.setAttribute('aria-pressed', 'false'); off(); } });
+		};
+		hold('scratch', scratchOn, scratchOff);
+		hold('repeat', repeatOn, repeatOff);
+		chip('loop').addEventListener('click', e => {
+			opt.loop = !opt.loop; e.currentTarget.setAttribute('aria-pressed', opt.loop);
+			for (const [s] of playing()) s.src.loop = opt.loop;
+		});
+		chip('count').addEventListener('click', e => { opt.count = !opt.count; e.currentTarget.setAttribute('aria-pressed', opt.count); });
+		chip('rev').addEventListener('click', e => {
+			opt.rev = !opt.rev; e.currentTarget.setAttribute('aria-pressed', opt.rev);
+			if (ac) resync();
+		});
+		chip('mic').addEventListener('click', async e => {
+			const b = e.currentTarget;
+			audio();
+			if (!opt.mic && !(await ensureMic())) return;
+			opt.mic = !opt.mic; b.setAttribute('aria-pressed', opt.mic); b.textContent = opt.mic ? 'Src: Mic' : 'Src: Pads';
+			route();
+		});
+		chip('rep').addEventListener('click', e => { opt.rep = (opt.rep + 1) % REPS.length; e.currentTarget.textContent = REPS[opt.rep][0]; });
+		chip('del').addEventListener('click', () => setDel(!delMode));
+
+		// ── Slot lights: count-in countdown, recording beat count, playback progress ──
+		let raf = 0;
+		function ui() {
+			raf = rig.open ? requestAnimationFrame(ui) : 0;
+			if (!ac) return;
+			const t = ac.currentTime;
+			S.forEach((s, i) => {
+				const el = slotEls[i], txt = el.firstChild.nextSibling;
+				if (s.state === 'armed' && t >= s.startAt) s.state = 'recording';
+				el.dataset.s = s.state;
+				if (s.state === 'armed') txt.textContent = Math.ceil((s.startAt - t) / spb());
+				else if (s.state === 'recording') txt.textContent = opt.count && metro.running ? Math.floor((t - s.startAt) / spb()) + 1 : (t - s.startAt).toFixed(1);
+				else if (s.state === 'playing') {
+					const d = s.buf.duration, ph = ((s.off + Math.max(0, t - s.playAt)) % d) / d;
+					el.style.setProperty('--p', (opt.rev ? 1 - ph : ph).toFixed(3));
+					txt.textContent = '';
+				} else txt.textContent = s.state === 'empty' ? '' : s.state === 'finishing' ? '…' : '';
+			});
+		}
+		addEventListener('keydown', e => {
+			if (!rig.open || e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
+			const i = LKEYS.indexOf(e.code);
+			if (i < 0) return;
+			e.preventDefault(); tap(i);
+		});
+		return {
+			wake() { if (!raf) raf = requestAnimationFrame(ui); },
+			sleep() { S.forEach((s, i) => { if (recSlot === i) clear(i); else if (s.state === 'playing') pause(i); }); repeatOff(); scratchOff(); setDel(false); },
+		};
 	})();
 
 	// ── The popup: opening it warms up audio + renders the kits, so the very first hit is instant ──
@@ -657,11 +950,12 @@
 		if (c.state === 'suspended') c.resume();
 		renderAll();
 		window.wiggler?.start();
+		loops?.wake();
 		setTimeout(showLatency, 400); // outputLatency is only known once audio is actually flowing
 	}));
 	rig.querySelector('.rig__close').addEventListener('click', () => rig.close());
 	rig.addEventListener('click', e => { if (e.target === rig) rig.close(); }); // tap the backdrop to close
-	rig.addEventListener('close', () => { window.wiggler?.stop(); metro.stop(); });
+	rig.addEventListener('close', () => { window.wiggler?.stop(); metro.stop(); loops?.sleep(); });
 
 	// Keyboard: 1-4 / Q-R / A-F / Z-V, but only while the popup is open.
 	addEventListener('keydown', e => {

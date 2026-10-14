@@ -226,7 +226,7 @@ html:has(.rig[open]) { overflow: hidden; }
 .rig__close { width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--glass-line); background: var(--glass); color: var(--text); cursor: pointer; }
 .rig__close:hover { border-color: #ff3b5c; }
 .pad__grid { touch-action: none; }
-.rig .pad__grid { width: min(100%, calc(100dvh - 470px), 520px); min-width: min(100%, 280px); margin: 0 auto; }
+.rig .pad__grid { width: min(100%, calc(100dvh - 572px), 520px); min-width: min(100%, 260px); margin: 0 auto; }
 .pad__tools { display: flex; align-items: center; gap: 8px; }
 .pad__cut { padding: 7px 12px; font-size: 0.78rem; }
 .pad__lat { color: var(--muted); font: 600 0.72rem/1 var(--body); font-variant-numeric: tabular-nums; }
@@ -273,6 +273,32 @@ html:has(.rig[open]) { overflow: hidden; }
 .rack__opt { align-self: center; padding: 6px 10px; border-radius: 999px; border: 1px solid var(--glass-line); background: transparent;
 	color: var(--muted); font: 700 0.66rem/1 var(--body); cursor: pointer; white-space: nowrap; }
 .rack__opt[aria-pressed="true"] { color: var(--text); border-color: #ff2a2a; box-shadow: inset 0 0 8px -2px #ff2a2a; }
+
+/* ── Loop bank ── */
+.loops { margin-top: 10px; }
+.rig .loops { width: min(100%, 560px); margin-inline: auto; }
+.loops__slots { display: grid; grid-template-columns: repeat(8, 1fr); gap: 6px; }
+.loop { --p: 0; position: relative; height: 42px; padding: 0; border: 1px dashed rgba(255, 255, 255, 0.18); border-radius: 10px; overflow: hidden;
+	background: #10132b; color: var(--text); cursor: pointer; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent; }
+.loop::before { content: ""; position: absolute; inset: 0; background: #22c55e; opacity: 0.22; transform: scaleX(var(--p)); transform-origin: left; }
+.loop__key { position: absolute; top: 4px; left: 6px; color: var(--muted); font: 600 0.6rem/1 var(--body); }
+.loop__txt { position: relative; font: 700 0.8rem/1 ui-monospace, Consolas, monospace; }
+.loop[data-s="empty"] .loop__txt::before { content: "●"; color: #5a1f1f; font-size: 0.7rem; }
+.loop[data-s="armed"] { border: 1px solid #ff2a2a; animation: blink 0.5s steps(2) infinite; }
+.loop[data-s="armed"] .loop__txt, .loop[data-s="recording"] .loop__txt { color: #fff; }
+.loop[data-s="recording"] { border: 1px solid #ff2a2a; background: #5a0f17; box-shadow: 0 0 14px -2px #ff2a2a; }
+.loop[data-s="finishing"] { border: 1px solid #ffd23d; }
+.loop[data-s="playing"] { border: 1px solid #22c55e; box-shadow: 0 0 12px -4px #22c55e; }
+.loop[data-s="stopped"] { border: 1px solid rgba(34, 197, 94, 0.45); }
+.loop[data-s="stopped"] .loop__txt::before { content: "▶"; color: #22c55e; font-size: 0.7rem; }
+.loops.is-del .loop:not([data-s="empty"]) { border-color: #ff2a2a; animation: blink 0.4s steps(2) infinite; }
+@keyframes blink { 50% { background: #3a0c12; } }
+.loops__bar { display: flex; flex-wrap: wrap; justify-content: center; gap: 5px; margin-top: 7px; }
+.chip { padding: 6px 9px; border-radius: 999px; border: 1px solid var(--glass-line); background: transparent; color: var(--muted);
+	font: 700 0.66rem/1 var(--body); cursor: pointer; touch-action: none; user-select: none; -webkit-user-select: none; white-space: nowrap; }
+.chip[aria-pressed="true"] { color: var(--text); border-color: #ff2a2a; box-shadow: inset 0 0 8px -2px #ff2a2a; }
+.chip--hold[aria-pressed="true"] { background: var(--orange); color: #1a0b02; border-color: var(--orange); }
+.chip--del[aria-pressed="true"] { background: #ff2a2a; color: #fff; }
 
 /* ── The Air Wiggler (ASCII bot, drawn by bot.js) ── */
 .bot { width: fit-content; margin: 0 auto 6px; overflow: hidden; color: #8f9bd8; font-family: ui-monospace, Consolas, "Courier New", monospace; font-size: 9px;
@@ -487,7 +513,7 @@ footer img { vertical-align: middle; }
 	<div class="scene__inner">
 		<p class="eyebrow">04 · Play</p>
 		<h2>Wiggle some air yourself</h2>
-		<p class="lead">Meet the Air Wiggler: a little beat bot with 16 pads, two kits and a metronome. Tap the pads or use your keyboard (<b>1–4 · Q–R · A–F · Z–V</b>). <strong>Right-click a pad</strong> to load your own sample.</p>
+		<p class="lead">Meet the Air Wiggler: a little beat bot with 16 pads, two kits and a metronome. Tap the pads or use your keyboard (<b>1–4 · Q–R · A–F · Z–V</b>), and record your own loops into the 8 slots underneath (<b>5–8 · T–I</b>). <strong>Right-click a pad</strong> to load your own sample.</p>
 		<button class="btn rig-open" type="button"><i class="fa fa-play" aria-hidden="true"></i> Wake up the Air Wiggler</button>
 		<dialog class="rig" aria-label="Air Wiggler beat pad">
 		<div class="pad">
@@ -512,6 +538,7 @@ footer img { vertical-align: middle; }
 			<pre class="bot" aria-hidden="true"></pre>
 			<div class="rack" aria-label="Master effects"></div>
 			<div class="pad__grid"></div>
+			<div class="loops" aria-label="Loop bank: 8 slots you record yourself"></div>
 			<input class="pad__file" type="file" accept="audio/*" hidden>
 		</div>
 		</dialog>
