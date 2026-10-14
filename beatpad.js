@@ -9,6 +9,7 @@
 	const fileIn = pad.querySelector('.pad__file');
 	const KEYS = ['Digit1', 'Digit2', 'Digit3', 'Digit4', 'KeyQ', 'KeyW', 'KeyE', 'KeyR',
 		'KeyA', 'KeyS', 'KeyD', 'KeyF', 'KeyZ', 'KeyX', 'KeyC', 'KeyV'];
+	let mode = 'pads'; // 'pads' or 'synth': what the bottom half of the rig is showing
 	const KEY_LABELS = ['1', '2', '3', '4', 'Q', 'W', 'E', 'R', 'A', 'S', 'D', 'F', 'Z', 'X', 'C', 'V'];
 	let SR = 48000; // replaced by the sound card's own rate once audio starts, so nothing gets resampled
 	const hz = n => 440 * 2 ** ((n - 69) / 12); // MIDI note → frequency
@@ -187,6 +188,82 @@
 			buffers[id] = await Promise.all(kit.pads.map(p => renderPad(p, kit.dusty)));
 		})));
 	}
+
+	// ── Memory: what you tweak is saved in this browser (IndexedDB), and every change can be undone ──
+	const store = (() => {
+		let db = null;
+		const open = () => db ||= new Promise((res, rej) => {
+			const r = indexedDB.open('airwiggler', 1);
+			r.onupgradeneeded = () => r.result.createObjectStore('kv');
+			r.onsuccess = () => res(r.result);
+			r.onerror = () => rej(r.error);
+		});
+		const run = async (mode, fn) => {
+			const d = await open();
+			return new Promise((res, rej) => {
+				const t = d.transaction('kv', mode), q = fn(t.objectStore('kv'));
+				t.oncomplete = () => res(q.result);
+				t.onerror = () => rej(t.error);
+			});
+		};
+		return { get: k => run('readonly', s => s.get(k)).catch(() => undefined), put: (k, v) => run('readwrite', s => s.put(v, k)).catch(() => {}) };
+	})();
+	const ctl = {};                       // every undoable control: path → { get, set }
+	const hist = { list: [], pos: 0 };    // each entry: [[path, from, to], ...] for one gesture
+	const HIST_MAX = 1e6;
+	let pendingEdit = {}, editTimer = 0, saveTimer = 0, restoring = false;
+	// Controls call touch() with their value from before the change. A gesture is committed once it has
+	// been still for 400 ms (you let go of the knob, stopped scrolling, etc.), so one drag = one undo step.
+	function touch(path, before) {
+		if (restoring) return;
+		if (!(path in pendingEdit)) pendingEdit[path] = before;
+		clearTimeout(editTimer);
+		editTimer = setTimeout(commit, 400);
+		saveSoon();
+	}
+	function commit() {
+		clearTimeout(editTimer);
+		const ch = Object.entries(pendingEdit).map(([p, f]) => [p, f, ctl[p].get()]).filter(([, f, t]) => f !== t);
+		pendingEdit = {};
+		if (!ch.length) return;
+		hist.list.length = hist.pos;
+		hist.list.push(ch);
+		if (hist.list.length > HIST_MAX) hist.list.splice(0, hist.list.length - HIST_MAX);
+		hist.pos = hist.list.length;
+		undoUi(); saveSoon();
+	}
+	function step(dir) {
+		commit();
+		if (dir < 0 ? !hist.pos : hist.pos >= hist.list.length) return;
+		const ch = dir < 0 ? hist.list[--hist.pos] : hist.list[hist.pos++];
+		restoring = true;
+		for (const [p, f, t] of ch) ctl[p]?.set(dir < 0 ? f : t);
+		restoring = false;
+		undoUi(); saveSoon();
+		window.wiggler?.hit('u', 0.5);
+	}
+	const undoBtn = pad.querySelector('.pad__undo'), redoBtn = pad.querySelector('.pad__redo');
+	function undoUi() {
+		if (!undoBtn) return;
+		undoBtn.disabled = !hist.pos; redoBtn.disabled = hist.pos >= hist.list.length;
+		undoBtn.title = `Undo (Ctrl+Z) · ${hist.pos.toLocaleString()} step${hist.pos === 1 ? '' : 's'} back`;
+		redoBtn.title = `Redo (Ctrl+Shift+Z) · ${(hist.list.length - hist.pos).toLocaleString()} ahead`;
+	}
+	undoBtn?.addEventListener('click', () => step(-1));
+	redoBtn?.addEventListener('click', () => step(1));
+	addEventListener('keydown', e => {
+		if (!rig.open || !(e.ctrlKey || e.metaKey) || e.code !== 'KeyZ' && e.code !== 'KeyY') return;
+		e.preventDefault();
+		step(e.code === 'KeyY' || e.shiftKey ? 1 : -1);
+	});
+	function saveSoon() { clearTimeout(saveTimer); saveTimer = setTimeout(saveAll, 800); }
+	function saveAll() {
+		const values = {};
+		for (const p in ctl) values[p] = ctl[p].get();
+		store.put('state', { values, patch: synthUi?.patch(), dirty: synthUi?.isDirty() });
+		store.put('history', { list: hist.list, pos: hist.pos });
+	}
+	addEventListener('pagehide', () => { commit(); saveAll(); });
 
 	// ── Live audio graph ──
 	// pads → bus ──┬─────────────────────────────→ compIn → [bus compressor] → master → soft clipper → speakers
@@ -474,7 +551,8 @@
 			tabs.append(tab);
 			if (m.id === 'comp') grEl = tab.querySelector('.rack__gr');
 			const led = tab.querySelector('.rack__led');
-			led.addEventListener('click', () => { audio(); P[m.id].on = !P[m.id].on; led.setAttribute('aria-pressed', P[m.id].on); apply(m.id); });
+			led.addEventListener('click', () => { audio(); P[m.id].on = !P[m.id].on; led.setAttribute('aria-pressed', P[m.id].on); apply(m.id); touch(`rack.${m.id}.on`, !P[m.id].on); });
+			ctl[`rack.${m.id}.on`] = { get: () => P[m.id].on, set: v => { P[m.id].on = v; led.setAttribute('aria-pressed', v); apply(m.id); } };
 			tab.querySelector('.rack__name').addEventListener('click', () => select(m.id));
 			const pn = document.createElement('div');
 			pn.className = 'rack__mod'; pn.hidden = true; pn.setAttribute('role', 'tabpanel');
@@ -495,10 +573,12 @@
 						: key === 'time' ? (P.dly.sync ? DIVS[Math.round(r * (DIVS.length - 1))][0] : ms(delaySec() * 1000)) : fmt(r);
 				};
 				if (key === 'time') hooks.push(show);
-				knob(wrap.querySelector('.knob'), {
+				const path = `rack.${m.id}.${key}`;
+				const kn = knob(wrap.querySelector('.knob'), {
 					min: 0, max: list ? curve.length - 1 : 1, step: list ? 1 : 0.005, value: toKnob(def),
-					onInput: v => { P[m.id][key] = toReal(v); show(); apply(m.id); },
+					onInput: v => { const before = P[m.id][key]; P[m.id][key] = toReal(v); show(); apply(m.id); touch(path, before); },
 				});
+				ctl[path] = { get: () => P[m.id][key], set: r => { P[m.id][key] = r; kn.set(toKnob(r), false); show(); apply(m.id); } };
 				show();
 			}
 			// extras: tempo sync for the delay, sidechain source for the compressor
@@ -506,14 +586,16 @@
 				const b = document.createElement('button');
 				b.type = 'button'; b.className = 'rack__opt'; b.setAttribute('aria-pressed', 'true'); b.textContent = 'Sync';
 				b.title = 'Snap the delay time to the metronome tempo';
-				b.addEventListener('click', () => { P.dly.sync = !P.dly.sync; b.setAttribute('aria-pressed', P.dly.sync); hooks.forEach(f => f()); });
+				b.addEventListener('click', () => { P.dly.sync = !P.dly.sync; b.setAttribute('aria-pressed', P.dly.sync); hooks.forEach(f => f()); touch('rack.dly.sync', !P.dly.sync); });
+				ctl['rack.dly.sync'] = { get: () => P.dly.sync, set: v => { P.dly.sync = v; b.setAttribute('aria-pressed', v); hooks.forEach(f => f()); } };
 				head.append(b);
 			}
 			if (m.key !== undefined) {
 				const b = document.createElement('button');
 				b.type = 'button'; b.className = 'rack__opt'; b.title = 'Sidechain: which sound pumps the compressor (tap to cycle)';
 				const lbl = () => { b.textContent = 'SC: ' + KEYS_SC.find(k => k[0] === P.comp.key)[1]; b.setAttribute('aria-pressed', P.comp.key !== 'off'); };
-				b.addEventListener('click', () => { const i = KEYS_SC.findIndex(k => k[0] === P.comp.key); P.comp.key = KEYS_SC[(i + 1) % KEYS_SC.length][0]; lbl(); applyComp(); });
+				b.addEventListener('click', () => { const before = P.comp.key, i = KEYS_SC.findIndex(k => k[0] === P.comp.key); P.comp.key = KEYS_SC[(i + 1) % KEYS_SC.length][0]; lbl(); applyComp(); touch('rack.comp.key', before); });
+				ctl['rack.comp.key'] = { get: () => P.comp.key, set: v => { P.comp.key = v; lbl(); applyComp(); } };
 				lbl(); head.append(b);
 			}
 		}
@@ -539,9 +621,19 @@
 			els[i].querySelector('.pad__name').textContent = own ? own.name : p[0];
 			els[i].dataset.c = own ? 'u' : p[3];
 		});
-		pad.querySelectorAll('[data-kit]').forEach(b => b.classList.toggle('is-on', b.dataset.kit === kit));
+		pad.querySelectorAll('[data-kit]').forEach(b => b.classList.toggle('is-on', mode === 'pads' && b.dataset.kit === kit));
+		pad.querySelector('[data-mode="synth"]')?.classList.toggle('is-on', mode === 'synth');
 	}
-	pad.querySelectorAll('[data-kit]').forEach(b => b.addEventListener('click', () => { kit = b.dataset.kit; label(); }));
+	function setMode(m) {
+		mode = m;
+		grid.hidden = m !== 'pads';
+		const sy = pad.querySelector('.synth');
+		if (sy) sy.hidden = m !== 'synth';
+		if (m !== 'synth') synthUi?.panic();
+		label();
+	}
+	pad.querySelectorAll('[data-kit]').forEach(b => b.addEventListener('click', () => { kit = b.dataset.kit; setMode('pads'); }));
+	pad.querySelector('[data-mode="synth"]')?.addEventListener('click', () => setMode('synth'));
 	label();
 
 	async function hit(i) {
@@ -635,8 +727,9 @@
 		let bpm = 120, running = false, timer = 0, next = 0, beat = 0, clicks = null, gain = null, lastAt = 0, lastIdx = -1;
 		const show = () => { out.textContent = bpm.toFixed(1); if (tempo !== bpm) { tempo = bpm; hooks.forEach(f => f()); } };
 		const setBpm = v => { bpm = Math.min(300, Math.max(30, +v.toFixed(1))); show(); coarse.set(Math.floor(bpm), false); fine.set(+(bpm % 1).toFixed(1), false); };
-		const coarse = knob(box.querySelector('[data-knob="coarse"]'), { min: 30, max: 300, step: 1, keyStep: 1, value: 120, onInput: v => { bpm = v + fine.get(); show(); } });
-		const fine = knob(box.querySelector('[data-knob="fine"]'), { min: 0, max: 0.9, step: 0.1, keyStep: 0.1, value: 0, onInput: v => { bpm = coarse.get() + v; show(); } });
+		const coarse = knob(box.querySelector('[data-knob="coarse"]'), { min: 30, max: 300, step: 1, keyStep: 1, value: 120, onInput: v => { const before = bpm; bpm = v + fine.get(); show(); touch('metro.bpm', before); } });
+		const fine = knob(box.querySelector('[data-knob="fine"]'), { min: 0, max: 0.9, step: 0.1, keyStep: 0.1, value: 0, onInput: v => { const before = bpm; bpm = coarse.get() + v; show(); touch('metro.bpm', before); } });
+		ctl['metro.bpm'] = { get: () => bpm, set: v => setBpm(v) };
 		async function makeClicks() { // two short blips, pre-rendered like the pads
 			const one = async (f, len) => {
 				const c = new OfflineAudioContext(1, Math.ceil(SR * len), SR), o = c.createOscillator();
@@ -678,7 +771,9 @@
 			taps.push(now); if (taps.length > 6) taps.shift();
 			e.currentTarget.animate([{ background: 'var(--orange)' }, { background: 'transparent' }], { duration: 150 });
 			if (taps.length < 3) return;
+			const before = bpm;
 			setBpm(60000 / ((taps[taps.length - 1] - taps[0]) / (taps.length - 1)));
+			touch('metro.bpm', before);
 		});
 		show();
 		// The beat grid the loop bank locks to: first beat (or bar line, if `bar`) at or after `after`
@@ -794,6 +889,7 @@
 			});
 			Object.assign(s, { buf, rbuf, anchor: s.startAt, state: 'stopped' });
 			play(p.i, Math.max(p.end, ac.currentTime + 0.005)); // starts right where the recording ended, so it stays in time
+			persist();
 		}
 
 		// ── Playback, phase-locked to the loop's own downbeat so everything stays in time ──
@@ -828,7 +924,9 @@
 			const s = S[i];
 			if (recSlot === i) { recNode?.port.postMessage({ cancel: true }); recSlot = -1; pending = null; }
 			stopVoice(s);
+			const had = !!s.buf;
 			Object.assign(s, { state: 'empty', buf: null, rbuf: null });
+			if (had) persist();
 			slotEls[i].animate([{ filter: 'brightness(2.5)' }, { filter: 'none' }], { duration: 250 });
 		}
 		function tap(i) {
@@ -840,6 +938,19 @@
 			else if (s.state === 'armed' || s.state === 'recording') stopRec(i);
 			else if (s.state === 'playing') opt.loop ? pause(i) : play(i, ac.currentTime + 0.005);
 			else if (s.state === 'stopped') opt.loop ? play(i) : play(i, ac.currentTime + 0.005);
+		}
+		// Recorded loops are kept in this browser, so they're still here next visit
+		const persist = () => store.put('loops', S.map(s => s.buf ? { L: s.buf.getChannelData(0).slice(), R: s.buf.getChannelData(1).slice(), sr: s.buf.sampleRate } : null));
+		let saved = null;
+		function materialize() {
+			if (!ac || !saved) return;
+			saved.forEach((d, i) => {
+				if (!d || S[i].buf) return;
+				const buf = ac.createBuffer(2, d.L.length, d.sr), rbuf = ac.createBuffer(2, d.L.length, d.sr);
+				[d.L, d.R].forEach((c, ch) => { buf.copyToChannel(c, ch); const r = rbuf.getChannelData(ch); for (let k = 0; k < c.length; k++) r[k] = c[c.length - 1 - k]; });
+				Object.assign(S[i], { buf, rbuf, anchor: 0, state: 'stopped' });
+			});
+			saved = null;
 		}
 		function setDel(on) { delMode = on; chip('del').setAttribute('aria-pressed', on); box.classList.toggle('is-del', on); }
 
@@ -931,14 +1042,293 @@
 		}
 		addEventListener('keydown', e => {
 			if (!rig.open || e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
+			if (mode === 'synth' && e.code.startsWith('Key')) return; // T-I belong to the piano in synth mode
 			const i = LKEYS.indexOf(e.code);
 			if (i < 0) return;
 			e.preventDefault(); tap(i);
 		});
 		return {
-			wake() { if (!raf) raf = requestAnimationFrame(ui); },
+			wake() { materialize(); if (!raf) raf = requestAnimationFrame(ui); },
+			load(arr) { saved = arr; materialize(); },
 			sleep() { S.forEach((s, i) => { if (recSlot === i) clear(i); else if (s.state === 'playing') pause(i); }); repeatOff(); scratchOff(); setDel(false); },
 		};
+	})();
+
+	// ── PianiSynth panel: patch bank, four pages of knobs, ADSR target LEDs, and a playable keyboard ──
+	const synthUi = (() => {
+		const box = pad.querySelector('.synth'), PS = window.PianiSynth;
+		if (!box || !PS) return null;
+		const SP = { ...PS.INIT };               // the sound you're hearing right now
+		const bankB = Array(128).fill(null);     // your own patches: { name, p }
+		let patch = 'A:0', dirty = false, eng = null, octave = 0;
+		const engine = () => {
+			if (!eng) { audio(); eng = PS.createEngine(ac, bus); eng.load(SP); }
+			return eng;
+		};
+		const pct = v => Math.round(v * 100) + '%', hzf = v => v < 1000 ? Math.round(v) + ' Hz' : (v / 1000).toFixed(1) + ' kHz';
+		const secs = v => v < 1 ? Math.round(v * 1000) + ' ms' : v.toFixed(2) + ' s';
+		const SEMIS = Array.from({ length: 49 }, (_, i) => i - 24), sgn = v => (v > 0 ? '+' : '') + v;
+		// [key, label, min, max, curve, format] or [key, label, values, labels]
+		const PAGES = {
+			Osc: [['w1', 'Osc 1', [0, 1, 2, 3], PS.WAVES], ['w2', 'Osc 2', [0, 1, 2, 3], PS.WAVES], ['pw', 'Pulse W', 0.05, 0.95, 'lin', pct],
+				['pwm', 'PWM', 0, 1, 'lin', pct], ['mix', 'Osc 2 lvl', 0, 1, 'lin', pct]],
+			Tone: [['det', 'Detune', 0, 50, 'lin', v => Math.round(v) + 'c'], ['semi', 'Osc 2 st', SEMIS, SEMIS.map(sgn)],
+				['fm', 'FM', 0, 10, 'lin', v => v.toFixed(1)], ['ratio', 'FM ratio', PS.RATIOS.map((_, i) => i), PS.RATIOS.map(r => r + ':1')],
+				['lfo', 'PWM rate', 0.05, 12, 'exp', v => v.toFixed(2) + ' Hz']],
+			Filter: [['cut', 'Cutoff', 40, 18000, 'exp', hzf], ['res', 'Reso', 0, 20, 'lin', v => v.toFixed(1)], ['famt', 'Env→Filt', 0, 1, 'lin', pct],
+				['pamt', 'Env→Pitch', SEMIS, SEMIS.map(v => sgn(v) + 'st')], ['lvl', 'Level', 0, 1, 'lin', pct]],
+			Env: [['a', 'Attack', 0.001, 4, 'exp', secs], ['d', 'Decay', 0.01, 4, 'exp', secs], ['s', 'Sustain', 0, 1, 'lin', pct],
+				['r', 'Release', 0.01, 6, 'exp', secs], ['glide', 'Glide', 0, 1, 'lin', secs]],
+		};
+
+		box.innerHTML = `<div class="synth__bar">
+				<button type="button" class="chip synth__prev" aria-label="Previous patch">◀</button>
+				<select class="synth__patch" aria-label="Patch"></select>
+				<button type="button" class="chip synth__next" aria-label="Next patch">▶</button>
+				<button type="button" class="chip synth__save" title="Save this sound into a B slot">Save</button>
+				<button type="button" class="chip synth__export" title="Download your B bank as a file">⇩</button>
+				<button type="button" class="chip synth__import" title="Load a B bank file">⇧</button>
+				<input type="file" class="synth__file" accept=".json,application/json" hidden>
+			</div>
+			<div class="rack synth__rack"><div class="rack__tabs synth__tabs" role="tablist"></div><div class="synth__pages"></div></div>
+			<div class="keys"><button type="button" class="chip keys__oct" data-d="-1" aria-label="Octave down">−</button><div class="keys__bed"></div><button type="button" class="chip keys__oct" data-d="1" aria-label="Octave up">+</button></div>`;
+		const sel = box.querySelector('.synth__patch'), tabs = box.querySelector('.synth__tabs'), pages = box.querySelector('.synth__pages');
+
+		// ── Knob pages ──
+		const views = {};
+		const touchSP = (k, before) => { if (!restoring) { dirty = true; markDirty(); } touch('synth.' + k, before); };
+		const setSP = (k, v) => { SP[k] = v; if (eng) { eng.P[k] = v; eng.live(); } };
+		for (const [name, knobs] of Object.entries(PAGES)) {
+			const t = document.createElement('button');
+			t.type = 'button'; t.className = 'rack__name synth__tab'; t.textContent = name; t.setAttribute('role', 'tab');
+			t.addEventListener('click', () => show(name));
+			tabs.append(t);
+			const pg = document.createElement('div');
+			pg.className = 'rack__mod'; pg.hidden = true;
+			pg.innerHTML = `<div class="rack__head"></div><div class="rack__knobs"></div>`;
+			views[name] = { tab: t, pg };
+			pages.append(pg);
+			const row = pg.querySelector('.rack__knobs');
+			for (const [k, label, a, b, curve, fmt] of knobs) {
+				const list = Array.isArray(a);
+				const wrap = document.createElement('div');
+				wrap.className = 'kn';
+				wrap.innerHTML = `<span class="knob" aria-label="Synth ${label}"></span><b class="kn__v"></b><small>${label}</small>`;
+				row.append(wrap);
+				const out = wrap.querySelector('.kn__v');
+				const toReal = v => list ? a[Math.round(v)] : curve === 'exp' ? a * (b / a) ** v : a + (b - a) * v;
+				const toKnob = r => list ? Math.max(0, a.indexOf(r)) : curve === 'exp' ? Math.log(r / a) / Math.log(b / a) : (r - a) / (b - a);
+				const showV = () => { out.textContent = list ? b[Math.max(0, a.indexOf(SP[k]))] : fmt(SP[k]); };
+				const kn = knob(wrap.querySelector('.knob'), {
+					min: 0, max: list ? a.length - 1 : 1, step: list ? 1 : 0.005, keyStep: list ? 1 : undefined, value: toKnob(SP[k]),
+					onInput: v => { const before = SP[k]; setSP(k, toReal(v)); showV(); touchSP(k, before); },
+				});
+				ctl['synth.' + k] = { get: () => SP[k], set: r => { setSP(k, r); kn.set(toKnob(r), false); showV(); } };
+				showV();
+			}
+		}
+		// Filter type chip + the ADSR target LEDs (red = the envelope drives it)
+		const head = n => views[n].pg.querySelector('.rack__head');
+		const ftChip = document.createElement('button');
+		ftChip.type = 'button'; ftChip.className = 'rack__opt'; ftChip.title = 'Filter type';
+		const ftShow = () => { ftChip.textContent = ['Low-pass', 'Band-pass', 'High-pass'][SP.ft]; };
+		ftChip.addEventListener('click', () => { const before = SP.ft; setSP('ft', (SP.ft + 1) % 3); ftShow(); touchSP('ft', before); });
+		ctl['synth.ft'] = { get: () => SP.ft, set: v => { setSP('ft', v); ftShow(); } };
+		head('Filter').append(Object.assign(document.createElement('p'), { className: 'rack__nod', textContent: 'Subtractive filter, per voice' }), ftChip);
+		ftShow();
+		head('Env').append(Object.assign(document.createElement('p'), { className: 'rack__nod', textContent: 'ADSR drives:' }));
+		for (const [k, label] of [['tA', 'Amp'], ['tF', 'Filt'], ['tP', 'Pitch'], ['tM', 'FM']]) {
+			const b = document.createElement('button');
+			b.type = 'button'; b.className = 'rack__opt synth__led'; b.textContent = label;
+			b.title = `Envelope → ${label}`;
+			const ledShow = () => b.setAttribute('aria-pressed', !!SP[k]);
+			b.addEventListener('click', () => { const before = SP[k]; setSP(k, !SP[k]); ledShow(); touchSP(k, before); });
+			ctl['synth.' + k] = { get: () => SP[k], set: v => { setSP(k, v); ledShow(); } };
+			head('Env').append(b);
+			ledShow();
+		}
+		head('Osc').append(Object.assign(document.createElement('p'), { className: 'rack__nod', textContent: 'Subtractive + FM hybrid. Pulse width + PWM for the juicy stuff' }));
+		head('Tone').append(Object.assign(document.createElement('p'), { className: 'rack__nod', textContent: 'FM: a sine modulator on both oscillators' }));
+		function show(name) { for (const [n, v] of Object.entries(views)) { v.pg.hidden = n !== name; v.tab.setAttribute('aria-selected', n === name); } }
+		show('Osc');
+
+		// ── Patches: bank A = 128 factory sounds (tweak freely, but they can't be overwritten), bank B = yours ──
+		const nm = id => { const [bk, i] = id.split(':'); return bk === 'A' ? PS.PRESETS[i].name : bankB[i]?.name || 'empty'; };
+		const num = id => id[0] + String(+id.slice(2) + 1).padStart(3, '0');
+		function fill() {
+			const og = bk => {
+				const g = document.createElement('optgroup');
+				g.label = bk === 'A' ? 'Bank A · factory' : 'Bank B · yours';
+				for (let i = 0; i < 128; i++) { const id = `${bk}:${i}`; g.append(new Option(`${num(id)}  ${nm(id)}`, id)); }
+				return g;
+			};
+			sel.replaceChildren(og('A'), og('B'));
+			sel.value = patch;
+			markDirty();
+		}
+		function markDirty() {
+			const o = sel.querySelector(`option[value="${patch}"]`);
+			if (o) o.textContent = `${num(patch)}  ${nm(patch)}${dirty ? ' *' : ''}`;
+		}
+		function load(id) {
+			const [bk, i] = id.split(':');
+			const src = bk === 'A' ? PS.PRESETS[i].p : bankB[i]?.p || PS.INIT;
+			const prevDirty = dirty;
+			dirty = false;
+			if (prevDirty) { const o = sel.querySelector(`option[value="${patch}"]`); if (o) o.textContent = `${num(patch)}  ${nm(patch)}`; }
+			patch = id; sel.value = id;
+			const was = restoring; restoring = true;
+			for (const k of Object.keys(PS.INIT)) ctl['synth.' + k]?.set(src[k] ?? PS.INIT[k]);
+			restoring = was;
+			eng?.allOff();
+			saveSoon();
+		}
+		sel.addEventListener('change', () => { commit(); load(sel.value); sel.blur(); });
+		const nudge = d => { const ids = [...sel.options].map(o => o.value), i = ids.indexOf(patch); commit(); load(ids[(i + d + ids.length) % ids.length]); };
+		box.querySelector('.synth__prev').addEventListener('click', () => nudge(-1));
+		box.querySelector('.synth__next').addEventListener('click', () => nudge(1));
+		box.querySelector('.synth__save').addEventListener('click', () => {
+			commit();
+			let slot = patch[0] === 'B' ? +patch.slice(2) : bankB.findIndex(x => !x);
+			if (slot < 0) {
+				const n = prompt('Bank B is full. Overwrite which B slot? (1-128)', '1');
+				if (!n) return;
+				slot = Math.min(127, Math.max(0, (parseInt(n, 10) || 1) - 1));
+			}
+			const name = prompt(`Save to B${String(slot + 1).padStart(3, '0')} as:`, patch[0] === 'B' && bankB[slot] ? bankB[slot].name : nm(patch));
+			if (name === null) return;
+			bankB[slot] = { name: name.trim().slice(0, 24) || 'My patch', p: { ...SP } };
+			store.put('bankB', bankB);
+			patch = `B:${slot}`; dirty = false;
+			fill(); saveSoon();
+			window.wiggler?.hit('u', 1);
+		});
+		box.querySelector('.synth__export').addEventListener('click', () => {
+			const a = document.createElement('a');
+			a.href = URL.createObjectURL(new Blob([JSON.stringify({ type: 'airwiggler-bank-b', v: 1, bank: bankB }, null, 1)], { type: 'application/json' }));
+			a.download = 'airwiggler-bank-B.json';
+			a.click();
+			setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+		});
+		const fileIn = box.querySelector('.synth__file');
+		box.querySelector('.synth__import').addEventListener('click', () => fileIn.click());
+		fileIn.addEventListener('change', async () => {
+			const f = fileIn.files[0];
+			fileIn.value = '';
+			if (!f) return;
+			try {
+				const data = JSON.parse(await f.text());
+				if (data.type !== 'airwiggler-bank-b' || !Array.isArray(data.bank)) throw 0;
+				data.bank.slice(0, 128).forEach((x, i) => {
+					bankB[i] = x && typeof x.name === 'string' && x.p && typeof x.p === 'object'
+						? { name: x.name.slice(0, 24), p: Object.fromEntries(Object.keys(PS.INIT).map(k => [k, typeof x.p[k] === typeof PS.INIT[k] ? x.p[k] : PS.INIT[k]])) }
+						: null;
+				});
+				store.put('bankB', bankB);
+				fill();
+				alert(`Loaded ${bankB.filter(Boolean).length} patches into bank B.`);
+			} catch {
+				alert("That file isn't an Air Wiggler bank.");
+			}
+		});
+
+		// ── Keyboard: on-screen (multi-touch, slide between keys) + computer keys A–K, sharps W E T Y U O P ──
+		const bed = box.querySelector('.keys__bed');
+		const WHITE = [0, 2, 4, 5, 7, 9, 11];
+		let whites = 0;
+		const base = () => 48 + octave * 12; // C3
+		function layout() {
+			const n = Math.max(8, Math.min(15, Math.floor(bed.clientWidth / 34) || 10));
+			if (n === whites) return;
+			whites = n;
+			bed.replaceChildren();
+			for (let w = 0; w < n; w++) {
+				const semi = Math.floor(w / 7) * 12 + WHITE[w % 7];
+				const k = document.createElement('div');
+				k.className = 'key'; k.dataset.o = semi;
+				k.style.left = `${w / n * 100}%`; k.style.width = `${100 / n}%`;
+				bed.append(k);
+				if ([0, 1, 3, 4, 5].includes(w % 7) && w < n - 1) {
+					const bk = document.createElement('div');
+					bk.className = 'key key--b'; bk.dataset.o = semi + 1;
+					bk.style.left = `${(w + 0.68) / n * 100}%`; bk.style.width = `${64 / n}%`;
+					bed.append(bk);
+				}
+			}
+			label();
+		}
+		function label() {
+			for (const k of bed.children) {
+				k.dataset.n = base() + +k.dataset.o;
+				k.textContent = k.dataset.o % 12 === 0 ? 'C' + ((base() + +k.dataset.o) / 12 - 1) : '';
+			}
+		}
+		const down = new Map(); // pointer or key code → note
+		function press(id, note) {
+			if (down.get(id) === note) return;
+			release(id);
+			const c = audio(); if (c.state === 'suspended') c.resume();
+			engine().noteOn(note, 0.8);
+			down.set(id, note);
+			bed.querySelector(`[data-n="${note}"]`)?.classList.add('is-down');
+			window.wiggler?.hit('k', 0.6);
+		}
+		function release(id) {
+			const n = down.get(id);
+			if (n === undefined) return;
+			down.delete(id);
+			if (![...down.values()].includes(n)) { eng?.noteOff(n); bed.querySelector(`[data-n="${n}"]`)?.classList.remove('is-down'); }
+		}
+		const noteAt = (x, y) => { const el = document.elementFromPoint(x, y); return el?.parentElement === bed ? +el.dataset.n : null; };
+		bed.addEventListener('pointerdown', e => {
+			e.preventDefault();
+			bed.setPointerCapture(e.pointerId);
+			const n = noteAt(e.clientX, e.clientY);
+			if (n !== null) press(e.pointerId, n);
+		});
+		bed.addEventListener('pointermove', e => {
+			if (!down.has(e.pointerId)) return;
+			const n = noteAt(e.clientX, e.clientY);
+			if (n !== null) press(e.pointerId, n); // glissando
+		});
+		for (const ev of ['pointerup', 'pointercancel']) bed.addEventListener(ev, e => release(e.pointerId));
+		box.querySelectorAll('.keys__oct').forEach(b => b.addEventListener('click', () => { octave = Math.max(-3, Math.min(3, octave + +b.dataset.d)); label(); }));
+		const KEYMAP = { KeyA: 0, KeyW: 1, KeyS: 2, KeyE: 3, KeyD: 4, KeyF: 5, KeyT: 6, KeyG: 7, KeyY: 8, KeyH: 9, KeyU: 10, KeyJ: 11, KeyK: 12, KeyO: 13, KeyL: 14, KeyP: 15, Semicolon: 16 };
+		addEventListener('keydown', e => {
+			if (!rig.open || mode !== 'synth' || e.repeat || e.ctrlKey || e.metaKey || e.altKey || e.target.tagName === 'SELECT') return;
+			if (e.code === 'KeyZ' || e.code === 'KeyX') { e.preventDefault(); octave = Math.max(-3, Math.min(3, octave + (e.code === 'KeyX' ? 1 : -1))); label(); return; }
+			if (!(e.code in KEYMAP)) return;
+			e.preventDefault();
+			press(e.code, base() + KEYMAP[e.code]);
+		});
+		addEventListener('keyup', e => release(e.code));
+		new ResizeObserver(layout).observe(bed);
+		fill();
+		return {
+			patch: () => patch,
+			isDirty: () => dirty,
+			restore(state, bank) {
+				if (bank) bank.forEach((x, i) => { bankB[i] = x || null; });
+				if (state?.patch) load(state.patch);
+				fill();
+			},
+			markClean() { dirty = false; markDirty(); },
+			setDirty() { dirty = true; markDirty(); },
+			panic() { for (const id of [...down.keys()]) release(id); eng?.allOff(); },
+		};
+	})();
+
+	// Bring back the last visit: knobs, tempo, patch, bank B, the undo history and recorded loops
+	(async () => {
+		const [state, h, bank, lp] = await Promise.all(['state', 'history', 'bankB', 'loops'].map(k => store.get(k)));
+		restoring = true;
+		synthUi?.restore(state, bank);
+		for (const [p, v] of Object.entries(state?.values || {})) ctl[p]?.set(v);
+		restoring = false;
+		if (state?.dirty) synthUi?.setDirty();
+		if (h?.list) { hist.list = h.list; hist.pos = Math.min(h.pos, h.list.length); }
+		undoUi();
+		if (lp) loops?.load(lp);
 	})();
 
 	// ── The popup: opening it warms up audio + renders the kits, so the very first hit is instant ──
@@ -955,11 +1345,11 @@
 	}));
 	rig.querySelector('.rig__close').addEventListener('click', () => rig.close());
 	rig.addEventListener('click', e => { if (e.target === rig) rig.close(); }); // tap the backdrop to close
-	rig.addEventListener('close', () => { window.wiggler?.stop(); metro.stop(); loops?.sleep(); });
+	rig.addEventListener('close', () => { window.wiggler?.stop(); metro.stop(); loops?.sleep(); synthUi?.panic(); commit(); saveAll(); });
 
 	// Keyboard: 1-4 / Q-R / A-F / Z-V, but only while the popup is open.
 	addEventListener('keydown', e => {
-		if (!rig.open || e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
+		if (!rig.open || mode !== 'pads' || e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
 		const i = KEYS.indexOf(e.code);
 		if (i < 0) return;
 		e.preventDefault();

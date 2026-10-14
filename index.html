@@ -226,6 +226,7 @@ html:has(.rig[open]) { overflow: hidden; }
 .rig__close { width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--glass-line); background: var(--glass); color: var(--text); cursor: pointer; }
 .rig__close:hover { border-color: #ff3b5c; }
 .pad__grid { touch-action: none; }
+.pad__grid[hidden] { display: none; }
 .rig .pad__grid { width: min(100%, calc(100dvh - 572px), 520px); min-width: min(100%, 260px); margin: 0 auto; }
 .pad__tools { display: flex; align-items: center; gap: 8px; }
 .pad__cut { padding: 7px 12px; font-size: 0.78rem; }
@@ -273,6 +274,31 @@ html:has(.rig[open]) { overflow: hidden; }
 .rack__opt { align-self: center; padding: 6px 10px; border-radius: 999px; border: 1px solid var(--glass-line); background: transparent;
 	color: var(--muted); font: 700 0.66rem/1 var(--body); cursor: pointer; white-space: nowrap; }
 .rack__opt[aria-pressed="true"] { color: var(--text); border-color: #ff2a2a; box-shadow: inset 0 0 8px -2px #ff2a2a; }
+
+/* ── PianiSynth panel ── */
+.pad__undo, .pad__redo { padding: 6px 9px; font-size: 0.85rem; }
+.pad__undo:disabled, .pad__redo:disabled { opacity: 0.35; cursor: default; }
+@media (max-width: 440px) { .pad__lat { display: none; } .pad__kits .track { padding: 8px 12px; } }
+.synth { width: min(100%, 560px); margin: 0 auto; }
+.synth[hidden] { display: none; }
+.synth__bar { display: flex; align-items: center; gap: 5px; margin-bottom: 6px; }
+.synth__patch { flex: 1; min-width: 0; height: 30px; padding: 0 8px; border-radius: 10px; border: 1px solid var(--glass-line); background: #10132b;
+	color: #7dffb0; font: 600 0.78rem/1 ui-monospace, Consolas, monospace; }
+.synth__rack { margin-bottom: 8px; }
+.synth__tabs { grid-template-columns: repeat(4, 1fr); }
+.synth__tab { height: 28px; padding: 0; text-align: center; border-radius: 10px; background: #10132b; border: 1px solid var(--glass-line); }
+.synth__tab[aria-selected="true"] { border-color: var(--orange); box-shadow: 0 0 12px -4px var(--orange); }
+.synth__led { padding: 5px 8px; }
+.synth__led::before { content: ""; display: inline-block; width: 6px; height: 6px; margin-right: 5px; border-radius: 50%; background: #3a1010; vertical-align: 1px; }
+.synth__led[aria-pressed="true"]::before { background: #ff2a2a; box-shadow: 0 0 6px #ff2a2a; }
+.keys { display: flex; align-items: stretch; gap: 5px; height: clamp(80px, calc(100dvh - 760px), 150px); }
+.keys__oct { padding: 0 8px; border-radius: 10px; font-size: 1rem; }
+.keys__bed { position: relative; flex: 1; touch-action: none; user-select: none; -webkit-user-select: none; }
+.key { position: absolute; top: 0; bottom: 0; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 6px;
+	border: 1px solid #0b0e22; border-radius: 0 0 7px 7px; background: linear-gradient(#e9ebfb, #c9cdea); color: #4a4f7a; font: 600 0.55rem/1 var(--body); }
+.key--b { z-index: 1; bottom: 40%; background: linear-gradient(#2a2f5a, #12152e); border-color: #05060f; }
+.key.is-down { background: linear-gradient(#ffb48a, var(--orange)); }
+.key--b.is-down { background: linear-gradient(#ff9a5c, #c14d12); }
 
 /* ── Loop bank ── */
 .loops { margin-top: 10px; }
@@ -522,6 +548,7 @@ footer img { vertical-align: middle; }
 				<div class="pad__kits">
 					<button class="track is-on" type="button" data-kit="soul">Soul MPC</button>
 					<button class="track" type="button" data-kit="808">808 Trap</button>
+					<button class="track" type="button" data-mode="synth">Synth</button>
 				</div>
 				<div class="metro" aria-label="Metronome">
 					<button class="metro__on" type="button" aria-pressed="false" title="Metronome on/off"><span class="metro__led"></span></button>
@@ -531,6 +558,8 @@ footer img { vertical-align: middle; }
 					<button class="metro__tap" type="button" title="Tap tempo: sets on the 3rd tap">Tap</button>
 				</div>
 				<div class="pad__tools">
+					<button class="chip pad__undo" type="button" aria-label="Undo" disabled>↶</button>
+					<button class="chip pad__redo" type="button" aria-label="Redo" disabled>↷</button>
 					<button class="track pad__cut" type="button" title="Kill every effect tail right now">Cut FX</button>
 					<span class="pad__lat" title="Audio latency"></span>
 				</div>
@@ -538,6 +567,7 @@ footer img { vertical-align: middle; }
 			<pre class="bot" aria-hidden="true"></pre>
 			<div class="rack" aria-label="Master effects"></div>
 			<div class="pad__grid"></div>
+			<div class="synth" hidden></div>
 			<div class="loops" aria-label="Loop bank: 8 slots you record yourself"></div>
 			<input class="pad__file" type="file" accept="audio/*" hidden>
 		</div>
@@ -996,6 +1026,7 @@ footer img { vertical-align: middle; }
 })();
 </script>
 <script src="bot.js" defer></script>
+<script src="synth.js" defer></script>
 <script src="beatpad.js" defer></script>
 </body>
 </html>
