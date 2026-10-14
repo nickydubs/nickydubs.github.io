@@ -188,33 +188,210 @@
 		})));
 	}
 
-	// ── Live audio graph: dry + reverb send + delay send → soft clipper → speakers ──
-	// No DynamicsCompressorNode on purpose: Chrome's has a fixed ~6 ms look-ahead, which you can feel.
-	// A tanh waveshaper catches the peaks instead, with zero added delay.
-	let ac, bus, master, revSend, revRet, delSend, delRet, fb;
-	const FB = 0.38;
+	// ── Live audio graph ──
+	// pads → bus ──┬─────────────────────────────→ compIn → [bus compressor] → master → soft clipper → speakers
+	//              └→ sends → reverb / delay / crush / shift → returns ─┘
+	// A pad picked as the sidechain key goes to keyBus instead: it skips the compressor and drives its detector.
+	// No DynamicsCompressorNode anywhere: Chrome's has a fixed ~6 ms look-ahead you can feel. The compressor and
+	// bitcrusher below are tiny AudioWorklets with zero look-ahead, and a tanh waveshaper catches the final peaks.
+	let ac, bus, keyBus, keySum, clickBus, sendBus, compIn, postComp, master, compNode = null, crushNode = null;
+	let tempo = 120;
+	const hooks = []; // run when the tempo changes
+	const WORKLET = `
+	class Comp extends AudioWorkletProcessor {
+		static get parameterDescriptors() { return ['thr', 'ratio', 'att', 'rel', 'makeup', 'key'].map(name => ({ name, defaultValue: 0 })); }
+		constructor() { super(); this.env = 0; this.n = 0; }
+		process(I, O, p) {
+			const inp = I[0], key = I[1], out = O[0], len = out[0].length, knee = 6;
+			const det = p.key[0] > 0.5 ? key : inp;
+			const thr = p.thr[0], slope = 1 / Math.max(1, p.ratio[0]) - 1, mk = 10 ** (p.makeup[0] / 20);
+			const aA = Math.exp(-1 / (Math.max(0.0001, p.att[0]) * sampleRate)), aR = Math.exp(-1 / (Math.max(0.001, p.rel[0]) * sampleRate));
+			for (let i = 0; i < len; i++) {
+				let x = 0;
+				for (let c = 0; c < det.length; c++) x = Math.max(x, Math.abs(det[c][i]));
+				const over = 20 * Math.log10(x + 1e-9) - thr;
+				const g = 2 * over < -knee ? 0 : 2 * Math.abs(over) <= knee ? slope * (over + knee / 2) ** 2 / (2 * knee) : slope * over;
+				const t = -g;
+				this.env = t > this.env ? aA * this.env + (1 - aA) * t : aR * this.env + (1 - aR) * t;
+				const gl = 10 ** (-this.env / 20) * mk;
+				for (let c = 0; c < out.length; c++) { const s = inp[c] || inp[0]; out[c][i] = s ? s[i] * gl : 0; }
+			}
+			if ((this.n += len) > 2048) { this.n = 0; this.port.postMessage(this.env); }
+			return true;
+		}
+	}
+	class Crush extends AudioWorkletProcessor {
+		static get parameterDescriptors() { return [{ name: 'bits', defaultValue: 12 }, { name: 'rate', defaultValue: 26040 }]; }
+		constructor() { super(); this.ph = 1; this.h = [0, 0]; }
+		process(I, O, p) {
+			const inp = I[0], out = O[0];
+			if (!inp.length) return true;
+			const q = 2 ** (p.bits[0] - 1), step = p.rate[0] / sampleRate;
+			for (let i = 0; i < out[0].length; i++) {
+				this.ph += step;
+				const take = this.ph >= 1;
+				if (take) this.ph -= Math.floor(this.ph);
+				for (let c = 0; c < out.length; c++) {
+					if (take) this.h[c] = Math.round((inp[c] || inp[0])[i] * q) / q;
+					out[c][i] = this.h[c];
+				}
+			}
+			return true;
+		}
+	}
+	registerProcessor('nd-comp', Comp);
+	registerProcessor('nd-crush', Crush);`;
+
+	// ── The rack: every knob is [key, label, min, max, default, curve, format]. Curves: lin, exp, or a list. ──
+	const DIVS = [['1/64T', 1 / 24], ['1/64', 1 / 16], ['1/32T', 1 / 12], ['1/32', 1 / 8], ['1/16T', 1 / 6], ['1/16', 1 / 4], ['1/16D', 3 / 8],
+		['1/8T', 1 / 3], ['1/8', 1 / 2], ['1/8D', 3 / 4], ['1/4T', 2 / 3], ['1/4', 1], ['1/4D', 1.5], ['1/2', 2], ['1 bar', 4]]; // in beats
+	const SHIFTS = [['1/32T', 1 / 12], ['1/32', 1 / 8], ['1/16T', 1 / 6], ['1/16', 1 / 4], ['1/8T', 1 / 3], ['1/8', 1 / 2], ['1/4T', 2 / 3],
+		['1/4', 1], ['1/2', 2], ['1 bar', 4], ['2 bars', 8], ['4 bars', 16]];
+	const KEYS_SC = [['off', 'Off'], ['kick', 'Kick'], ['drums', 'Drums'], ['bass', 'Bass'], ['keys', 'Keys'], ['click', 'Click']];
+	const pct = v => Math.round(v * 100) + '%', ms = v => (v < 10 ? v.toFixed(1) : Math.round(v)) + ' ms', khz = v => v < 1000 ? Math.round(v) + ' Hz' : (v / 1000).toFixed(1) + ' kHz';
+	const RACK = [
+		{ id: 'rev', name: 'Reverb', on: true, nod: 'Plate after the EMT 140 (1957), returned through the Abbey Road EQ trick', knobs: [
+			['pre', 'Pre-delay', 0, 250, 20, 'lin', ms], ['len', 'Length', 0.3, 8, 2.2, 'exp', v => v.toFixed(1) + ' s'],
+			['dens', 'Density', 0, 1, 0.85, 'lin', pct], ['spread', 'Spread', 0, 1, 0.7, 'lin', pct], ['lvl', 'Level', 0, 1, 0.3, 'lin', pct]] },
+		{ id: 'dly', name: 'Delay', on: false, sync: true, nod: 'Tape echo after the Roland RE-201 Space Echo (1974): darker and dirtier every repeat', knobs: [
+			['time', 'Time', 0, 1, 9 / 14, 'lin', null], ['fb', 'Feedback', 0, 0.95, 0.4, 'lin', pct], ['tone', 'Tone', 400, 12000, 3200, 'exp', khz],
+			['wow', 'Wow', 0, 1, 0.15, 'lin', pct], ['lvl', 'Level', 0, 1, 0.5, 'lin', pct]] },
+		{ id: 'crush', name: 'Crush', on: false, nod: 'Grit after the E-mu SP-1200 (1987): defaults to its 12-bit, 26.04 kHz', knobs: [
+			['lo', 'Lo-cut', 20, 2000, 100, 'exp', khz], ['crush', 'Crush', 0, 1, 0.31, 'lin', v => `${Math.round(16 - 13 * v)}-bit`],
+			['drive', 'Drive', 0, 1, 0.3, 'lin', pct], ['hi', 'Hi-cut', 1000, 20000, 12000, 'exp', khz], ['lvl', 'Level', 0, 1, 0.5, 'lin', pct]] },
+		{ id: 'shift', name: 'Shift', on: false, nod: 'Beat shifter, a nod to the Eventide H910 Harmonizer (1975): throws the beat back in time', knobs: [
+			['amt', 'Shift', 0, SHIFTS.length - 1, 5, SHIFTS, null], ['rep', 'Repeats', 0, 0.95, 0.3, 'lin', pct],
+			['warp', 'Warp', 0, 1, 0, 'lin', pct], ['chaos', 'Chaos', 0, 1, 0, 'lin', pct], ['lvl', 'Level', 0, 1, 0.5, 'lin', pct]] },
+		{ id: 'comp', name: 'Comp', on: true, key: 'off', nod: 'Final bus compressor in the spirit of the SSL G-series (1977), with zero look-ahead', knobs: [
+			['thr', 'Threshold', -40, 0, -14, 'lin', v => v.toFixed(1) + ' dB'], ['ratio', 'Ratio', 1, 20, 3, 'exp', v => v.toFixed(1) + ':1'],
+			['att', 'Attack', 0.1, 100, 10, 'exp', ms], ['rel', 'Release', 20, 1500, 200, 'exp', ms], ['makeup', 'Makeup', 0, 18, 3, 'lin', v => '+' + v.toFixed(1) + ' dB']] },
+	];
+	const P = {}; // live settings, real units
+	for (const m of RACK) { P[m.id] = { on: m.on, sync: m.sync, key: m.key }; for (const k of m.knobs) P[m.id][k[0]] = k[4]; }
+	const delaySec = () => Math.min(8, P.dly.sync ? DIVS[Math.round(P.dly.time * (DIVS.length - 1))][1] * 60 / tempo : 0.01 * 200 ** P.dly.time);
+	const shiftSec = () => Math.min(32, SHIFTS[P.shift.amt][1] * 60 / tempo);
+
+	// Each effect is built as a fresh little graph between its send and return, so "Cut FX" can throw the
+	// whole thing away (tails and all) and build a clean one.
+	const FX = {}, nodes = {};
+	const set = (param, v, tau = 0.02) => param.setTargetAtTime(v, ac.currentTime, tau);
+	const BUILD = {
+		rev() {
+			const pre = ac.createDelay(0.3), conv = ac.createConvolver(), hp = filt(ac, 'highpass', 400), lp = filt(ac, 'lowpass', 9000);
+			chain(pre, conv, hp, lp);
+			return { input: pre, output: lp, pre, conv };
+		},
+		dly() {
+			const dl = ac.createDelay(8), sat = shaper(ac, 1.3), tone = filt(ac, 'lowpass', 3200), fb = ac.createGain();
+			const lfo = ac.createOscillator(), depth = ac.createGain();
+			lfo.frequency.value = 0.55; chain(lfo, depth, dl.delayTime); lfo.start();
+			chain(dl, sat, tone, fb, dl);
+			return { input: dl, output: tone, dl, tone, fb, depth, lfo };
+		},
+		crush() {
+			const lo = filt(ac, 'highpass', 100), drive = ac.createGain(), sat = shaper(ac, 2.5), hi = filt(ac, 'lowpass', 12000), trim = ac.createGain();
+			chain(lo, drive, sat);
+			if (crushNode) { crushNode.disconnect(); chain(sat, crushNode, hi); } else chain(sat, hi);
+			chain(hi, trim);
+			return { input: lo, output: trim, lo, drive, sat, hi, trim };
+		},
+		shift() {
+			const dl = ac.createDelay(32), rep = ac.createGain(), lfo = ac.createOscillator(), depth = ac.createGain();
+			lfo.frequency.value = 0.25; chain(lfo, depth, dl.delayTime); lfo.start();
+			chain(dl, rep, dl);
+			return { input: dl, output: dl, dl, rep, depth, lfo };
+		},
+	};
+	function irFor({ len, dens, spread }) { // decaying noise; low density = sparse grainy reflections, spread = stereo width
+		const n = Math.ceil(ac.sampleRate * len), ir = ac.createBuffer(2, n, ac.sampleRate);
+		const L = ir.getChannelData(0), R = ir.getChannelData(1), p = 0.004 + dens * dens * 0.996, amp = 1 / Math.sqrt(p);
+		let e = 0;
+		for (let i = 0; i < n; i++) {
+			const env = Math.exp(-6.9 * i / n), a = Math.random() < p ? (Math.random() * 2 - 1) * amp : 0, b = Math.random() < p ? (Math.random() * 2 - 1) * amp : 0;
+			L[i] = a * env; R[i] = (spread * b + (1 - spread) * a) * env;
+			e += L[i] * L[i];
+		}
+		const k = 1 / Math.sqrt(e || 1); // same loudness at any length/density; Level does the rest
+		for (let i = 0; i < n; i++) { L[i] *= k; R[i] *= k; }
+		return ir;
+	}
+	let irTimer = 0;
+	function apply(id) {
+		if (!ac) return;
+		if (id === 'comp') return applyComp();
+		const s = P[id], f = FX[id];
+		set(nodes[id].send.gain, s.on ? 1 : 0);
+		if (id === 'rev') {
+			set(f.pre.delayTime, s.pre / 1000);
+			set(nodes.rev.ret.gain, s.lvl * 40);
+			clearTimeout(irTimer);
+			if (!f.conv.buffer) f.conv.buffer = irFor(s);
+			else irTimer = setTimeout(() => { FX.rev.conv.buffer = irFor(s); }, 120);
+		} else if (id === 'dly') {
+			set(f.dl.delayTime, delaySec(), 0.05);
+			set(f.fb.gain, s.fb); set(f.tone.frequency, s.tone); set(f.depth.gain, s.wow * 0.0035); set(nodes.dly.ret.gain, s.lvl);
+		} else if (id === 'crush') {
+			set(f.lo.frequency, s.lo); set(f.drive.gain, 30 ** s.drive); set(f.hi.frequency, s.hi);
+			set(f.trim.gain, 1 / (1 + s.drive * 1.5)); set(nodes.crush.ret.gain, s.lvl);
+			if (crushNode) { set(crushNode.parameters.get('bits'), 16 - 13 * s.crush, 0.005); set(crushNode.parameters.get('rate'), Math.max(800, ac.sampleRate * (1 - s.crush) ** 1.7), 0.005); }
+		} else if (id === 'shift') {
+			set(f.dl.delayTime, shiftSec(), 0.03); // the glide between shift lengths is the "rip": a tape-speed swoop
+			set(f.rep.gain, s.rep); set(f.depth.gain, s.warp * 0.03); set(f.lfo.frequency, tempo / 60 / 4); set(nodes.shift.ret.gain, s.lvl);
+		}
+	}
+	function applyComp() {
+		if (!ac) return;
+		const s = P.comp;
+		compIn.disconnect();
+		if (s.on && compNode) {
+			compIn.connect(compNode);
+			const prm = n => compNode.parameters.get(n);
+			set(prm('thr'), s.thr); set(prm('ratio'), s.ratio); set(prm('att'), s.att / 1000); set(prm('rel'), s.rel / 1000); set(prm('makeup'), s.makeup);
+			set(prm('key'), s.key === 'off' ? 0 : 1, 0.001);
+		} else {
+			compIn.connect(postComp);
+			meter(0);
+		}
+		try { clickBus.disconnect(keySum); } catch {}
+		if (s.key === 'click') clickBus.connect(keySum);
+	}
+	function build(id) {
+		if (FX[id]) { nodes[id].send.disconnect(); FX[id].output.disconnect(); FX[id].lfo?.stop(); }
+		FX[id] = BUILD[id]();
+		nodes[id].send.connect(FX[id].input);
+		FX[id].output.connect(nodes[id].ret);
+		apply(id);
+	}
+	// Which pads count as the sidechain key
+	function isKey(def) {
+		const k = P.comp.key;
+		if (!def || k === 'off' || k === 'click' || !P.comp.on || !compNode) return false;
+		return k === 'kick' ? /kick/i.test(def[0]) : k === 'drums' ? def[3] === 'd' : k === 'bass' ? def[3] === 'b' : def[3] === 'k' || def[3] === 'h';
+	}
+
 	function audio() {
 		if (ac) return ac;
 		ac = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: 'interactive' });
 		SR = ac.sampleRate;
-		const comp = shaper(ac, 1.4);
 		master = ac.createGain(); master.gain.value = 0.6; // the clipper adds ~4 dB on quiet signals; this evens it out
-		chain(master, comp, ac.destination);
-		bus = ac.createGain(); bus.connect(master);
-		// reverb: a generated 2.4s stereo room (decaying noise), no impulse file to download
-		const conv = ac.createConvolver(), len = ac.sampleRate * 2.4, ir = ac.createBuffer(2, len, ac.sampleRate);
-		for (let ch = 0; ch < 2; ch++) { const d = ir.getChannelData(ch); for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / len) ** 3.2; }
-		conv.buffer = ir;
-		revSend = ac.createGain(); revRet = ac.createGain();
-		chain(bus, revSend, conv, revRet, master);
-		// delay: dotted-eighth-ish echo that darkens as it repeats
-		const dl = ac.createDelay(2), lp = ac.createBiquadFilter();
-		dl.delayTime.value = 0.33; lp.type = 'lowpass'; lp.frequency.value = 3200;
-		fb = ac.createGain(); fb.gain.value = FB;
-		delSend = ac.createGain(); delRet = ac.createGain();
-		chain(bus, delSend, dl, lp, fb, dl);
-		chain(lp, delRet, master);
-		setFx();
+		chain(master, shaper(ac, 1.4), ac.destination);
+		postComp = ac.createGain(); postComp.connect(master);
+		compIn = ac.createGain(); compIn.connect(postComp);
+		bus = ac.createGain(); keyBus = ac.createGain(); keySum = ac.createGain(); clickBus = ac.createGain(); sendBus = ac.createGain();
+		bus.connect(compIn); keyBus.connect(postComp); keyBus.connect(keySum); clickBus.connect(master);
+		bus.connect(sendBus); keyBus.connect(sendBus);
+		for (const id of ['rev', 'dly', 'crush', 'shift']) {
+			nodes[id] = { send: ac.createGain(), ret: ac.createGain() };
+			sendBus.connect(nodes[id].send); nodes[id].ret.connect(compIn);
+			build(id);
+		}
+		ac.audioWorklet?.addModule(URL.createObjectURL(new Blob([WORKLET], { type: 'text/javascript' }))).then(() => {
+			compNode = new AudioWorkletNode(ac, 'nd-comp', { numberOfInputs: 2, outputChannelCount: [2] });
+			compNode.connect(postComp); keySum.connect(compNode, 0, 1);
+			compNode.port.onmessage = e => meter(e.data);
+			crushNode = new AudioWorkletNode(ac, 'nd-crush', { outputChannelCount: [2] });
+			build('crush'); applyComp();
+		}).catch(() => {}); // no worklets (very old browsers): everything still plays, just without comp + crusher
 		showLatency();
 		return ac;
 	}
@@ -226,23 +403,88 @@
 		latOut.textContent = ms ? `~${ms.toFixed(1)} ms` : '';
 		latOut.title = `Browser buffer ${((ac.baseLatency || 0) * 1000).toFixed(1)} ms + output ${((ac.outputLatency || 0) * 1000).toFixed(1)} ms at ${ac.sampleRate} Hz`;
 	}
-	const revIn = pad.querySelector('[data-fx="reverb"]'), delIn = pad.querySelector('[data-fx="delay"]');
-	function setFx() {
-		if (!ac) return;
-		revSend.gain.setTargetAtTime(revIn.value * 0.7, ac.currentTime, 0.02);
-		delSend.gain.setTargetAtTime(delIn.value * 0.6, ac.currentTime, 0.02);
+	// Cut FX: throw away every effect's tail (rebuild them clean); your settings stay.
+	pad.querySelector('.pad__cut').addEventListener('click', () => { if (ac) for (const id of ['rev', 'dly', 'crush', 'shift']) build(id); });
+
+	// Beat clock for the shifter's Chaos knob: a logistic map (the classic road to chaos) picks the next shift
+	let chaosX = 0.4;
+	function chaosTick() {
+		setTimeout(chaosTick, 60000 / tempo);
+		const s = P.shift;
+		if (!ac || !s.on || s.chaos <= 0 || !rig.open) return;
+		chaosX = (3.57 + 0.43 * s.chaos) * chaosX * (1 - chaosX);
+		if (Math.random() < s.chaos) FX.shift.dl.delayTime.setTargetAtTime(Math.min(32, SHIFTS[Math.floor(chaosX * SHIFTS.length)][1] * 60 / tempo), ac.currentTime, 0.03);
+		else apply('shift');
 	}
-	revIn.addEventListener('input', setFx);
-	delIn.addEventListener('input', setFx);
-	pad.querySelector('.pad__cut').addEventListener('click', () => {
-		revIn.value = 0; delIn.value = 0;
-		if (!ac) return;
-		const t = ac.currentTime;
-		for (const g of [revSend, delSend, revRet, delRet, fb]) { g.gain.cancelScheduledValues(t); g.gain.setTargetAtTime(0, t, 0.01); }
-		// tails are dead; bring the returns back so the sliders work again
-		for (const g of [revRet, delRet]) g.gain.setTargetAtTime(1, t + 0.25, 0.01);
-		fb.gain.setTargetAtTime(FB, t + 0.25, 0.01);
-	});
+	chaosTick();
+	hooks.push(() => { if (ac) { apply('dly'); apply('shift'); } });
+
+	// ── Rack UI: a tab per effect (with its on/off LED), one row of knobs for the selected one ──
+	const rackEl = pad.querySelector('.rack');
+	let grEl = null;
+	function meter(db) { grEl?.style.setProperty('--gr', Math.min(1, db / 12).toFixed(3)); }
+	if (rackEl) {
+		const tabs = document.createElement('div'), panel = document.createElement('div');
+		tabs.className = 'rack__tabs'; tabs.setAttribute('role', 'tablist'); panel.className = 'rack__panel';
+		rackEl.append(tabs, panel);
+		const panels = {};
+		const select = id => {
+			tabs.querySelectorAll('.rack__name').forEach(b => b.setAttribute('aria-selected', b.dataset.m === id));
+			for (const [k, el] of Object.entries(panels)) el.hidden = k !== id;
+		};
+		for (const m of RACK) {
+			const tab = document.createElement('div');
+			tab.className = 'rack__tab';
+			tab.innerHTML = `<button type="button" class="rack__led" aria-pressed="${m.on}" aria-label="${m.name} on/off" title="${m.name} on/off"></button>`
+				+ `<button type="button" class="rack__name" data-m="${m.id}" role="tab">${m.name}${m.id === 'comp' ? '<i class="rack__gr" title="Gain reduction"></i>' : ''}</button>`;
+			tabs.append(tab);
+			if (m.id === 'comp') grEl = tab.querySelector('.rack__gr');
+			const led = tab.querySelector('.rack__led');
+			led.addEventListener('click', () => { audio(); P[m.id].on = !P[m.id].on; led.setAttribute('aria-pressed', P[m.id].on); apply(m.id); });
+			tab.querySelector('.rack__name').addEventListener('click', () => select(m.id));
+			const pn = document.createElement('div');
+			pn.className = 'rack__mod'; pn.hidden = true; pn.setAttribute('role', 'tabpanel');
+			pn.innerHTML = `<div class="rack__head"><p class="rack__nod" title="${m.nod}">${m.nod}</p></div><div class="rack__knobs"></div>`;
+			panels[m.id] = pn; panel.append(pn);
+			const row = pn.querySelector('.rack__knobs'), head = pn.querySelector('.rack__head');
+			for (const [key, lab, min, max, def, curve, fmt] of m.knobs) {
+				const wrap = document.createElement('div');
+				wrap.className = 'kn';
+				wrap.innerHTML = `<span class="knob" aria-label="${m.name} ${lab}"></span><b class="kn__v"></b><small>${lab}</small>`;
+				row.append(wrap);
+				const out = wrap.querySelector('.kn__v'), list = Array.isArray(curve);
+				const toReal = v => list ? Math.round(v) : curve === 'exp' ? min * (max / min) ** v : min + (max - min) * v;
+				const toKnob = r => list ? r : curve === 'exp' ? Math.log(r / min) / Math.log(max / min) : (r - min) / (max - min);
+				const show = () => {
+					const r = P[m.id][key];
+					out.textContent = list ? curve[r][0]
+						: key === 'time' ? (P.dly.sync ? DIVS[Math.round(r * (DIVS.length - 1))][0] : ms(delaySec() * 1000)) : fmt(r);
+				};
+				if (key === 'time') hooks.push(show);
+				knob(wrap.querySelector('.knob'), {
+					min: 0, max: list ? curve.length - 1 : 1, step: list ? 1 : 0.005, value: toKnob(def),
+					onInput: v => { P[m.id][key] = toReal(v); show(); apply(m.id); },
+				});
+				show();
+			}
+			// extras: tempo sync for the delay, sidechain source for the compressor
+			if (m.sync !== undefined) {
+				const b = document.createElement('button');
+				b.type = 'button'; b.className = 'rack__opt'; b.setAttribute('aria-pressed', 'true'); b.textContent = 'Sync';
+				b.title = 'Snap the delay time to the metronome tempo';
+				b.addEventListener('click', () => { P.dly.sync = !P.dly.sync; b.setAttribute('aria-pressed', P.dly.sync); hooks.forEach(f => f()); });
+				head.append(b);
+			}
+			if (m.key !== undefined) {
+				const b = document.createElement('button');
+				b.type = 'button'; b.className = 'rack__opt'; b.title = 'Sidechain: which sound pumps the compressor (tap to cycle)';
+				const lbl = () => { b.textContent = 'SC: ' + KEYS_SC.find(k => k[0] === P.comp.key)[1]; b.setAttribute('aria-pressed', P.comp.key !== 'off'); };
+				b.addEventListener('click', () => { const i = KEYS_SC.findIndex(k => k[0] === P.comp.key); P.comp.key = KEYS_SC[(i + 1) % KEYS_SC.length][0]; lbl(); applyComp(); });
+				lbl(); head.append(b);
+			}
+		}
+		select('rev');
+	}
 
 	// ── Pads ──
 	let kit = 'soul';
@@ -285,7 +527,7 @@
 		}
 		const src = c.createBufferSource(), g = c.createGain();
 		src.buffer = buf;
-		chain(src, g, bus);
+		chain(src, g, !own && isKey(KITS[kit].pads[i]) ? keyBus : bus);
 		src.start(t);
 		window.wiggler?.hit(own ? 'u' : KITS[kit].pads[i][3], i === 0 || /kick/i.test(KITS[kit].pads[i][0]) ? 1.2 : 0.8);
 		if (group) { voices[group] = { src, g }; src.onended = () => { if (voices[group]?.src === src) delete voices[group]; }; }
@@ -321,7 +563,7 @@
 	});
 
 	// ── Knobs: drag up/down (Shift = fine), mouse wheel, or arrow keys when focused. Double-click resets. ──
-	function knob(el, { min, max, step, value, onInput }) {
+	function knob(el, { min, max, step, value, onInput, keyStep = Math.max(step, (max - min) / 50) }) {
 		const def = value;
 		const set = (v, fire = true) => {
 			v = Math.min(max, Math.max(min, Math.round(v / step) * step));
@@ -344,7 +586,7 @@
 		el.addEventListener('keydown', e => {
 			const d = { ArrowUp: 1, ArrowRight: 1, ArrowDown: -1, ArrowLeft: -1, PageUp: 10, PageDown: -10 }[e.key];
 			if (!d) return;
-			e.preventDefault(); e.stopPropagation(); set(value + d * step);
+			e.preventDefault(); e.stopPropagation(); set(value + d * keyStep * (e.shiftKey ? 0.2 : 1));
 		});
 		el.addEventListener('dblclick', () => set(def));
 		set(value, false);
@@ -357,10 +599,10 @@
 		if (!box) return { stop() {} };
 		const out = box.querySelector('.metro__bpm'), led = box.querySelector('.metro__led'), onBtn = box.querySelector('.metro__on');
 		let bpm = 120, running = false, timer = 0, next = 0, beat = 0, clicks = null, gain = null;
-		const show = () => { out.textContent = bpm.toFixed(1); };
+		const show = () => { out.textContent = bpm.toFixed(1); if (tempo !== bpm) { tempo = bpm; hooks.forEach(f => f()); } };
 		const setBpm = v => { bpm = Math.min(300, Math.max(30, +v.toFixed(1))); show(); coarse.set(Math.floor(bpm), false); fine.set(+(bpm % 1).toFixed(1), false); };
-		const coarse = knob(box.querySelector('[data-knob="coarse"]'), { min: 30, max: 300, step: 1, value: 120, onInput: v => { bpm = v + fine.get(); show(); } });
-		const fine = knob(box.querySelector('[data-knob="fine"]'), { min: 0, max: 0.9, step: 0.1, value: 0, onInput: v => { bpm = coarse.get() + v; show(); } });
+		const coarse = knob(box.querySelector('[data-knob="coarse"]'), { min: 30, max: 300, step: 1, keyStep: 1, value: 120, onInput: v => { bpm = v + fine.get(); show(); } });
+		const fine = knob(box.querySelector('[data-knob="fine"]'), { min: 0, max: 0.9, step: 0.1, keyStep: 0.1, value: 0, onInput: v => { bpm = coarse.get() + v; show(); } });
 		async function makeClicks() { // two short blips, pre-rendered like the pads
 			const one = async (f, len) => {
 				const c = new OfflineAudioContext(1, Math.ceil(SR * len), SR), o = c.createOscillator();
@@ -384,7 +626,7 @@
 		async function start() {
 			audio(); if (ac.state === 'suspended') await ac.resume();
 			clicks ||= await makeClicks();
-			if (!gain) { gain = ac.createGain(); gain.gain.value = 0.5; gain.connect(master); }
+			if (!gain) { gain = ac.createGain(); gain.gain.value = 0.5; gain.connect(clickBus); }
 			running = true; beat = 0; next = ac.currentTime + 0.06;
 			tick(); timer = setInterval(tick, 25);
 			onBtn.setAttribute('aria-pressed', 'true');

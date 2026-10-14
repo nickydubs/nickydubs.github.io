@@ -242,7 +242,8 @@
 		const lh = parseFloat(getComputedStyle(pre).lineHeight) / parseFloat(getComputedStyle(pre).fontSize) || 1;
 		aspect = ratio / lh;
 		cw = ch * aspect;
-		pre.style.fontSize = Math.min(13, Math.floor(width / (COLS * ratio) * 10) / 10) + 'px';
+		const tall = innerHeight * 0.22 / ROWS; // never let the bot eat more than ~22% of the screen height
+		pre.style.fontSize = Math.min(13, tall, Math.floor(width / (COLS * ratio) * 10) / 10).toFixed(1) + 'px';
 	}
 
 	let raf = 0, last = 0, acc = 0;
