@@ -1,1 +1,3 @@
 _private/
+__pycache__/
+*_samples/
