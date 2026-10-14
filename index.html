@@ -213,6 +213,55 @@ h2 { margin: 0 0 18px; font: 800 clamp(2.2rem, 6vw, 4rem)/1.05 var(--display); l
 .pad__key { position: absolute; top: 8px; right: 10px; color: var(--muted); font: 600 0.7rem/1 var(--body); }
 .pad__name { position: absolute; left: 10px; bottom: 18px; font: 600 clamp(0.62rem, 2.4vw, 0.8rem)/1.1 var(--body); text-align: left; }
 
+/* ── Popup: fixed to the screen so tapping pads never scrolls the page ── */
+html:has(.rig[open]) { overflow: hidden; }
+#play .scene__inner { text-align: center; }
+.rig { width: min(600px, 100vw); max-width: 100vw; max-height: 100dvh; padding: 0; border: 0; background: none; color: var(--text);
+	overflow: auto; overscroll-behavior: contain; }
+.rig::backdrop { background: rgba(4, 5, 14, 0.82); backdrop-filter: blur(6px); }
+.rig .pad { max-width: none; margin: 0; padding: 12px 14px 16px; }
+@media (max-width: 640px) {
+	.rig { width: 100vw; height: 100dvh; margin: 0; }
+	.rig .pad { min-height: 100%; border-radius: 0; border: 0; display: flex; flex-direction: column; justify-content: center; }
+}
+.pad__top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
+.rig__close { width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--glass-line); background: var(--glass); color: var(--text); cursor: pointer; }
+.rig__close:hover { border-color: #ff3b5c; }
+.pad__grid { touch-action: none; }
+.rig .pad__grid { width: min(100%, calc(100dvh - 420px), 520px); min-width: min(100%, 280px); margin: 0 auto; }
+.pad__lat { color: var(--muted); font: 600 0.72rem/1 var(--body); font-variant-numeric: tabular-nums; }
+
+/* ── Metronome + knobs ── */
+.metro { display: flex; align-items: center; gap: 8px; padding: 4px 8px; border-radius: 999px; background: rgba(0, 0, 0, 0.35); border: 1px solid var(--glass-line); }
+.metro__on { width: 26px; height: 26px; display: grid; place-items: center; border-radius: 50%; border: 1px solid var(--glass-line); background: #10132b; cursor: pointer; }
+.metro__led { width: 9px; height: 9px; border-radius: 50%; background: #3a1010; transition: background 0.2s; }
+.metro__on[aria-pressed="true"] .metro__led { background: #ff2a2a; box-shadow: 0 0 8px #ff2a2a; }
+.metro__led.is-accent { background: #ffd23d !important; box-shadow: 0 0 10px #ffd23d !important; }
+.metro__bpm { min-width: 4.2ch; color: #7dffb0; font: 700 1rem/1 ui-monospace, Consolas, monospace; text-shadow: 0 0 8px rgba(125, 255, 176, 0.6); text-align: right; }
+.knob { --a: -135deg; position: relative; width: 26px; height: 26px; border-radius: 50%; cursor: ns-resize; touch-action: none;
+	background: radial-gradient(circle at 35% 30%, #3a4070, #14183a 70%); box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5), inset 0 0 0 1px rgba(255, 255, 255, 0.1); }
+.knob::after { content: ""; position: absolute; left: 50%; top: 3px; width: 2px; height: 9px; margin-left: -1px; border-radius: 2px;
+	background: var(--orange); transform: rotate(var(--a)); transform-origin: 50% 10px; }
+.knob--fine { width: 20px; height: 20px; }
+.knob--fine::after { top: 2px; height: 7px; transform-origin: 50% 8px; background: var(--cyan); }
+.knob:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+.metro__tap { padding: 5px 10px; border-radius: 999px; border: 1px solid var(--glass-line); background: transparent; color: var(--text);
+	font: 600 0.75rem/1 var(--body); cursor: pointer; touch-action: manipulation; }
+
+/* ── The Air Wiggler (ASCII bot, drawn by bot.js) ── */
+.bot { width: fit-content; margin: 0 auto 6px; overflow: hidden; color: #8f9bd8; font-family: ui-monospace, Consolas, "Courier New", monospace; font-size: 9px;
+	line-height: 1; white-space: pre; user-select: none; text-align: left; }
+.bot b { font-weight: inherit; }
+.bot .c1 { color: var(--orange); text-shadow: 0 0 6px var(--orange); font-weight: 700; }
+.bot .c2 { color: #ffd23d; text-shadow: 0 0 8px #ffd23d; }
+.bot .c3 { color: #d9defa; }
+.bot .c10 { color: #6a6f9a; }
+.bot .c11 { color: #7b8cff; text-shadow: 0 0 6px var(--blue); }
+.bot .c12 { color: var(--orange); text-shadow: 0 0 6px var(--orange); }
+.bot .c13 { color: #ff4f7b; text-shadow: 0 0 6px #ff4f7b; }
+.bot .c14 { color: var(--cyan); text-shadow: 0 0 6px var(--cyan); }
+.bot .c15 { color: #22c55e; text-shadow: 0 0 6px #22c55e; }
+
 /* ── Coming soon ── */
 .soon { display: flex; align-items: center; gap: 18px; max-width: 880px; margin: 40px auto 0; padding: 0 20px;
 	color: var(--orange); font: 600 0.8rem/1.3 var(--body); letter-spacing: 0.18em; text-transform: uppercase; text-align: center; }
@@ -412,20 +461,35 @@ footer img { vertical-align: middle; }
 	<div class="scene__inner">
 		<p class="eyebrow">04 · Play</p>
 		<h2>Wiggle some air yourself</h2>
-		<p class="lead">Tap the pads or use your keyboard (<b>1–4 · Q–R · A–F · Z–V</b>). <strong>Right-click a pad</strong> to load your own sample.</p>
+		<p class="lead">Meet the Air Wiggler: a little beat bot with 16 pads, two kits and a metronome. Tap the pads or use your keyboard (<b>1–4 · Q–R · A–F · Z–V</b>). <strong>Right-click a pad</strong> to load your own sample.</p>
+		<button class="btn rig-open" type="button"><i class="fa fa-play" aria-hidden="true"></i> Wake up the Air Wiggler</button>
+		<dialog class="rig" aria-label="Air Wiggler beat pad">
 		<div class="pad">
-			<div class="pad__bar">
+			<div class="pad__top">
+				<button class="rig__close" type="button" aria-label="Close the beat pad"><i class="fa fa-times" aria-hidden="true"></i></button>
 				<div class="pad__kits">
 					<button class="track is-on" type="button" data-kit="soul">Soul MPC</button>
 					<button class="track" type="button" data-kit="808">808 Trap</button>
 				</div>
+				<div class="metro" aria-label="Metronome">
+					<button class="metro__on" type="button" aria-pressed="false" title="Metronome on/off"><span class="metro__led"></span></button>
+					<output class="metro__bpm" title="Tempo (BPM)">120.0</output>
+					<span class="knob" data-knob="coarse" aria-label="Tempo, coarse" title="Coarse tempo: drag, scroll or arrow keys"></span>
+					<span class="knob knob--fine" data-knob="fine" aria-label="Tempo, fine" title="Fine tempo (0.1): drag, scroll or arrow keys"></span>
+					<button class="metro__tap" type="button" title="Tap tempo: sets on the 3rd tap">Tap</button>
+				</div>
+			</div>
+			<pre class="bot" aria-hidden="true"></pre>
+			<div class="pad__bar">
 				<label class="pad__fx">Reverb <input type="range" min="0" max="1" step="0.01" value="0.25" data-fx="reverb"></label>
 				<label class="pad__fx">Delay <input type="range" min="0" max="1" step="0.01" value="0" data-fx="delay"></label>
 				<button class="track pad__cut" type="button">Cut FX</button>
+				<span class="pad__lat" title="Audio latency"></span>
 			</div>
 			<div class="pad__grid"></div>
 			<input class="pad__file" type="file" accept="audio/*" hidden>
 		</div>
+		</dialog>
 	</div>
 </section>
 
@@ -879,6 +943,7 @@ footer img { vertical-align: middle; }
 	}
 })();
 </script>
+<script src="bot.js" defer></script>
 <script src="beatpad.js" defer></script>
 </body>
 </html>

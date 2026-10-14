@@ -1,15 +1,16 @@
 // Nicky Dubs beat pad: 16 pads, two kits synthesized right here in the browser (no samples to download,
 // nothing copyrighted), plus reverb + delay. Sounds are pre-rendered into buffers, so a hit is just
-// "start this buffer now": the lowest latency the browser can do.
+// "start this buffer now": the lowest latency the browser can do. Lives in a popup so the page can't
+// scroll under your fingers, with the Air Wiggler (bot.js) reacting above the pads.
 (() => {
-	const pad = document.querySelector('.pad');
-	if (!pad) return;
+	const pad = document.querySelector('.pad'), rig = document.querySelector('.rig');
+	if (!pad || !rig) return;
 	const grid = pad.querySelector('.pad__grid');
 	const fileIn = pad.querySelector('.pad__file');
 	const KEYS = ['Digit1', 'Digit2', 'Digit3', 'Digit4', 'KeyQ', 'KeyW', 'KeyE', 'KeyR',
 		'KeyA', 'KeyS', 'KeyD', 'KeyF', 'KeyZ', 'KeyX', 'KeyC', 'KeyV'];
 	const KEY_LABELS = ['1', '2', '3', '4', 'Q', 'W', 'E', 'R', 'A', 'S', 'D', 'F', 'Z', 'X', 'C', 'V'];
-	const SR = 44100;
+	let SR = 48000; // replaced by the sound card's own rate once audio starts, so nothing gets resampled
 	const hz = n => 440 * 2 ** ((n - 69) / 12); // MIDI note → frequency
 
 	// ── Sound design (each builder draws into an offline context) ──
@@ -187,31 +188,43 @@
 		})));
 	}
 
-	// ── Live audio graph: dry + reverb send + delay send → gentle compressor → speakers ──
-	let ac, bus, revSend, revRet, delSend, delRet, fb;
+	// ── Live audio graph: dry + reverb send + delay send → soft clipper → speakers ──
+	// No DynamicsCompressorNode on purpose: Chrome's has a fixed ~6 ms look-ahead, which you can feel.
+	// A tanh waveshaper catches the peaks instead, with zero added delay.
+	let ac, bus, master, revSend, revRet, delSend, delRet, fb;
 	const FB = 0.38;
 	function audio() {
 		if (ac) return ac;
 		ac = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: 'interactive' });
-		const comp = ac.createDynamicsCompressor();
-		comp.threshold.value = -10; comp.ratio.value = 4; comp.attack.value = 0.003; comp.release.value = 0.15;
-		comp.connect(ac.destination);
-		bus = ac.createGain(); bus.connect(comp);
+		SR = ac.sampleRate;
+		const comp = shaper(ac, 1.4);
+		master = ac.createGain(); master.gain.value = 0.6; // the clipper adds ~4 dB on quiet signals; this evens it out
+		chain(master, comp, ac.destination);
+		bus = ac.createGain(); bus.connect(master);
 		// reverb: a generated 2.4s stereo room (decaying noise), no impulse file to download
 		const conv = ac.createConvolver(), len = ac.sampleRate * 2.4, ir = ac.createBuffer(2, len, ac.sampleRate);
 		for (let ch = 0; ch < 2; ch++) { const d = ir.getChannelData(ch); for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / len) ** 3.2; }
 		conv.buffer = ir;
 		revSend = ac.createGain(); revRet = ac.createGain();
-		chain(bus, revSend, conv, revRet, comp);
+		chain(bus, revSend, conv, revRet, master);
 		// delay: dotted-eighth-ish echo that darkens as it repeats
 		const dl = ac.createDelay(2), lp = ac.createBiquadFilter();
 		dl.delayTime.value = 0.33; lp.type = 'lowpass'; lp.frequency.value = 3200;
 		fb = ac.createGain(); fb.gain.value = FB;
 		delSend = ac.createGain(); delRet = ac.createGain();
 		chain(bus, delSend, dl, lp, fb, dl);
-		chain(lp, delRet, comp);
+		chain(lp, delRet, master);
 		setFx();
+		showLatency();
 		return ac;
+	}
+	// Honest numbers: the browser's processing buffer + what the OS/sound card adds after it.
+	const latOut = pad.querySelector('.pad__lat');
+	function showLatency() {
+		if (!ac || !latOut) return;
+		const ms = ((ac.baseLatency || 0) + (ac.outputLatency || 0)) * 1000;
+		latOut.textContent = ms ? `~${ms.toFixed(1)} ms` : '';
+		latOut.title = `Browser buffer ${((ac.baseLatency || 0) * 1000).toFixed(1)} ms + output ${((ac.outputLatency || 0) * 1000).toFixed(1)} ms at ${ac.sampleRate} Hz`;
 	}
 	const revIn = pad.querySelector('[data-fx="reverb"]'), delIn = pad.querySelector('[data-fx="delay"]');
 	function setFx() {
@@ -274,7 +287,20 @@
 		src.buffer = buf;
 		chain(src, g, bus);
 		src.start(t);
+		window.wiggler?.hit(own ? 'u' : KITS[kit].pads[i][3], i === 0 || /kick/i.test(KITS[kit].pads[i][0]) ? 1.2 : 0.8);
 		if (group) { voices[group] = { src, g }; src.onended = () => { if (voices[group]?.src === src) delete voices[group]; }; }
+	}
+
+	// Most sample files start with a few ms of silence; cut it so the hit lands the instant you tap.
+	function trim(buf) {
+		const d = buf.getChannelData(0);
+		let i = 0;
+		while (i < d.length && Math.abs(d[i]) < 0.003) i++;
+		i = Math.max(0, i - Math.round(buf.sampleRate * 0.0005)); // keep 0.5 ms so the attack doesn't click
+		if (i < buf.sampleRate * 0.002 || i >= d.length) return buf;
+		const out = ac.createBuffer(buf.numberOfChannels, buf.length - i, buf.sampleRate);
+		for (let ch = 0; ch < buf.numberOfChannels; ch++) out.copyToChannel(buf.getChannelData(ch).subarray(i), ch);
+		return out;
 	}
 
 	// Right-click a pad → load your own sound into it (this kit only, this visit only).
@@ -285,7 +311,7 @@
 		if (!f || loadInto < 0) return;
 		if (f.size > 15e6) { alert('That file is a bit big. Try something under 15 MB.'); return; }
 		try {
-			const buffer = await audio().decodeAudioData(await f.arrayBuffer());
+			const buffer = trim(await audio().decodeAudioData(await f.arrayBuffer()));
 			custom[kit][loadInto] = { buffer, name: f.name.replace(/\.[^.]+$/, '').slice(0, 14) };
 			label();
 			hit(loadInto);
@@ -294,14 +320,110 @@
 		}
 	});
 
-	// Keyboard: 1-4 / Q-R / A-F / Z-V, but only while the pad is on screen.
-	let onScreen = false;
-	new IntersectionObserver(([e]) => {
-		onScreen = e.isIntersecting;
-		if (onScreen) renderAll();
-	}, { rootMargin: '400px 0px' }).observe(pad);
+	// ── Knobs: drag up/down (Shift = fine), mouse wheel, or arrow keys when focused. Double-click resets. ──
+	function knob(el, { min, max, step, value, onInput }) {
+		const def = value;
+		const set = (v, fire = true) => {
+			v = Math.min(max, Math.max(min, Math.round(v / step) * step));
+			value = +v.toFixed(3);
+			el.style.setProperty('--a', `${-135 + (value - min) / (max - min) * 270}deg`);
+			el.setAttribute('aria-valuenow', value);
+			if (fire) onInput(value);
+		};
+		Object.assign(el, { tabIndex: 0 });
+		el.setAttribute('role', 'slider');
+		el.setAttribute('aria-valuemin', min); el.setAttribute('aria-valuemax', max);
+		let y0 = 0, v0 = 0;
+		el.addEventListener('pointerdown', e => { e.preventDefault(); el.setPointerCapture(e.pointerId); y0 = e.clientY; v0 = value; el.focus(); });
+		el.addEventListener('pointermove', e => {
+			if (!el.hasPointerCapture(e.pointerId)) return;
+			const px = Math.min(700, Math.max(150, (max - min) / step * 2.5)) * (e.shiftKey ? 4 : 1); // pixels for the full sweep
+			set(v0 + (y0 - e.clientY) / px * (max - min));
+		});
+		el.addEventListener('wheel', e => { e.preventDefault(); set(value - Math.sign(e.deltaY) * step); }, { passive: false });
+		el.addEventListener('keydown', e => {
+			const d = { ArrowUp: 1, ArrowRight: 1, ArrowDown: -1, ArrowLeft: -1, PageUp: 10, PageDown: -10 }[e.key];
+			if (!d) return;
+			e.preventDefault(); e.stopPropagation(); set(value + d * step);
+		});
+		el.addEventListener('dblclick', () => set(def));
+		set(value, false);
+		return { get: () => value, set };
+	}
+
+	// ── Metronome: clicks are scheduled on the audio clock (not timers), so they never drift ──
+	const metro = (() => {
+		const box = pad.querySelector('.metro');
+		if (!box) return { stop() {} };
+		const out = box.querySelector('.metro__bpm'), led = box.querySelector('.metro__led'), onBtn = box.querySelector('.metro__on');
+		let bpm = 120, running = false, timer = 0, next = 0, beat = 0, clicks = null, gain = null;
+		const show = () => { out.textContent = bpm.toFixed(1); };
+		const setBpm = v => { bpm = Math.min(300, Math.max(30, +v.toFixed(1))); show(); coarse.set(Math.floor(bpm), false); fine.set(+(bpm % 1).toFixed(1), false); };
+		const coarse = knob(box.querySelector('[data-knob="coarse"]'), { min: 30, max: 300, step: 1, value: 120, onInput: v => { bpm = v + fine.get(); show(); } });
+		const fine = knob(box.querySelector('[data-knob="fine"]'), { min: 0, max: 0.9, step: 0.1, value: 0, onInput: v => { bpm = coarse.get() + v; show(); } });
+		async function makeClicks() { // two short blips, pre-rendered like the pads
+			const one = async (f, len) => {
+				const c = new OfflineAudioContext(1, Math.ceil(SR * len), SR), o = c.createOscillator();
+				o.frequency.value = f; chain(o, envGain(c, 0, 0.0005, 0.6, len - 0.002), c.destination); o.start(0);
+				return c.startRendering();
+			};
+			return Promise.all([one(1760, 0.03), one(1175, 0.025)]);
+		}
+		function tick() {
+			while (next < ac.currentTime + 0.12) {
+				const src = ac.createBufferSource(), accent = beat % 4 === 0, at = next;
+				src.buffer = clicks[accent ? 0 : 1]; chain(src, gain); src.start(at);
+				setTimeout(() => {
+					led.classList.toggle('is-accent', accent);
+					led.animate([{ opacity: 1 }, { opacity: 0.15 }], { duration: 120 });
+					window.wiggler?.beat(accent);
+				}, Math.max(0, (at - ac.currentTime) * 1000));
+				next += 60 / bpm; beat++;
+			}
+		}
+		async function start() {
+			audio(); if (ac.state === 'suspended') await ac.resume();
+			clicks ||= await makeClicks();
+			if (!gain) { gain = ac.createGain(); gain.gain.value = 0.5; gain.connect(master); }
+			running = true; beat = 0; next = ac.currentTime + 0.06;
+			tick(); timer = setInterval(tick, 25);
+			onBtn.setAttribute('aria-pressed', 'true');
+		}
+		function stop() { running = false; clearInterval(timer); onBtn.setAttribute('aria-pressed', 'false'); }
+		onBtn.addEventListener('click', () => running ? stop() : start());
+		// Tap tempo: the tempo is set on the 3rd tap, then keeps refining (average of the last 6 taps).
+		const taps = [];
+		box.querySelector('.metro__tap').addEventListener('pointerdown', e => {
+			e.preventDefault();
+			const now = performance.now();
+			if (taps.length && now - taps[taps.length - 1] > 2000) taps.length = 0;
+			taps.push(now); if (taps.length > 6) taps.shift();
+			e.currentTarget.animate([{ background: 'var(--orange)' }, { background: 'transparent' }], { duration: 150 });
+			if (taps.length < 3) return;
+			setBpm(60000 / ((taps[taps.length - 1] - taps[0]) / (taps.length - 1)));
+		});
+		show();
+		return { stop, get bpm() { return bpm; } };
+	})();
+
+	// ── The popup: opening it warms up audio + renders the kits, so the very first hit is instant ──
+	const bot = pad.querySelector('.bot');
+	if (bot && window.wiggler) wiggler.mount(bot);
+	document.querySelectorAll('.rig-open').forEach(b => b.addEventListener('click', () => {
+		rig.showModal();
+		const c = audio();
+		if (c.state === 'suspended') c.resume();
+		renderAll();
+		window.wiggler?.start();
+		setTimeout(showLatency, 400); // outputLatency is only known once audio is actually flowing
+	}));
+	rig.querySelector('.rig__close').addEventListener('click', () => rig.close());
+	rig.addEventListener('click', e => { if (e.target === rig) rig.close(); }); // tap the backdrop to close
+	rig.addEventListener('close', () => { window.wiggler?.stop(); metro.stop(); });
+
+	// Keyboard: 1-4 / Q-R / A-F / Z-V, but only while the popup is open.
 	addEventListener('keydown', e => {
-		if (!onScreen || e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
+		if (!rig.open || e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
 		const i = KEYS.indexOf(e.code);
 		if (i < 0) return;
 		e.preventDefault();
