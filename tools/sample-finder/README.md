@@ -16,6 +16,7 @@ python sample_finder.py song.wav --only drum_break,loop
 | `melodic_run` | fast notes, 4.5+ note changes per second |
 | `vocal_phrase` / `vocal_chop` | lead line with vibrato; chop if under 1.5 s |
 | `lead_chop` | short pitched bit on top, not enough vibrato to say voice vs instrument |
+| `vocal_slice` | every vocal phrase/chop and lead chop also cut into single-note one-shots, named by pitch (`01_A4.wav`) in a `*_slices/` folder next to the parent clip. Cuts land mid-glide on note changes and in level dips between syllables. Skip with `--no-slices` |
 | `one_shot` | a single hit with clean air before and after (`drum_hit` / `tonal_hit`) |
 | `loop` | 1, 2 or 4 bars that repeat in the very next window, cut on the beat |
 

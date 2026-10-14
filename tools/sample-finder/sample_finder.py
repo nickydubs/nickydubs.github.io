@@ -8,6 +8,8 @@ Labels:
   vocal_phrase     sung line (vibrato / glides), longer than ~1.5 s
   vocal_chop       short sung bit, good for chopping
   lead_chop        short pitched bit on top of the mix, no clear vibrato (voice or instrument)
+  vocal_slice      every vocal/lead chop above, also cut into single-note one-shots
+                   (named by pitch, in a *_slices/ folder next to the parent clip)
   one_shot         a single hit with clean air around it (drum_hit or tonal_hit)
   loop             1/2/4 bars that repeat in the very next window, so they loop clean
 
@@ -340,6 +342,51 @@ def find_loops(A, sr, bars_options=(1, 2, 4), thresh=0.85):
     return out
 
 
+VOCAL_LABELS = ("vocal_phrase", "vocal_chop", "lead_chop")
+
+
+def slice_vocal(A, t0, t1, min_len=0.1):
+    """Chop a vocal into single-note/syllable one-shots: cut where the note changes
+    (held >= 80 ms) or where the level dips between syllables."""
+    a, b = frames(t0), frames(t1)
+    if b - a < 3:
+        return []
+    note = np.round(median_filter(A["lead"], 3)[a:b])
+    cuts = set()
+    # note changes between stably held notes, cut in the middle of the glide
+    held = [(r0, r1, note[r0]) for r0, r1 in runs(np.concatenate([[True], np.diff(note) == 0]))]
+    held = [h for h in held if h[1] - h[0] >= frames(0.08)]
+    for (p0, p1, pn), (n0, n1, nn) in zip(held, held[1:]):
+        if pn != nn:
+            cuts.add((p1 + n0) // 2)
+    # level dips between syllables (6 dB+ under the peaks on both sides)
+    lvl = uniform_filter1d(A["rms_h"][a:b], 3)
+    w = frames(0.2)
+    for i in range(1, len(lvl) - 1):
+        if lvl[i] <= lvl[i - 1] and lvl[i] <= lvl[i + 1]:
+            left, right = lvl[max(0, i - w):i].max(), lvl[i + 1:i + 1 + w].max()
+            if lvl[i] < 0.5 * min(left, right):
+                cuts.add(i)
+    edges = [0] + sorted(cuts) + [b - a]
+    # merge slivers into the previous slice
+    keep = [edges[0]]
+    for e in edges[1:]:
+        if (e - keep[-1]) * FT < min_len and len(keep) > 1:
+            keep[-1] = e
+        elif (e - keep[-1]) * FT >= min_len or e == edges[-1]:
+            keep.append(e)
+    if len(keep) > 2 and (keep[-1] - keep[-2]) * FT < min_len:
+        del keep[-2]
+    out = []
+    for s0, s1 in zip(keep, keep[1:]):
+        if (s1 - s0) * FT < min_len:
+            continue
+        mid = note[s0 + (s1 - s0) // 4: s1 - (s1 - s0) // 4 or s1]
+        pitch = librosa.midi_to_note(int(np.median(mid if len(mid) else note[s0:s1])), unicode=False)
+        out.append({"start": round(t0 + s0 * FT, 3), "end": round(t0 + s1 * FT, 3), "pitch": pitch})
+    return out
+
+
 # ---------------------------------------------------------------------------
 # output
 # ---------------------------------------------------------------------------
@@ -356,6 +403,17 @@ def export(y, sr, items, out_dir, stem):
         name = f"{k:03d}_{it['label']}_{fmt(it['start'])}-{fmt(it['end'])}.wav"
         sf.write(os.path.join(out_dir, name), clip, sr)
         it["file"] = name
+        if it.get("slices"):
+            sub = name[:-4] + "_slices"
+            os.makedirs(os.path.join(out_dir, sub), exist_ok=True)
+            for j, sl in enumerate(it["slices"], 1):
+                c = y[int(sl["start"] * sr):int(sl["end"] * sr)].copy()
+                f = min(int(0.008 * sr), len(c) // 4)
+                if f > 1:
+                    c[:f] *= np.linspace(0, 1, f)
+                    c[-f:] *= np.linspace(1, 0, f)
+                sl["file"] = f"{sub}/{j:02d}_{sl['pitch']}.wav"
+                sf.write(os.path.join(out_dir, sl["file"]), c, sr)
     with open(os.path.join(out_dir, "samples.json"), "w") as fh:
         json.dump({"track": stem, "samples": items}, fh, indent=2)
     with open(os.path.join(out_dir, "samples.csv"), "w", newline="") as fh:
@@ -365,6 +423,10 @@ def export(y, sr, items, out_dir, stem):
             w.writerow({**{k: it[k] for k in ("file", "label", "score", "note")},
                         "start": f"{it['start']:.2f}", "end": f"{it['end']:.2f}",
                         "duration": f"{it['end'] - it['start']:.2f}"})
+            for sl in it.get("slices", []):
+                w.writerow({"file": sl["file"], "label": "vocal_slice", "score": "", "note": sl["pitch"],
+                            "start": f"{sl['start']:.2f}", "end": f"{sl['end']:.2f}",
+                            "duration": f"{sl['end'] - sl['start']:.2f}"})
 
 
 def main(argv=None):
@@ -373,6 +435,7 @@ def main(argv=None):
     p.add_argument("-o", "--out", help="output folder (default: <track>_samples)")
     p.add_argument("--only", help="comma list of labels to keep, e.g. drum_break,loop")
     p.add_argument("--no-clips", action="store_true", help="just print, don't write wavs")
+    p.add_argument("--no-slices", action="store_true", help="don't chop vocals into one-shot slices")
     p.add_argument("--debug", action="store_true", help="print threshold diagnostics")
     args = p.parse_args(argv)
 
@@ -392,9 +455,13 @@ def main(argv=None):
     items.sort(key=lambda d: (d["start"], d["label"]))
     for it in items:
         it["start"], it["end"] = round(it["start"], 3), round(it["end"], 3)
+        if it["label"] in VOCAL_LABELS and not args.no_slices:
+            it["slices"] = slice_vocal(A, it["start"], it["end"])
 
     for it in items:
         print(f"  {fmt(it['start'])} - {fmt(it['end'])}  {it['label']:<16} {it['score']:<5} {it['note']}")
+        if it.get("slices"):
+            print(f"      -> {len(it['slices'])} one-shot slices: " + " ".join(sl["pitch"] for sl in it["slices"]))
     if not items:
         print("  nothing found; try --debug to see where the thresholds sit")
     if not args.no_clips and items:
