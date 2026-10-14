@@ -474,6 +474,36 @@ footer img { vertical-align: middle; }
 	</div>
 </section>
 
+<!-- 6: Services (each "Email me" builds a mailto with its own subject, same reversed-email trick as booking) -->
+<section class="scene" id="services">
+	<span class="ghost" aria-hidden="true">HIRE</span>
+	<div class="scene__inner">
+		<p class="eyebrow">06 · Services</p>
+		<h2>Hire the air wiggler</h2>
+		<p class="lead">Need a drummer, a cleaner mix, or a site that actually looks like you? <strong>Send me what you've got</strong> and I'll reply with a price.</p>
+		<div class="cards cards--3">
+			<article class="card">
+				<span class="card__icon"><i class="fa fa-sliders" aria-hidden="true"></i></span>
+				<h3>Stems &amp; mastering</h3>
+				<p>Split any song you own into clean stems, fix the warbly AI-split artifacts, and get a loud, release-ready master back.</p>
+				<a class="btn" href="#services" data-mail-link="moc.liamg@cisumsbudykcin" data-subject="Stems and mastering"><i class="fa fa-envelope" aria-hidden="true"></i>Email me</a>
+			</article>
+			<article class="card">
+				<span class="card__icon"><i class="fa fa-music" aria-hidden="true"></i></span>
+				<h3>Custom drum tracks</h3>
+				<p>Real drums, recorded on a real kit, for your song. Jungle, DnB, funk, rock or halftime, with stems delivered.</p>
+				<a class="btn" href="#services" data-mail-link="moc.liamg@cisumsbudykcin" data-subject="Custom drum track"><i class="fa fa-envelope" aria-hidden="true"></i>Email me</a>
+			</article>
+			<article class="card">
+				<span class="card__icon"><i class="fa fa-desktop" aria-hidden="true"></i></span>
+				<h3>Websites</h3>
+				<p>This site, but yours. Fast, animated, phone-friendly sites for musicians, bands and small businesses, plus a store if you sell stuff.</p>
+				<a class="btn" href="#services" data-mail-link="moc.liamg@cisumsbudykcin" data-subject="Website build"><i class="fa fa-envelope" aria-hidden="true"></i>Email me</a>
+			</article>
+		</div>
+	</div>
+</section>
+
 <!-- ═══ Everything below this line is unfinished / mock-ups ═══ -->
 <div class="soon" role="separator"><span>Everything below here is coming soon. Stay tuned.</span></div>
 
@@ -481,19 +511,19 @@ footer img { vertical-align: middle; }
 	<span class="ghost" aria-hidden="true">SHOP</span>
 	<div class="scene__inner">
 		<p class="eyebrow">Coming soon · Shop</p>
-		<h2>Beats &amp; gear</h2>
+		<h2>Breaks, stems &amp; gear</h2>
 		<div class="cards">
 			<article class="card">
 				<span class="card__icon"><i class="fa fa-headphones" aria-hidden="true"></i></span>
-				<h3>Beats</h3>
-				<p>Juicy, dancey, ready-to-wiggle beats to write over, lease or own.</p>
-				<a class="btn" href="store.html">Browse beats</a>
+				<h3>Sample packs &amp; stems</h3>
+				<p>Live drum breaks, one-shots, riffs, track stems and beats to write over. Instant download.</p>
+				<a class="btn" href="store.html">Peek at the store</a>
 			</article>
 			<article class="card card--rig">
 				<span class="card__icon"><i class="fa fa-lightbulb-o" aria-hidden="true"></i></span>
 				<h3>Kick Drum Light Rig <span class="price">$360</span></h3>
 				<p>An infinity mirror that clips into almost any kick drum, with sound-reactive LEDs that hit when you hit. Handmade by me.</p>
-				<a class="btn" href="store.html">Get one</a>
+				<a class="btn" href="store.html#products">Get one</a>
 			</article>
 		</div>
 	</div>
@@ -810,7 +840,7 @@ footer img { vertical-align: middle; }
 	// Booking email: same trick, built into a mailto only when clicked.
 	document.querySelectorAll('[data-mail-link]').forEach(a => a.addEventListener('click', e => {
 		e.preventDefault();
-		location.href = 'mailto:' + [...a.dataset.mailLink].reverse().join('') + '?subject=Booking%20Nicky%20Dubs';
+		location.href = 'mailto:' + [...a.dataset.mailLink].reverse().join('') + '?subject=' + encodeURIComponent(a.dataset.subject || 'Booking Nicky Dubs');
 	}));
 
 	// e-Transfer email: un-reverse only on a real click, then show + copy it.
