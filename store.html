@@ -3,42 +3,235 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Store coming soon | Nicky Dubs</title>
-<meta name="robots" content="noindex">
+<title>Store | Nicky Dubs</title>
+<meta name="description" content="Drum breaks, sample packs, stems and beats from Nicky Dubs. Instant downloads.">
 <link rel="icon" href="favicon.ico">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,800&family=Inter:wght@400;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Inter:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
 <style>
-:root { --ink: #070915; --ink-2: #0d1130; --text: #eef0ff; --muted: #9aa0c3; --blue: #3d5afe; --orange: #ff7a3d; color-scheme: dark; }
+/* Same palette as the main site. */
+:root {
+	--ink: #070915; --ink-2: #0d1130; --text: #eef0ff; --muted: #9aa0c3;
+	--blue: #3d5afe; --orange: #ff7a3d; --cyan: #34d6ff;
+	--glass-line: rgba(255, 255, 255, 0.09);
+	--display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+	--body: "Inter", "Segoe UI", system-ui, sans-serif;
+	color-scheme: dark;
+}
 * { box-sizing: border-box; }
-body { margin: 0; min-height: 100svh; display: grid; place-items: center; padding: 40px 16px;
-	background: radial-gradient(70% 60% at 20% 10%, rgba(61, 90, 254, 0.35), transparent 70%),
-		radial-gradient(60% 50% at 85% 90%, rgba(255, 122, 61, 0.22), transparent 70%), var(--ink);
-	color: var(--text); font: 16px/1.6 "Inter", "Segoe UI", system-ui, sans-serif; text-align: center; }
-main { max-width: 520px; }
-img { width: 140px; height: auto; animation: beat 1.2s ease-in-out infinite; }
-@keyframes beat { 0%, 20%, 45%, 100% { transform: scale(1); } 6% { transform: scale(1.04); } 30% { transform: scale(1.02); } }
-h1 { margin: 18px 0 10px; font: 800 clamp(2rem, 7vw, 3rem)/1.05 "Bricolage Grotesque", sans-serif;
+body { margin: 0; min-height: 100svh; color: var(--text); font: 16px/1.6 var(--body); -webkit-font-smoothing: antialiased;
+	background: radial-gradient(70% 50% at 15% 0%, rgba(61, 90, 254, 0.32), transparent 70%),
+		radial-gradient(60% 45% at 90% 100%, rgba(255, 122, 61, 0.2), transparent 70%), var(--ink);
+	background-attachment: fixed; }
+a { color: inherit; }
+.wrap { max-width: 1040px; margin: 0 auto; padding: 28px 20px 64px; }
+
+/* Top bar */
+.top { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.top img { width: 74px; height: auto; display: block; }
+.back { color: var(--muted); font-weight: 600; font-size: 0.9rem; text-decoration: none; }
+.back:hover, .back:focus-visible { color: var(--text); }
+
+/* Header */
+header { text-align: center; margin: 34px auto 30px; max-width: 640px; }
+.eyebrow { margin: 0 0 10px; color: var(--orange); font: 600 0.8rem/1 var(--body); letter-spacing: 0.22em; text-transform: uppercase; }
+h1 { margin: 0 0 14px; font: 800 clamp(2.2rem, 7vw, 3.6rem)/1.05 var(--display); letter-spacing: -0.02em; text-wrap: balance;
 	background: linear-gradient(180deg, #fff, #b9c3ff); -webkit-background-clip: text; background-clip: text; color: transparent; }
-p { margin: 0 0 26px; color: var(--muted); }
-.btns { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; }
-a { display: inline-flex; padding: 12px 22px; border-radius: 999px; color: #fff; font-weight: 600; text-decoration: none;
-	background: linear-gradient(135deg, var(--orange), #ff4f7b); box-shadow: 0 10px 24px -10px var(--orange); transition: transform 0.25s ease; }
-a:hover, a:focus-visible { transform: translateY(-2px); outline: none; }
-a.ghost { background: transparent; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.15); }
-@media (prefers-reduced-motion: reduce) { img { animation: none; } }
+.lead { margin: 0; color: var(--muted); font-size: 1.05rem; }
+.lead strong { color: var(--text); font-weight: 600; }
+
+/* Filter chips */
+.filters { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: 0 0 26px; padding: 0; list-style: none; }
+.chip { padding: 8px 16px; border-radius: 999px; cursor: pointer; border: 1px solid var(--glass-line);
+	background: rgba(255, 255, 255, 0.045); color: var(--text); font: 600 0.88rem/1 var(--body);
+	transition: border-color 0.25s ease, background 0.25s ease; }
+.chip:hover, .chip:focus-visible { border-color: rgba(52, 214, 255, 0.5); outline: none; }
+.chip[aria-pressed="true"] { border-color: var(--orange); background: rgba(255, 122, 61, 0.12); }
+
+/* Products */
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(300px, 100%), 1fr)); gap: 18px; }
+.item { position: relative; display: flex; flex-direction: column; gap: 10px; padding: 24px; border-radius: 22px;
+	background: rgba(16, 20, 52, 0.72); border: 1px solid var(--glass-line);
+	transition: transform 0.35s cubic-bezier(0.2, 0.9, 0.3, 1.3), border-color 0.3s ease, box-shadow 0.3s ease; }
+.item:hover { transform: translateY(-5px); border-color: rgba(255, 122, 61, 0.45); box-shadow: 0 24px 60px -24px rgba(255, 122, 61, 0.45); }
+.item__head { display: flex; align-items: center; gap: 12px; }
+.item__icon { flex: none; display: grid; place-items: center; width: 46px; height: 46px; border-radius: 14px; font-size: 20px;
+	background: linear-gradient(135deg, var(--blue), #7a5cff); box-shadow: 0 8px 20px -8px var(--blue); }
+.item__kind { color: var(--cyan); font: 600 0.7rem/1.3 var(--body); letter-spacing: 0.16em; text-transform: uppercase; }
+.item h2 { margin: 2px 0 0; font: 800 1.3rem/1.2 var(--display); }
+.item p { margin: 0; color: var(--muted); font-size: 0.95rem; }
+.specs { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.specs li { padding: 3px 10px; border-radius: 999px; border: 1px solid var(--glass-line); color: #cfd6ff; font-size: 0.78rem; }
+.item audio { width: 100%; height: 36px; }
+.item__foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: auto; padding-top: 6px; }
+.price { font: 800 1.35rem/1 var(--display); color: var(--orange); }
+.price small { display: block; margin-top: 4px; color: var(--muted); font: 500 0.72rem/1 var(--body); letter-spacing: 0.04em; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 12px 20px; border: 0; border-radius: 999px;
+	cursor: pointer; background: linear-gradient(135deg, var(--orange), #ff4f7b); color: #fff; font: 600 0.95rem/1 var(--body);
+	text-decoration: none; box-shadow: 0 10px 24px -10px var(--orange); transition: transform 0.25s ease, filter 0.25s ease; }
+.btn:hover, .btn:focus-visible { transform: translateY(-2px); filter: brightness(1.08); outline: none; }
+.btn--soon { background: transparent; color: var(--muted); box-shadow: inset 0 0 0 1px var(--glass-line); cursor: default; }
+.btn--soon:hover { transform: none; filter: none; }
+.btn--ghost { background: transparent; box-shadow: inset 0 0 0 1px var(--glass-line); }
+
+/* Notes */
+.notes { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr)); gap: 18px; margin-top: 40px; }
+.note { padding: 20px 22px; border-radius: 18px; border: 1px solid var(--glass-line); background: rgba(255, 255, 255, 0.035); }
+.note h3 { margin: 0 0 6px; font: 800 1.05rem/1.2 var(--display); }
+.note p { margin: 0; color: var(--muted); font-size: 0.92rem; }
+footer { margin-top: 48px; text-align: center; color: var(--muted); font-size: 0.85rem; }
+
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
 </head>
 <body>
-<main>
-	<img src="images/nickydubs-logo.png" width="640" height="584" alt="Nicky Dubs">
-	<h1>The store is almost ready</h1>
-	<p>Beats and the kick drum light rig are getting polished up. Come back soon! Want to show some love in the meantime? Every donation keeps the air wiggling.</p>
-	<div class="btns">
-		<a href="./#support">Support Nicky Dubs</a>
-		<a class="ghost" href="./">Back to the site</a>
+<div class="wrap">
+	<div class="top">
+		<a href="./"><img src="images/nickydubs-logo.png" width="640" height="584" alt="Nicky Dubs home"></a>
+		<a class="back" href="./"><i class="fa fa-arrow-left" aria-hidden="true"></i> Back to the site</a>
 	</div>
-</main>
+
+	<header>
+		<p class="eyebrow">Store</p>
+		<h1>Breaks, stems &amp; beats</h1>
+		<p class="lead">Drums recorded live on a real kit, chopped and ready to drop in your DAW. <strong>Instant download</strong> after checkout, royalty-free in your own tracks. The first drops are being cooked right now.</p>
+	</header>
+
+	<ul class="filters" aria-label="Filter products">
+		<li><button class="chip" type="button" data-filter="all" aria-pressed="true">Everything</button></li>
+		<li><button class="chip" type="button" data-filter="samples" aria-pressed="false">Sample packs</button></li>
+		<li><button class="chip" type="button" data-filter="stems" aria-pressed="false">Stems</button></li>
+		<li><button class="chip" type="button" data-filter="beats" aria-pressed="false">Beats</button></li>
+		<li><button class="chip" type="button" data-filter="gear" aria-pressed="false">Gear</button></li>
+	</ul>
+
+	<section class="grid" id="products" aria-live="polite"></section>
+
+	<section class="notes" aria-label="How buying works">
+		<div class="note">
+			<h3>How downloads work</h3>
+			<p>Checkout runs through Lemon Squeezy. Pay by card, Apple Pay or PayPal, and the files land in your inbox right away.</p>
+		</div>
+		<div class="note">
+			<h3>What you can do with them</h3>
+			<p>Use the sounds in your own released music, no credit needed. Just don't resell or share the raw files.</p>
+		</div>
+		<div class="note">
+			<h3>Want something custom?</h3>
+			<p>Custom drum tracks, stem splitting and mastering are on the <a href="./#services">services</a> list.</p>
+		</div>
+	</section>
+
+	<footer>&copy; 2026 NICKY DUBS. All rights reserved.</footer>
+</div>
+
+<script>
+/*
+ * THE PRODUCT LIST. To put something on sale:
+ *   1. Make the product in Lemon Squeezy and copy its checkout link
+ *      (looks like https://nickydubs.lemonsqueezy.com/buy/xxxxxxxx).
+ *   2. Paste it into that product's `checkout` below. The button flips from
+ *      "Coming soon" to "Buy" by itself.
+ * Optional: `preview` = an mp3 in /audio (e.g. "audio/breaks-vol1.mp3") adds a little player.
+ * Gear: Lemon Squeezy only sells downloads, so physical stuff uses `order` (an email subject) instead.
+ */
+const PRODUCTS = [
+	{
+		kind: "samples", label: "Sample pack", icon: "fa-bolt",
+		name: "Live Looping Breaks Vol. 1",
+		about: "Drum breaks played live on a real kit, cut into clean loops at jungle, DnB and halftime tempos.",
+		specs: ["WAV 24-bit", "Loops + one-shots", "Labeled BPM"],
+		price: 15, checkout: "", preview: ""
+	},
+	{
+		kind: "samples", label: "Drum kit", icon: "fa-circle-o",
+		name: "Basement Kit One-Shots",
+		about: "Kicks, snares, ghost notes, rides and fills from the basement kit, each hit tuned and trimmed.",
+		specs: ["WAV 24-bit", "Multiple velocities", "Drag and drop"],
+		price: 12, checkout: "", preview: ""
+	},
+	{
+		kind: "samples", label: "Sample pack", icon: "fa-random",
+		name: "Air Wiggler Riffs",
+		about: "Short melodic riffs, bass licks and odd-subdivision grooves for flipping into your own tracks.",
+		specs: ["WAV 24-bit", "Key + BPM labeled"],
+		price: 15, checkout: "", preview: ""
+	},
+	{
+		kind: "stems", label: "Stems", icon: "fa-sliders",
+		name: "Track Stems",
+		about: "Every part of a Nicky Dubs track on its own: drums, bass, synths, FX. Remix it, study it, play over it.",
+		specs: ["WAV", "Per-track bundles"],
+		price: 8, checkout: "", preview: ""
+	},
+	{
+		kind: "beats", label: "Beat lease", icon: "fa-headphones",
+		name: "Beats to write over",
+		about: "Juicy, dancey, ready-to-wiggle beats to lease for your own songs. Exclusive rights by request.",
+		specs: ["WAV + stems", "Lease or own"],
+		price: 30, checkout: "", preview: ""
+	},
+	{
+		kind: "gear", label: "Handmade gear", icon: "fa-lightbulb-o",
+		name: "Kick Drum Light Rig",
+		about: "An infinity mirror that clips into almost any kick drum, with sound-reactive LEDs that hit when you hit. Handmade by me.",
+		specs: ["Fits most kicks", "Sound-reactive"],
+		price: 360, checkout: "", order: "Kick Drum Light Rig order", preview: ""
+	}
+];
+
+// Booking email, stored reversed like on the main site, built only on click.
+const MAIL = "moc.liamg@cisumsbudykcin";
+
+const grid = document.getElementById("products");
+function el(tag, cls, text) { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; }
+
+function card(p) {
+	const a = el("article", "item"); a.dataset.kind = p.kind;
+	const head = el("div", "item__head");
+	const icon = el("span", "item__icon"); icon.innerHTML = `<i class="fa ${p.icon}" aria-hidden="true"></i>`;
+	const t = el("div"); t.append(el("div", "item__kind", p.label), el("h2", null, p.name));
+	head.append(icon, t);
+	a.append(head, el("p", null, p.about));
+	const specs = el("ul", "specs"); p.specs.forEach(s => specs.append(el("li", null, s))); a.append(specs);
+	if (p.preview) { const au = el("audio"); au.controls = true; au.preload = "none"; au.src = p.preview; a.append(au); }
+
+	const foot = el("div", "item__foot");
+	const price = el("div", "price", `$${p.price}`);
+	const live = Boolean(p.checkout);
+	price.append(el("small", null, live ? "instant download" : "planned price"));
+	let btn;
+	if (live) {
+		btn = el("a", "btn lemonsqueezy-button"); btn.href = p.checkout;
+		btn.innerHTML = '<i class="fa fa-download" aria-hidden="true"></i>Buy';
+	} else if (p.order) {
+		btn = el("a", "btn btn--ghost"); btn.href = "#";
+		btn.innerHTML = '<i class="fa fa-envelope" aria-hidden="true"></i>Email to order';
+		btn.addEventListener("click", e => {
+			e.preventDefault();
+			location.href = "mailto:" + [...MAIL].reverse().join("") + "?subject=" + encodeURIComponent(p.order);
+		});
+	} else {
+		btn = el("span", "btn btn--soon", "Coming soon"); btn.setAttribute("aria-disabled", "true");
+	}
+	foot.append(price, btn); a.append(foot);
+	return a;
+}
+PRODUCTS.forEach(p => grid.append(card(p)));
+
+// Load Lemon Squeezy's overlay checkout only once something is actually for sale.
+if (PRODUCTS.some(p => p.checkout)) {
+	const s = document.createElement("script"); s.src = "https://app.lemonsqueezy.com/js/lemon.js"; s.defer = true;
+	document.head.append(s);
+}
+
+document.querySelectorAll("[data-filter]").forEach(chip => chip.addEventListener("click", () => {
+	document.querySelectorAll("[data-filter]").forEach(c => c.setAttribute("aria-pressed", String(c === chip)));
+	const f = chip.dataset.filter;
+	grid.querySelectorAll(".item").forEach(it => { it.hidden = f !== "all" && it.dataset.kind !== f; });
+}));
+</script>
 </body>
 </html>
