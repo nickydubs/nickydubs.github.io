@@ -101,10 +101,14 @@
 			lfo.connect(depth); depth.connect(dl.delayTime);
 			return [o, depth];
 		}
-		function noteOn(note, vel = 0.8) {
-			noteOff(note, true);
-			if (voices.size >= 10) noteOff(voices.keys().next().value, true); // steal the oldest
-			const t = ac.currentTime, f = hz(note);
+		// Live notes (no `at`) are tracked by note number; scheduled ones (the piano roll) are returned to the
+		// caller, who books their release with releaseAt().
+		function noteOn(note, vel = 0.8, at) {
+			if (at === undefined) {
+				noteOff(note, true);
+				if (voices.size >= 10) noteOff(voices.keys().next().value, true); // steal the oldest
+			}
+			const t = Math.max(ac.currentTime, at || 0), f = hz(note);
 			const sum = ac.createGain(), filt = ac.createBiquadFilter(), vca = ac.createGain(), dc = ac.createBiquadFilter();
 			filt.type = FTYPES[P.ft]; filt.frequency.value = 0; filt.Q.value = 0;
 			cutSrc.connect(filt.frequency); resSrc.connect(filt.Q);
@@ -141,7 +145,22 @@
 			chain(sum, filt, dc, vca, master);
 			for (const o of freqs) o.start(t);
 			mod?.start(t);
-			voices.set(note, { freqs, mod, modG, vca, filt, extra });
+			const v = { freqs, mod, modG, vca, filt, extra };
+			if (at === undefined) voices.set(note, v);
+			return v;
+		}
+		function releaseAt(v, at) {
+			const r = P.tA ? P.r : 0.02, t = Math.max(at, ac.currentTime);
+			v.vca.gain.cancelScheduledValues(t);
+			v.vca.gain.setTargetAtTime(0, t, Math.max(0.003, r / 4));
+			if (P.tF) { v.filt.detune.cancelScheduledValues(t); v.filt.detune.setTargetAtTime(0, t, Math.max(0.003, P.r / 4)); }
+			const end = t + r * 1.6 + 0.05;
+			for (const o of v.freqs) o.stop(end);
+			v.mod?.stop(end);
+			cleanup(v, end);
+		}
+		function cleanup(v, end) {
+			setTimeout(() => { try { cutSrc.disconnect(v.filt.frequency); resSrc.disconnect(v.filt.Q); } catch {} for (const x of v.extra) if (x.gain) try { lfo.disconnect(x); } catch {} }, (end - ac.currentTime) * 1000 + 50);
 		}
 		function noteOff(note, fast) {
 			const v = voices.get(note);
@@ -153,11 +172,11 @@
 			const end = t + r * 1.6 + 0.05;
 			for (const o of v.freqs) o.stop(end);
 			v.mod?.stop(end);
-			setTimeout(() => { try { cutSrc.disconnect(v.filt.frequency); resSrc.disconnect(v.filt.Q); } catch {} for (const x of v.extra) if (x.gain) try { lfo.disconnect(x); } catch {} }, (end - t) * 1000 + 50);
+			cleanup(v, end);
 		}
 		function chain(...n) { for (let i = 0; i < n.length - 1; i++) n[i].connect(n[i + 1]); }
 		return {
-			P, noteOn, noteOff, live,
+			P, noteOn, noteOff, releaseAt, live,
 			allOff() { for (const n of [...voices.keys()]) noteOff(n, true); },
 			load(p) { Object.assign(P, INIT, p); live(); },
 		};

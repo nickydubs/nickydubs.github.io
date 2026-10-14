@@ -643,19 +643,26 @@
 			{ duration: 260, easing: 'cubic-bezier(0.2, 0.9, 0.3, 1.2)' });
 		const own = custom[kit][i];
 		if (!own && !buffers[kit]) await renderAll();
-		const buf = own ? own.buffer : buffers[kit][i];
-		const group = own ? null : KITS[kit].pads[i][4];
-		const t = c.currentTime;
+		playPad(kit, i, c.currentTime);
+		window.wiggler?.hit(own ? 'u' : KITS[kit].pads[i][3], i === 0 || /kick/i.test(KITS[kit].pads[i][0]) ? 1.2 : 0.8);
+		roll?.capture(kit, i, 1);
+		league?.score('p' + i);
+	}
+	// The sound itself, now or at a scheduled time (the piano roll books hits slightly ahead)
+	function playPad(k, i, at, vel = 1) {
+		const own = custom[k]?.[i], def = KITS[k]?.pads[i];
+		const buf = own ? own.buffer : buffers[k]?.[i];
+		if (!buf || !def) return;
+		const group = own ? null : def[4], t = Math.max(ac.currentTime, at);
 		if (group && voices[group]) { // choke: closed hat cuts open hat, a new 808 note cuts the last
 			const v = voices[group];
 			v.g.gain.setTargetAtTime(0, t, 0.008);
 			v.src.stop(t + 0.05);
 		}
-		const src = c.createBufferSource(), g = c.createGain();
-		src.buffer = buf;
-		chain(src, g, !own && isKey(KITS[kit].pads[i]) ? keyBus : bus);
+		const src = ac.createBufferSource(), g = ac.createGain();
+		src.buffer = buf; g.gain.value = vel;
+		chain(src, g, !own && isKey(def) ? keyBus : bus);
 		src.start(t);
-		window.wiggler?.hit(own ? 'u' : KITS[kit].pads[i][3], i === 0 || /kick/i.test(KITS[kit].pads[i][0]) ? 1.2 : 0.8);
 		if (group) { voices[group] = { src, g }; src.onended = () => { if (voices[group]?.src === src) delete voices[group]; }; }
 	}
 
@@ -808,6 +815,8 @@
 			<button type="button" class="chip chip--hold" data-o="repeat" title="Hold to beat-repeat the loops; let go and they snap back in time">Repeat</button>
 			<button type="button" class="chip" data-o="rep" title="Beat-repeat size">1/8</button>
 			<button type="button" class="chip chip--del" data-o="del" aria-pressed="false" title="Tap Del, then the slot to clear (or long-press a slot)">Del</button>
+			<button type="button" class="chip chip--view" data-o="roll" aria-pressed="false" title="Piano roll: record, draw and loop notes for the synth and pads">Roll</button>
+			<button type="button" class="chip chip--view" data-o="league" aria-pressed="false" title="Wiggle League: your score and the leaderboard">🏆 0</button>
 		</div>`;
 		const slotEls = LLAB.map((k, i) => {
 			const b = document.createElement('button');
@@ -890,6 +899,7 @@
 			Object.assign(s, { buf, rbuf, anchor: s.startAt, state: 'stopped' });
 			play(p.i, Math.max(p.end, ac.currentTime + 0.005)); // starts right where the recording ended, so it stays in time
 			persist();
+			league?.bonus(100);
 		}
 
 		// ── Playback, phase-locked to the loop's own downbeat so everything stays in time ──
@@ -1264,12 +1274,15 @@
 			}
 		}
 		const down = new Map(); // pointer or key code → note
-		function press(id, note) {
+		const caps = new Map(); // id → piano-roll capture token
+		function press(id, note, vel = 0.8) {
 			if (down.get(id) === note) return;
 			release(id);
 			const c = audio(); if (c.state === 'suspended') c.resume();
-			engine().noteOn(note, 0.8);
+			engine().noteOn(note, vel);
 			down.set(id, note);
+			caps.set(id, roll?.capture('synth', note, vel));
+			league?.score('s' + note);
 			bed.querySelector(`[data-n="${note}"]`)?.classList.add('is-down');
 			window.wiggler?.hit('k', 0.6);
 		}
@@ -1277,6 +1290,7 @@
 			const n = down.get(id);
 			if (n === undefined) return;
 			down.delete(id);
+			roll?.end(caps.get(id)); caps.delete(id);
 			if (![...down.values()].includes(n)) { eng?.noteOff(n); bed.querySelector(`[data-n="${n}"]`)?.classList.remove('is-down'); }
 		}
 		const noteAt = (x, y) => { const el = document.elementFromPoint(x, y); return el?.parentElement === bed ? +el.dataset.n : null; };
@@ -1307,6 +1321,10 @@
 		return {
 			patch: () => patch,
 			isDirty: () => dirty,
+			name: () => nm(patch),
+			engine,
+			noteOn: (n, v) => press('midi' + n, n, v),
+			noteOff: n => release('midi' + n),
 			restore(state, bank) {
 				if (bank) bank.forEach((x, i) => { bankB[i] = x || null; });
 				if (state?.patch) load(state.patch);
@@ -1317,6 +1335,383 @@
 			panic() { for (const id of [...down.keys()]) release(id); eng?.allOff(); },
 		};
 	})();
+
+	// ── Piano roll: up to 1024 bars of notes for the synth and the pads, played in live or drawn in ──
+	const clampN = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+	const roll = (() => {
+		const box = pad.querySelector('.roll');
+		if (!box) return null;
+		const BARS = [1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024];
+		const QS = [['No snap', 0], ['1/4', 1], ['1/8', 0.5], ['1/16', 0.25], ['1/32', 0.125], ['1/8T', 1 / 3], ['1/16T', 1 / 6]];
+		const COLORS = { d: '#5c74ff', k: '#ff7a3d', h: '#ff4f7b', b: '#34d6ff', u: '#22c55e' };
+		let notes = [], bars = 4, qi = 3, lane = 'synth';
+		let playing = false, recording = false, armedAt = 0, anchorTime = 0, anchorBeat = 0, rspb = 0.5, schedTo = 0, timer = 0, pass = 0, raf = 0;
+		let recBefore = null;
+		const fresh = new Set(); // notes recorded this pass: they play back from the next time round
+		const q = () => QS[qi][1], len = () => bars * 4;
+		const beatAt = t => anchorBeat + (t - anchorTime) / rspb, timeOf = b => anchorTime + (b - anchorBeat) * rspb;
+		const lat = () => ac ? clampN((ac.baseLatency || 0) + (ac.outputLatency || 0), 0, 0.2) : 0;
+
+		box.innerHTML = `<div class="roll__bar">
+			<button type="button" class="chip roll__rec" aria-pressed="false" title="Record (overdub): a bar of count-in, then it plays and records from the downbeat">● Rec</button>
+			<button type="button" class="chip roll__play" aria-pressed="false" title="Play / stop">▶</button>
+			<button type="button" class="chip roll__lane" title="Show the synth notes or the pad hits">Synth</button>
+			<select class="roll__sel roll__bars" aria-label="Length in bars">${BARS.map(b => `<option value="${b}">${b} bar${b > 1 ? 's' : ''}</option>`).join('')}</select>
+			<select class="roll__sel roll__q" aria-label="Snap">${QS.map(([l], i) => `<option value="${i}">${l}</option>`).join('')}</select>
+			<button type="button" class="chip roll__midi" aria-pressed="false" title="Play the synth (and pads on channel 10) from a MIDI keyboard or drum pad">MIDI</button>
+			<button type="button" class="chip roll__clear" title="Clear every note in this lane">Clear</button>
+		</div><canvas class="roll__cv" aria-label="Piano roll: tap to add a note, tap a note to delete it, drag to move, drag its end to resize, drag empty space to scroll"></canvas>`;
+		const $ = s => box.querySelector(s);
+		const recBtn = $('.roll__rec'), playBtn = $('.roll__play'), laneBtn = $('.roll__lane'), barsSel = $('.roll__bars'), qSel = $('.roll__q');
+		barsSel.value = bars; qSel.value = qi;
+
+		// ── Undo + memory: the whole note list is one undoable, saved value ──
+		const snap = () => JSON.stringify(notes);
+		const changed = before => touch('roll.notes', before);
+		ctl['roll.notes'] = { get: snap, set: v => { notes = JSON.parse(v || '[]'); fresh.clear(); draw(); } };
+		ctl['roll.bars'] = { get: () => bars, set: v => { bars = v; barsSel.value = v; clampScroll(); draw(); } };
+		ctl['roll.q'] = { get: () => qi, set: v => { qi = v; qSel.value = v; draw(); } };
+		barsSel.addEventListener('change', () => { const before = bars; bars = +barsSel.value; touch('roll.bars', before); clampScroll(); draw(); barsSel.blur(); });
+		qSel.addEventListener('change', () => { const before = qi; qi = +qSel.value; touch('roll.q', before); draw(); qSel.blur(); });
+		laneBtn.addEventListener('click', () => { lane = lane === 'synth' ? 'pads' : 'synth'; laneBtn.textContent = lane === 'synth' ? 'Synth' : 'Pads'; sy = lane === 'synth' ? (108 - 72) * RH : 0; clampScroll(); draw(); });
+		$('.roll__clear').addEventListener('click', () => {
+			const before = snap();
+			notes = notes.filter(n => !inLane(n));
+			changed(before); draw();
+		});
+
+		// ── Drawing (only what's on screen, so 1024 bars costs the same as 4) ──
+		const cv = $('.roll__cv'), cx = cv.getContext('2d');
+		const GUT = 36, RUL = 14;
+		let BW = 26, RH = 11, sx = 0, sy = (108 - 72) * RH, W = 0, H = 0, dpr = 1;
+		const rows = () => lane === 'synth' ? 85 : 16;              // synth lane: MIDI 24 (C1) to 108 (C8)
+		const rowOf = n => lane === 'synth' ? 108 - n : n;
+		const noteOfRow = r => lane === 'synth' ? 108 - r : r;
+		const rh = () => lane === 'synth' ? RH : Math.max(RH, (H - RUL) / 16);
+		const inLane = nt => (nt.k === 'synth') === (lane === 'synth');
+		const BLACK = [1, 3, 6, 8, 10];
+		const padDef = (k, n) => (KITS[k] || KITS[kit]).pads[n];
+		function size() {
+			const b = cv.getBoundingClientRect();
+			if (!b.width) return;
+			dpr = devicePixelRatio || 1; W = b.width; H = b.height;
+			cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+			clampScroll(); draw();
+		}
+		function clampScroll() {
+			sx = clampN(sx, 0, Math.max(0, len() * BW - (W - GUT)));
+			sy = clampN(sy, 0, Math.max(0, rows() * rh() - (H - RUL)));
+		}
+		function draw() {
+			if (box.hidden || !W) return;
+			cx.setTransform(dpr, 0, 0, dpr, 0, 0);
+			cx.fillStyle = '#0b0e22'; cx.fillRect(0, 0, W, H);
+			const R = rh(), L = len();
+			const b0 = sx / BW, b1 = Math.min(L, (sx + W - GUT) / BW);
+			const r0 = Math.max(0, Math.floor(sy / R)), r1 = Math.min(rows(), Math.ceil((sy + H - RUL) / R));
+			cx.save();
+			cx.beginPath(); cx.rect(GUT, RUL, W - GUT, H - RUL); cx.clip();
+			for (let r = r0; r < r1; r++) {
+				const y = RUL + r * R - sy, n = noteOfRow(r);
+				cx.fillStyle = lane === 'synth' ? (BLACK.includes(n % 12) ? '#0f1330' : '#171b3c') : (r % 2 ? '#141836' : '#181d40');
+				cx.fillRect(GUT, y, W, R);
+				if (lane === 'synth' && n % 12 === 0) { cx.fillStyle = 'rgba(255,255,255,0.1)'; cx.fillRect(GUT, y + R - 1, W, 1); }
+			}
+			const sub = q() || 0.25;
+			for (let b = Math.floor(b0 / sub) * sub; b <= b1 + 1e-6; b += sub) {
+				const beat = Math.abs(b - Math.round(b)) < 1e-6, bar = beat && Math.round(b) % 4 === 0;
+				if (!beat && sub * BW < 6) continue;
+				cx.fillStyle = bar ? 'rgba(255,255,255,0.3)' : beat ? 'rgba(255,255,255,0.13)' : 'rgba(255,255,255,0.05)';
+				cx.fillRect(Math.round(GUT + b * BW - sx), RUL, 1, H);
+			}
+			if (b1 >= L) { cx.fillStyle = 'rgba(0,0,0,0.5)'; cx.fillRect(GUT + L * BW - sx, RUL, W, H); } // past the end
+			for (const nt of notes) {
+				if (!inLane(nt) || nt.t + nt.d < b0 || nt.t > b1) continue;
+				const r = rowOf(nt.n);
+				if (r < r0 - 1 || r > r1) continue;
+				const x = GUT + nt.t * BW - sx, y = RUL + r * R - sy;
+				cx.globalAlpha = 0.45 + nt.v * 0.55;
+				cx.fillStyle = nt.k === 'synth' ? '#ff7a3d' : COLORS[padDef(nt.k, nt.n)?.[3]] || COLORS.d;
+				cx.beginPath(); cx.roundRect(x + 0.5, y + 1, Math.max(3, nt.d * BW - 1), R - 2, 3); cx.fill();
+				cx.globalAlpha = 1;
+			}
+			if (playing) {
+				const pb = ((beatAt(ac.currentTime - lat()) % L) + L) % L;
+				cx.fillStyle = recording && ac.currentTime >= armedAt ? '#ff2a2a' : '#7dffb0';
+				cx.fillRect(GUT + pb * BW - sx, RUL, 2, H);
+			}
+			cx.restore();
+			cx.font = '600 9px Inter, system-ui, sans-serif';
+			cx.fillStyle = '#10132b'; cx.fillRect(GUT, 0, W, RUL);
+			for (let bar = Math.floor(b0 / 4); bar * 4 <= b1; bar++) {
+				const x = GUT + bar * 4 * BW - sx;
+				if (x < GUT - 1 || (BW * 4 < 22 && bar % 4)) continue;
+				cx.fillStyle = '#9aa0c3'; cx.fillText(String(bar + 1), x + 3, 10);
+			}
+			cx.fillStyle = '#10132b'; cx.fillRect(0, 0, GUT, H);
+			for (let r = r0; r < r1; r++) {
+				const y = RUL + r * R - sy, n = noteOfRow(r);
+				if (y + R < RUL) continue;
+				if (lane === 'synth') {
+					if (BLACK.includes(n % 12)) { cx.fillStyle = '#05060f'; cx.fillRect(GUT - 14, y, 14, R); }
+					if (n % 12 === 0) { cx.fillStyle = '#9aa0c3'; cx.fillText('C' + (n / 12 - 1), 3, y + R / 2 + 3); }
+				} else { cx.fillStyle = '#9aa0c3'; cx.fillText(padDef(kit, n)[0].slice(0, 7), 3, y + R / 2 + 3); }
+			}
+		}
+
+		// ── Editing: tap = add/delete, drag a note = move (its right edge = resize), drag empty space = scroll ──
+		let drag = null;
+		function at(e) {
+			const b = cv.getBoundingClientRect(), x = e.clientX - b.left, y = e.clientY - b.top;
+			if (x < GUT || y < RUL) return { x, y };
+			const beat = (x - GUT + sx) / BW, r = Math.floor((y - RUL + sy) / rh());
+			let nt = null;
+			for (let i = notes.length - 1; i >= 0; i--) { const n = notes[i]; if (inLane(n) && rowOf(n.n) === r && beat >= n.t && beat <= n.t + n.d) { nt = n; break; } }
+			return { x, y, beat, r, nt, edge: nt && (nt.t + nt.d - beat) * BW < 8 && nt.d * BW > 12 };
+		}
+		const snapTo = v => q() ? Math.round(v / q()) * q() : v;
+		function preview(nt) {
+			audio();
+			if (nt.k === 'synth') { const e = synthUi?.engine(); if (!e) return; const v = e.noteOn(nt.n, nt.v, ac.currentTime); e.releaseAt(v, ac.currentTime + Math.min(0.4, nt.d * rspb)); }
+			else playPad(nt.k, nt.n, ac.currentTime, nt.v);
+		}
+		cv.addEventListener('pointerdown', e => {
+			e.preventDefault();
+			cv.setPointerCapture(e.pointerId);
+			const h = at(e);
+			drag = { ...h, cx0: e.clientX, cy0: e.clientY, sx0: sx, sy0: sy, moved: false, before: snap(), t0: h.nt?.t, n0: h.nt?.n, d0: h.nt?.d };
+		});
+		cv.addEventListener('pointermove', e => {
+			if (!drag) return;
+			const dx = e.clientX - drag.cx0, dy = e.clientY - drag.cy0;
+			if (!drag.moved && Math.hypot(dx, dy) < 6) return;
+			drag.moved = true;
+			const nt = drag.nt;
+			if (nt && drag.edge) nt.d = Math.max(q() || 1 / 16, snapTo(drag.d0 + dx / BW));
+			else if (nt) {
+				nt.t = clampN(snapTo(drag.t0 + dx / BW), 0, len() - Math.min(nt.d, len()));
+				const n = noteOfRow(clampN(rowOf(drag.n0) + Math.round(dy / rh()), 0, rows() - 1));
+				if (n !== nt.n) { nt.n = n; preview(nt); }
+			} else { sx = drag.sx0 - dx; sy = drag.sy0 - dy; clampScroll(); }
+			draw();
+		});
+		const up = () => {
+			const d = drag;
+			drag = null;
+			if (!d) return;
+			if (!d.moved && d.beat !== undefined && d.beat < len() && d.r < rows()) {
+				if (d.nt) notes.splice(notes.indexOf(d.nt), 1);
+				else {
+					const nt = { t: +(q() ? Math.floor(d.beat / q()) * q() : d.beat).toFixed(4), d: q() || 0.25, n: noteOfRow(d.r), v: 0.8, k: lane === 'synth' ? 'synth' : kit };
+					notes.push(nt); preview(nt);
+				}
+			}
+			if (d.nt || !d.moved) { changed(d.before); draw(); }
+		};
+		cv.addEventListener('pointerup', up);
+		cv.addEventListener('pointercancel', up);
+		cv.addEventListener('wheel', e => {
+			e.preventDefault();
+			if (e.ctrlKey) { // zoom around the pointer
+				const b = cv.getBoundingClientRect(), x = e.clientX - b.left - GUT, beat = (x + sx) / BW;
+				BW = clampN(BW * (e.deltaY < 0 ? 1.15 : 1 / 1.15), 3, 140);
+				sx = beat * BW - x;
+			} else { sx += e.deltaX + (e.shiftKey ? e.deltaY : 0); if (!e.shiftKey) sy += e.deltaY; }
+			clampScroll(); draw();
+		}, { passive: false });
+		new ResizeObserver(size).observe(cv);
+
+		// ── Transport: plays in a loop, locked to the metronome's bar lines ──
+		async function play(countIn) {
+			audio(); if (ac.state === 'suspended') await ac.resume();
+			await metro.start();
+			rspb = 60 / tempo;
+			const t0 = metro.nextBeat(ac.currentTime + (countIn ? rspb * 3 : 0.05), true);
+			anchorTime = t0; anchorBeat = 0; schedTo = 0; pass = 0; fresh.clear();
+			playing = true;
+			clearInterval(timer); timer = setInterval(tick, 25); tick();
+			ui(); loop();
+			return t0;
+		}
+		function stop() {
+			if (recording) stopRec();
+			playing = false;
+			clearInterval(timer);
+			ui(); draw();
+		}
+		function tick() {
+			const to = beatAt(ac.currentTime + 0.12), L = len();
+			while (schedTo < to) {
+				const p = Math.floor(schedTo / L), base = p * L, end = Math.min(to, base + L);
+				if (p !== pass) { pass = p; fresh.clear(); }
+				for (const nt of notes) if (nt.t >= schedTo - base && nt.t < end - base && !fresh.has(nt)) schedule(nt, base + nt.t);
+				schedTo = end;
+			}
+		}
+		function schedule(nt, b) {
+			const t = timeOf(b);
+			if (t < ac.currentTime - 0.005) return;
+			if (nt.k === 'synth') { const e = synthUi?.engine(); if (!e) return; const v = e.noteOn(nt.n, nt.v, t); e.releaseAt(v, timeOf(b + nt.d)); }
+			else playPad(nt.k, nt.n, t, nt.v);
+		}
+		hooks.push(() => { if (playing) { const now = ac.currentTime; anchorBeat = beatAt(now); anchorTime = now; schedTo = Math.min(schedTo, beatAt(now)); } rspb = 60 / tempo; });
+		function loop() {
+			if (!playing) { raf = 0; return; }
+			raf = requestAnimationFrame(loop);
+			if (box.hidden) return;
+			const L = len(), pb = ((beatAt(ac.currentTime - lat()) % L) + L) % L, x = pb * BW;
+			if (!drag && (x < sx || x > sx + W - GUT - 20)) { sx = x - 10; clampScroll(); } // follow the playhead
+			draw();
+		}
+		async function rec() {
+			if (recording) { stopRec(); return; }
+			recBefore = snap();
+			recording = true;
+			armedAt = playing ? ac.currentTime : await play(true);
+			ui();
+		}
+		function stopRec() {
+			recording = false;
+			for (const tok of held.values()) end(tok);
+			held.clear();
+			changed(recBefore);
+			ui();
+		}
+		function ui() {
+			recBtn.setAttribute('aria-pressed', recording);
+			playBtn.setAttribute('aria-pressed', playing);
+			playBtn.textContent = playing ? '■' : '▶';
+		}
+		recBtn.addEventListener('click', rec);
+		playBtn.addEventListener('click', () => playing ? stop() : play(false));
+
+		// ── Live capture: the synth keys, pads and MIDI call these ──
+		const held = new Map();
+		let tokN = 0;
+		function capture(k, n, v) {
+			if (!recording || !playing) return null;
+			const t = ac.currentTime - lat(); // you play to what you hear, which is late by the output latency
+			if (t < armedAt - rspb * 0.5) return null; // still counting in
+			const L = len();
+			let b = ((beatAt(t) % L) + L) % L;
+			if (q()) b = (Math.round(b / q()) * q()) % L;
+			const nt = { t: +b.toFixed(4), d: q() || 0.25, n, v: +v.toFixed(2), k };
+			notes.push(nt); fresh.add(nt);
+			const tok = { nt, start: t, id: ++tokN };
+			if (k === 'synth') held.set(tok.id, tok);
+			return tok;
+		}
+		function end(tok) {
+			if (!tok || !held.has(tok.id)) return;
+			held.delete(tok.id);
+			const beats = (ac.currentTime - lat() - tok.start) / rspb;
+			tok.nt.d = +Math.max(q() || 1 / 16, q() ? Math.round(beats / q()) * q() : beats).toFixed(4);
+		}
+
+		// ── MIDI in: a keyboard plays the synth; channel 10 (drums) plays the pads ──
+		const midiBtn = $('.roll__midi');
+		midiBtn.addEventListener('click', async () => {
+			if (!navigator.requestMIDIAccess) { alert('This browser has no Web MIDI. Chrome and Edge do.'); return; }
+			try {
+				const m = await navigator.requestMIDIAccess();
+				const hook = () => {
+					for (const inp of m.inputs.values()) inp.onmidimessage = onMidi;
+					midiBtn.textContent = `MIDI · ${m.inputs.size}`;
+					midiBtn.title = [...m.inputs.values()].map(i => i.name).join(', ') || 'No MIDI devices plugged in yet';
+				};
+				hook(); m.onstatechange = hook;
+				midiBtn.setAttribute('aria-pressed', 'true');
+			} catch { alert('MIDI access was blocked. Check the browser permission for this site.'); }
+		});
+		function onMidi({ data: [st, d1, d2] }) {
+			if (!rig.open) return;
+			const cmd = st & 0xf0, drums = (st & 0x0f) === 9;
+			if (cmd === 0x90 && d2 > 0) drums ? hit(((d1 - 36) % 16 + 16) % 16) : synthUi?.noteOn(d1, d2 / 127);
+			else if ((cmd === 0x80 || cmd === 0x90) && !drums) synthUi?.noteOff(d1);
+		}
+
+		return {
+			capture, end,
+			show() { size(); loop(); },
+			stop,
+		};
+	})();
+
+	// ── Wiggle League: every rig state you play (each undo step) is a contestant, and your playing scores it ──
+	const league = (() => {
+		const box = pad.querySelector('.league');
+		if (!box) return null;
+		let table = {}, streak = 0, recent = [], seen = [], saveT = 0;
+		const hud = () => pad.querySelector('[data-o="league"]');
+		const k = () => '#' + hist.pos;
+		const who = () => `Rig #${hist.pos} · ${mode === 'synth' ? synthUi?.name() || 'Synth' : KITS[kit].name}`;
+		const fmt = n => Math.round(n).toLocaleString();
+		const row = () => { const r = table[k()] ||= { label: who(), score: 0, notes: 0, streak: 0, ppm: 0 }; r.label = who(); return r; };
+		function add(pts, id) {
+			const r = row(), now = performance.now();
+			r.score += pts; if (id !== undefined) r.notes++;
+			recent.push([now, pts]);
+			while (recent.length && now - recent[0][0] > 60000) recent.shift();
+			const span = Math.max(15000, now - recent[0][0]); // extrapolate to a minute once you've played 15 s
+			const ppm = recent.reduce((s, x) => s + x[1], 0) * 60000 / span;
+			r.ppm = Math.max(r.ppm, Math.round(ppm));
+			const mult = 1 + Math.min(7, Math.floor(streak / 8));
+			const h = hud();
+			if (h) h.textContent = `🏆 ${fmt(r.score)}${mult > 1 ? ' ×' + mult : ''}`;
+			if (!box.hidden) render();
+			clearTimeout(saveT); saveT = setTimeout(() => store.put('league', table), 1500);
+		}
+		// One note: 10 points, up to +30 for landing on the 16th grid (judged against what you heard),
+		// +5 for something you haven't played in your last 16 notes, and ×1-×8 for streaks of tight hits.
+		function score(id) {
+			if (!ac) return;
+			let pts = 10;
+			if (metro.running) {
+				const spb = 60 / metro.bpm, s16 = spb / 4, t = ac.currentTime - (ac.baseLatency || 0) - (ac.outputLatency || 0);
+				const off = ((t - (metro.nextBeat(t) - spb)) % s16 + s16) % s16, dev = Math.min(off, s16 - off);
+				const acc = 1 - Math.min(1, dev / (s16 / 2));
+				pts += Math.round(30 * acc * acc);
+				streak = dev < 0.025 ? streak + 1 : 0;
+			} else streak = 0;
+			pts *= 1 + Math.min(7, Math.floor(streak / 8));
+			if (!seen.includes(id)) pts += 5;
+			seen.push(id); if (seen.length > 16) seen.shift();
+			const r = row(); r.streak = Math.max(r.streak, streak);
+			if (streak && streak % 8 === 0) window.wiggler?.hit('u', 1.4);
+			add(pts, id);
+		}
+		function render() {
+			const rows = Object.entries(table).sort((a, b) => b[1].score - a[1].score), me = k();
+			const rank = rows.findIndex(([key]) => key === me) + 1;
+			box.innerHTML = `<div class="league__head"><b>Wiggle League</b><span>You're ${rank ? '#' + rank : 'unranked'} as <i>${who()}</i> · streak ${streak}</span>
+				<button type="button" class="chip league__reset" title="Wipe the league table">Reset</button></div>
+				<p class="league__how">Every undo step is a contestant. Notes score 10, up to +30 for hitting the 16th grid with the click on, +5 for variety, ×2–×8 for streaks of tight hits, +100 per recorded loop.</p>
+				<ol class="league__list">${rows.slice(0, 40).map(([key, r], i) => `<li class="${key === me ? 'is-me' : ''}"><span class="league__rank">${i + 1}</span><span class="league__name">${r.label}</span><span class="league__pts">${fmt(r.score)}</span><span class="league__meta">${fmt(r.ppm)}/min · ${r.notes} notes · best ×${1 + Math.min(7, Math.floor(r.streak / 8))}</span></li>`).join('') || '<li class="league__empty">Play something to get on the board.</li>'}</ol>`;
+			box.querySelector('.league__reset').addEventListener('click', () => { if (confirm('Wipe the whole league table?')) { table = {}; store.put('league', table); render(); const h = hud(); if (h) h.textContent = '🏆 0'; } });
+		}
+		store.get('league').then(t => { if (t) { table = t; const r = table[k()]; const h = hud(); if (r && h) h.textContent = `🏆 ${fmt(r.score)}`; } });
+		return { score, bonus: pts => add(pts), render };
+	})();
+
+	// ── Views: the robot + FX rack, the piano roll, or the league table share the top half of the rig ──
+	const stage = pad.querySelector('.stage');
+	let view = 'stage';
+	function setView(v) {
+		if (view === 'stage') stage.dataset.h = stage.offsetHeight;
+		view = view === v ? 'stage' : v;
+		const h = Math.max(160, (+stage.dataset.h || 300) - 8) + 'px'; // same footprint as the robot + rack, so nothing below moves
+		stage.hidden = view !== 'stage';
+		for (const [name, el] of [['roll', pad.querySelector('.roll')], ['league', pad.querySelector('.league')]]) {
+			if (!el) continue;
+			el.hidden = view !== name; el.style.height = h;
+			pad.querySelector(`[data-o="${name}"]`)?.setAttribute('aria-pressed', view === name);
+		}
+		if (view === 'stage') window.wiggler?.start(); else window.wiggler?.stop();
+		if (view === 'roll') roll?.show();
+		if (view === 'league') league?.render();
+	}
+	pad.querySelector('[data-o="roll"]')?.addEventListener('click', () => setView('roll'));
+	pad.querySelector('[data-o="league"]')?.addEventListener('click', () => setView('league'));
 
 	// Bring back the last visit: knobs, tempo, patch, bank B, the undo history and recorded loops
 	(async () => {
@@ -1339,13 +1734,13 @@
 		const c = audio();
 		if (c.state === 'suspended') c.resume();
 		renderAll();
-		window.wiggler?.start();
+		if (view === 'stage') window.wiggler?.start();
 		loops?.wake();
 		setTimeout(showLatency, 400); // outputLatency is only known once audio is actually flowing
 	}));
 	rig.querySelector('.rig__close').addEventListener('click', () => rig.close());
 	rig.addEventListener('click', e => { if (e.target === rig) rig.close(); }); // tap the backdrop to close
-	rig.addEventListener('close', () => { window.wiggler?.stop(); metro.stop(); loops?.sleep(); synthUi?.panic(); commit(); saveAll(); });
+	rig.addEventListener('close', () => { window.wiggler?.stop(); roll?.stop(); metro.stop(); loops?.sleep(); synthUi?.panic(); commit(); saveAll(); });
 
 	// Keyboard: 1-4 / Q-R / A-F / Z-V, but only while the popup is open.
 	addEventListener('keydown', e => {
