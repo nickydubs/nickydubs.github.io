@@ -228,7 +228,12 @@ details.crypto .addr { margin-bottom: 10px; }
 	background: linear-gradient(160deg, #161a3a, #0b0e22); border: 1px solid var(--glass-line);
 	box-shadow: 0 40px 90px -40px rgba(61, 90, 254, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.06); }
 .pad__bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 10px 16px; margin-bottom: 16px; }
-.pad__kits { display: flex; gap: 8px; }
+.pad__kits { display: flex; gap: 8px; min-width: 0; }
+.pad__kit, .beats__pick { font: inherit; color: inherit; background-color: transparent; max-width: 46vw; }
+.pad__kit option, .beats__pick option { color: #111; }
+.beats { display: flex; gap: 8px; align-items: center; margin: 0 0 10px; }
+.beats__pick { flex: 1; min-width: 0; max-width: none; }
+.beats__go { white-space: nowrap; }
 .pad__cut:hover { border-color: #ff3b5c; }
 .pad__grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
 .pad__btn { --c: var(--blue); position: relative; aspect-ratio: 1; padding: 0; border: 0; border-radius: 14px; cursor: pointer;
@@ -604,15 +609,14 @@ footer img { vertical-align: middle; }
 	<div class="scene__inner">
 		<p class="eyebrow">04 · Play</p>
 		<h2>Wiggle some air yourself</h2>
-		<p class="lead">A beat pad and synth you can play right here in your browser, watched over by the Air Wiggler, a little robot that dances to whatever you play. 16 pads, two kits and a metronome. Tap the pads or use your keyboard (<b>1–4 · Q–R · A–F · Z–V</b>), and record your own loops into the 8 slots underneath (<b>5–8 · T–I</b>). <strong>Right-click a pad</strong> to load your own sample.</p>
+		<p class="lead">A beat pad and synth you can play right here in your browser, watched over by the Air Wiggler, a little robot that dances to whatever you play. 16 pads, seven kits (Soul MPC, 808 Trap, Jungle, Liquid DnB, Dubstep, House, Roller Disco), eight ready-made beats to jam over, and a metronome. Tap the pads or use your keyboard (<b>1–4 · Q–R · A–F · Z–V</b>), and record your own loops into the 8 slots underneath (<b>5–8 · T–I</b>). <strong>Right-click a pad</strong> to load your own sample.</p>
 		<button class="btn rig-open" type="button"><i class="fa fa-play" aria-hidden="true"></i> Open the beat pad &amp; synth</button>
 		<dialog class="rig" aria-label="Air Wiggler beat pad">
 		<div class="pad">
 			<div class="pad__top">
 				<button class="rig__close" type="button" aria-label="Close the beat pad"><i class="fa fa-times" aria-hidden="true"></i></button>
 				<div class="pad__kits">
-					<button class="track is-on" type="button" data-kit="soul">Soul MPC</button>
-					<button class="track" type="button" data-kit="808">808 Trap</button>
+					<select class="track pad__kit is-on" aria-label="Drum kit"></select>
 					<button class="track" type="button" data-mode="synth">Synth</button>
 				</div>
 				<div class="metro" aria-label="Metronome">
@@ -1101,6 +1105,6 @@ footer img { vertical-align: middle; }
 </script>
 <script src="bot.js?v=20261018b" defer></script>
 <script src="synth.js?v=20261018" defer></script>
-<script src="beatpad.js?v=20261018" defer></script>
+<script src="beatpad.js?v=20261018c" defer></script>
 </body>
 </html>

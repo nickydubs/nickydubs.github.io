@@ -1,4 +1,4 @@
-// Nicky Dubs beat pad: 16 pads, two kits synthesized right here in the browser (no samples to download,
+// Nicky Dubs beat pad: 16 pads, seven kits synthesized right here in the browser (no samples to download,
 // nothing copyrighted), plus reverb + delay. Sounds are pre-rendered into buffers, so a hit is just
 // "start this buffer now": the lowest latency the browser can do. Lives in a popup so the page can't
 // scroll under your fingers, with the Air Wiggler (bot.js) reacting above the pads.
@@ -147,9 +147,78 @@
 			o.frequency.setValueAtTime(f * 2.2, 0); o.frequency.exponentialRampToValueAtTime(f, 0.06);
 			chain(o, shaper(c, 2.6), envGain(c, 0, 0.003, 0.8, 1.5), out); o.start(0);
 		},
+		ride: (c, out) => { // bell + wash: detuned squares through a bandpass, long tail
+			const bp = filt(c, 'bandpass', 6500, 0.6), hp = filt(c, 'highpass', 4000);
+			chain(bp, hp, envGain(c, 0, 0.001, 0.32, 0.9), out);
+			for (const f of [313, 377, 481, 588, 727]) { const o = c.createOscillator(); o.type = 'square'; o.frequency.value = f * 2.9; o.connect(bp); o.start(0); }
+			const n = noise(c, 1); chain(n, filt(c, 'highpass', 8000), envGain(c, 0, 0.001, 0.12, 0.7), out); n.start(0);
+		},
+		crash: (c, out) => { const n = noise(c, 1.8); chain(n, filt(c, 'highpass', 4500), envGain(c, 0, 0.002, 0.6, 1.4), out); n.start(0); },
+		tamb: (c, out) => {
+			const n = noise(c, 0.3), g = c.createGain(); g.gain.setValueAtTime(0.0001, 0);
+			for (const t of [0, 0.018, 0.04]) { g.gain.setValueAtTime(0.5, t); g.gain.exponentialRampToValueAtTime(0.05, t + 0.015); }
+			g.gain.setValueAtTime(0.3, 0.06); g.gain.exponentialRampToValueAtTime(0.0001, 0.22);
+			chain(n, filt(c, 'bandpass', 8000, 1.5), g, out); n.start(0);
+		},
+		conga: f => (c, out) => {
+			const o = c.createOscillator();
+			o.frequency.setValueAtTime(f * 1.3, 0); o.frequency.exponentialRampToValueAtTime(f, 0.03);
+			chain(o, envGain(c, 0, 0.001, 0.8, 0.22), out); o.start(0);
+		},
+		laser: (c, out) => {
+			const o = c.createOscillator(); o.type = 'sawtooth';
+			o.frequency.setValueAtTime(3200, 0); o.frequency.exponentialRampToValueAtTime(120, 0.35);
+			chain(o, filt(c, 'lowpass', 4000), envGain(c, 0, 0.002, 0.35, 0.3), out); o.start(0);
+		},
+		big: (c, out) => { S.snare(185, 0.32, 1200)(c, out); S.clap(c, out); }, // dubstep snare: snare + clap layered
+		pad: (notes, bright = 1400) => (c, out) => { // slow detuned saws, a warm wash under the drums
+			const lp = filt(c, 'lowpass', bright), g = c.createGain();
+			g.gain.setValueAtTime(0.0001, 0); g.gain.linearRampToValueAtTime(0.5 / notes.length ** 0.5, 0.25); g.gain.exponentialRampToValueAtTime(0.0001, 2.6);
+			chain(lp, g, out);
+			for (const n of notes) for (const d of [-9, 9]) { const o = c.createOscillator(); o.type = 'sawtooth'; o.frequency.value = hz(n); o.detune.value = d; o.connect(lp); o.start(0); }
+		},
+		strings: notes => S.pad(notes, 3200), // disco strings: the pad, brighter
+		stab: notes => (c, out) => { // short bright saw chord, filter snapping shut
+			const lp = c.createBiquadFilter(); lp.type = 'lowpass'; lp.Q.value = 4;
+			lp.frequency.setValueAtTime(4500, 0); lp.frequency.exponentialRampToValueAtTime(500, 0.25);
+			chain(lp, envGain(c, 0, 0.002, 0.45 / notes.length ** 0.5, 0.3), out);
+			for (const n of notes) for (const d of [-6, 6]) { const o = c.createOscillator(); o.type = 'sawtooth'; o.frequency.value = hz(n); o.detune.value = d; o.connect(lp); o.start(0); }
+		},
+		organ: notes => (c, out) => { // house organ: a few sine harmonics, short and percussive
+			const bus = c.createGain(); bus.gain.value = 0.7 / notes.length ** 0.6;
+			chain(bus, envGain(c, 0, 0.003, 1, 0.55), out);
+			for (const n of notes) for (const [m, a] of [[1, 0.6], [2, 0.35], [3, 0.2], [4, 0.1]]) {
+				const o = c.createOscillator(), g = c.createGain(); o.frequency.value = hz(n) * m; g.gain.value = a; chain(o, g, bus); o.start(0);
+			}
+		},
+		reese: n => (c, out) => { // jungle reese: two detuned saws, low-passed, phasing against each other
+			const lp = filt(c, 'lowpass', 520, 1.5);
+			chain(lp, shaper(c, 1.8), envGain(c, 0, 0.01, 0.7, 1.1), out);
+			for (const d of [-22, 22]) { const o = c.createOscillator(); o.type = 'sawtooth'; o.frequency.value = hz(n); o.detune.value = d; o.connect(lp); o.start(0); }
+			const sub = c.createOscillator(); sub.frequency.value = hz(n); chain(sub, envGain(c, 0, 0.01, 0.6, 1.1), out); sub.start(0);
+		},
+		sub: n => (c, out) => { // clean sub, plus an octave of triangle so phone speakers can hear it
+			const o = c.createOscillator(), h = c.createOscillator(), hg = c.createGain(), env = envGain(c, 0, 0.006, 0.9, 0.8);
+			o.frequency.value = hz(n); h.type = 'triangle'; h.frequency.value = hz(n) * 2; hg.gain.value = 0.25;
+			chain(o, env, out); chain(h, hg, env); o.start(0); h.start(0);
+		},
+		wobble: n => (c, out) => { // dubstep wobble: saw + square through a resonant filter swept by an LFO
+			const lp = c.createBiquadFilter(); lp.type = 'lowpass'; lp.Q.value = 9; lp.frequency.value = 600;
+			const lfo = c.createOscillator(), depth = c.createGain(); lfo.frequency.value = 7; depth.gain.value = 520;
+			chain(lfo, depth, lp.frequency); lfo.start(0);
+			chain(lp, shaper(c, 2.2), envGain(c, 0, 0.005, 0.55, 0.85), out);
+			for (const [t, d] of [['sawtooth', -7], ['square', 7]]) { const o = c.createOscillator(); o.type = t; o.frequency.value = hz(n); o.detune.value = d; o.connect(lp); o.start(0); }
+		},
+		slap: n => (c, out) => { // funk slap bass: a bright pluck that closes fast
+			const lp = c.createBiquadFilter(); lp.type = 'lowpass'; lp.Q.value = 3;
+			lp.frequency.setValueAtTime(3000, 0); lp.frequency.exponentialRampToValueAtTime(350, 0.18);
+			chain(lp, envGain(c, 0, 0.002, 0.8, 0.45), out);
+			for (const t of ['sawtooth', 'triangle']) { const o = c.createOscillator(); o.type = t; o.frequency.value = hz(n); o.connect(lp); o.start(0); }
+		},
 	};
 
-	// Two kits. `len` = render length (s), `group` = mute group (MPC-style choke), `c` = pad colour.
+	// The kits. Each pad: [name, sound, render length (s), colour, mute group (MPC-style choke)].
+	// The newer kits share one layout: 8 drums on top, then 4 chords, then 4 bass notes.
 	const KITS = {
 		soul: { name: 'Soul MPC', dusty: true, pads: [
 			['Kick', S.kick(160, 48, 0.42), 0.6, 'd'], ['Snare', S.snare(190, 0.2), 0.35, 'd'], ['Hat', S.hat(0.05), 0.12, 'd', 'hat'], ['Open hat', S.hat(0.4), 0.5, 'd', 'hat'],
@@ -161,6 +230,36 @@
 			['Kick', S.kick(120, 42, 0.55), 0.7, 'd'], ['Snare', S.snare(220, 0.16, 2400), 0.3, 'd'], ['Clap', S.clap, 0.4, 'd'], ['Hat', S.hat(0.04, 0.4), 0.1, 'd', 'hat'],
 			['Open hat', S.hat(0.32, 0.4), 0.4, 'd', 'hat'], ['Hat roll', S.roll, 0.35, 'd', 'hat'], ['Rim', S.rim, 0.1, 'd'], ['Cowbell', S.cowbell, 0.4, 'd'],
 			...[36, 39, 41, 43, 44, 46, 48, 51].map(n => [`808 ${['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'][n % 12]}`, S.bass808(n), 1.6, 'b', 'bass']),
+		] },
+		jungle: { name: 'Jungle', dusty: true, pads: [
+			['Kick', S.kick(150, 50, 0.32), 0.5, 'd'], ['Snare', S.snare(210, 0.22, 1500), 0.4, 'd'], ['Hat', S.hat(0.045), 0.12, 'd', 'hat'], ['Ride', S.ride, 1.2, 'd'],
+			['Ghost', S.snare(240, 0.07, 2600), 0.15, 'd'], ['Rim', S.rim, 0.1, 'd'], ['Crash', S.crash, 1.8, 'h'], ['Tom', S.tom(95), 0.6, 'd'],
+			['Am9', S.pad([57, 60, 64, 67, 71]), 2.7, 'k'], ['Fmaj7', S.pad([53, 57, 60, 64]), 2.7, 'k'], ['Dm9', S.pad([50, 57, 60, 64, 65]), 2.7, 'k'], ['Em7', S.pad([52, 55, 59, 62]), 2.7, 'k'],
+			['Reese A', S.reese(33), 1.2, 'b', 'bass'], ['Reese C', S.reese(36), 1.2, 'b', 'bass'], ['Reese D', S.reese(38), 1.2, 'b', 'bass'], ['Reese E', S.reese(40), 1.2, 'b', 'bass'],
+		] },
+		liquid: { name: 'Liquid DnB', dusty: false, pads: [
+			['Kick', S.kick(140, 46, 0.3), 0.45, 'd'], ['Snare', S.snare(200, 0.18, 2000), 0.35, 'd'], ['Hat', S.hat(0.04, 0.4), 0.1, 'd', 'hat'], ['Open hat', S.hat(0.3, 0.4), 0.4, 'd', 'hat'],
+			['Ghost', S.snare(230, 0.06, 2600), 0.15, 'd'], ['Shaker', S.shaker, 0.2, 'd'], ['Rim', S.rim, 0.1, 'd'], ['Ride', S.ride, 1.2, 'd'],
+			['Fmaj9', S.keys([53, 57, 60, 64, 67]), 2, 'k'], ['Em9', S.keys([52, 55, 59, 62, 66]), 2, 'k'], ['Dm9', S.keys([50, 53, 57, 60, 64]), 2, 'k'], ['Cmaj9', S.keys([48, 55, 59, 62, 64]), 2, 'k'],
+			['Sub F', S.sub(41), 0.9, 'b', 'bass'], ['Sub E', S.sub(40), 0.9, 'b', 'bass'], ['Sub D', S.sub(38), 0.9, 'b', 'bass'], ['Sub C', S.sub(36), 0.9, 'b', 'bass'],
+		] },
+		dubstep: { name: 'Dubstep', dusty: false, pads: [
+			['Kick', S.kick(130, 40, 0.5), 0.7, 'd'], ['Snare', S.big, 0.5, 'd'], ['Hat', S.hat(0.05), 0.12, 'd', 'hat'], ['Open hat', S.hat(0.35), 0.45, 'd', 'hat'],
+			['Crash', S.crash, 1.8, 'h'], ['Rim', S.rim, 0.1, 'd'], ['Laser', S.laser, 0.4, 'h'], ['Clap', S.clap, 0.4, 'd'],
+			['Fm', S.stab([53, 56, 60]), 0.35, 'k'], ['Db', S.stab([49, 53, 56]), 0.35, 'k'], ['Ab', S.stab([56, 60, 63]), 0.35, 'k'], ['Eb', S.stab([51, 55, 58]), 0.35, 'k'],
+			['Wob F', S.wobble(41), 0.9, 'b', 'bass'], ['Wob G#', S.wobble(44), 0.9, 'b', 'bass'], ['Wob A#', S.wobble(46), 0.9, 'b', 'bass'], ['Wob D#', S.wobble(39), 0.9, 'b', 'bass'],
+		] },
+		house: { name: 'House', dusty: false, pads: [
+			['Kick', S.kick(140, 50, 0.5), 0.6, 'd'], ['Clap', S.clap, 0.4, 'd'], ['Hat', S.hat(0.04), 0.1, 'd', 'hat'], ['Open hat', S.hat(0.28), 0.4, 'd', 'hat'],
+			['Shaker', S.shaker, 0.2, 'd'], ['Rim', S.rim, 0.1, 'd'], ['Conga', S.conga(330), 0.3, 'd'], ['Cowbell', S.cowbell, 0.4, 'd'],
+			['Am7', S.organ([57, 60, 64, 67]), 0.7, 'k'], ['Dm7', S.organ([50, 57, 60, 65]), 0.7, 'k'], ['Em7', S.organ([52, 55, 59, 62]), 0.7, 'k'], ['Fmaj7', S.organ([53, 57, 60, 64]), 0.7, 'k'],
+			['Bass A', S.slap(33), 0.5, 'b', 'bass'], ['Bass D', S.slap(38), 0.5, 'b', 'bass'], ['Bass E', S.slap(40), 0.5, 'b', 'bass'], ['Bass F', S.slap(41), 0.5, 'b', 'bass'],
+		] },
+		disco: { name: 'Roller Disco', dusty: true, pads: [
+			['Kick', S.kick(130, 48, 0.4), 0.55, 'd'], ['Snare', S.snare(220, 0.15, 2600), 0.3, 'd'], ['Hat', S.hat(0.04), 0.1, 'd', 'hat'], ['Open hat', S.hat(0.35), 0.45, 'd', 'hat'],
+			['Tamb', S.tamb, 0.25, 'd'], ['Clap', S.clap, 0.4, 'd'], ['Conga', S.conga(260), 0.3, 'd'], ['Cowbell', S.cowbell, 0.4, 'd'],
+			['Em7', S.strings([52, 59, 62, 67]), 2.7, 'k'], ['Am7', S.strings([57, 60, 64, 67]), 2.7, 'k'], ['D', S.strings([50, 57, 62, 66]), 2.7, 'k'], ['Cmaj7', S.strings([48, 55, 59, 64]), 2.7, 'k'],
+			['Slap E', S.slap(40), 0.5, 'b', 'bass'], ['Slap A', S.slap(45), 0.5, 'b', 'bass'], ['Slap D', S.slap(38), 0.5, 'b', 'bass'], ['Slap C', S.slap(36), 0.5, 'b', 'bass'],
 		] },
 	};
 
@@ -181,12 +280,14 @@
 		if (peak > 0.9) for (let i = 0; i < d.length; i++) d[i] *= 0.9 / peak; // never clip, keep the kit's balance otherwise
 		return buf;
 	}
-	const buffers = {}, custom = { soul: [], 808: [] };
+	const KIT_ORDER = ['soul', '808', 'jungle', 'liquid', 'dubstep', 'house', 'disco']; // '808' would sort first on its own
+	const buffers = {}, custom = Object.fromEntries(Object.keys(KITS).map(k => [k, []])), renders = {};
 	let rendering = null;
-	function renderAll() {
-		return rendering || (rendering = Promise.all(Object.entries(KITS).map(async ([id, kit]) => {
-			buffers[id] = await Promise.all(kit.pads.map(p => renderPad(p, kit.dusty)));
-		})));
+	function renderKit(id) { // one kit's pads, rendered once
+		return renders[id] ||= Promise.all(KITS[id].pads.map(p => renderPad(p, KITS[id].dusty))).then(b => { buffers[id] = b; });
+	}
+	function renderAll() { // the kit on screen first, then the rest one by one so opening stays quick
+		return rendering ||= (async () => { await renderKit(kit); for (const id of KIT_ORDER) await renderKit(id); })();
 	}
 
 	// ── Memory: what you tweak is saved in this browser (IndexedDB), and every change can be undone ──
@@ -621,7 +722,7 @@
 			els[i].querySelector('.pad__name').textContent = own ? own.name : p[0];
 			els[i].dataset.c = own ? 'u' : p[3];
 		});
-		pad.querySelectorAll('[data-kit]').forEach(b => b.classList.toggle('is-on', mode === 'pads' && b.dataset.kit === kit));
+		if (kitSel) { kitSel.value = kit; kitSel.classList.toggle('is-on', mode === 'pads'); }
 		pad.querySelector('[data-mode="synth"]')?.classList.toggle('is-on', mode === 'synth');
 	}
 	function setMode(m) {
@@ -632,7 +733,12 @@
 		if (m !== 'synth') synthUi?.panic();
 		label();
 	}
-	pad.querySelectorAll('[data-kit]').forEach(b => b.addEventListener('click', () => { kit = b.dataset.kit; setMode('pads'); }));
+	const kitSel = pad.querySelector('.pad__kit');
+	if (kitSel) {
+		kitSel.innerHTML = KIT_ORDER.map(id => `<option value="${id}">${KITS[id].name}</option>`).join('');
+		kitSel.addEventListener('change', () => { kit = kitSel.value; renderKit(kit); setMode('pads'); });
+		kitSel.addEventListener('pointerdown', () => { if (mode !== 'pads') setMode('pads'); });
+	}
 	pad.querySelector('[data-mode="synth"]')?.addEventListener('click', () => setMode('synth'));
 	label();
 
@@ -640,7 +746,7 @@
 		const c = audio();
 		if (c.state === 'suspended') c.resume();
 		const own = custom[kit][i];
-		if (!own && !buffers[kit]) await renderAll();
+		if (!own && !buffers[kit]) await renderKit(kit);
 		playPad(kit, i, c.currentTime);            // sound first; every visual waits until it's scheduled
 		els[i].animate([{ transform: 'scale(0.93)', filter: 'brightness(1.9)' }, { transform: 'scale(1)', filter: 'brightness(1)' }],
 			{ duration: 260, easing: 'cubic-bezier(0.2, 0.9, 0.3, 1.2)' });
@@ -665,6 +771,83 @@
 		src.start(t);
 		if (group) { voices[group] = { src, g }; src.onended = () => { if (voices[group]?.src === src) delete voices[group]; }; }
 	}
+
+	// ── Beats: loops picked for Nicky, played on the kits, to jam over with the pads or the synth ──
+	// Each lane is [pad, pattern], one character per 16th note: x = hit, o = soft hit, 1-8 = the pad that many
+	// steps on from `pad` (chords and bass notes), anything else = rest. Lanes loop at their own length.
+	const D16 = (...bars) => bars.join('');
+	const BEATS = [
+		{ name: 'Amen jungle', kit: 'jungle', bpm: 168, swing: 0, lanes: [
+			[0, D16('x.x.......xx....', '..xx......x.....')], [1, D16('....x..o.o..x..o', '.o..x..o.o....x.')],
+			[3, 'x.x.x.x.x.x.x.x.'], [8, D16('1...............', '2...............')], [12, D16('1...........1...', '3.........3.....')]] },
+		{ name: 'Liquid roller', kit: 'liquid', bpm: 174, swing: 0, lanes: [
+			[0, 'x.........x.....'], [1, '....x.......x...'], [4, '.......o......o.'], [2, '..x...x...x...x.'], [5, 'o.o.o.o.o.o.o.o.'],
+			[8, D16('1...............', '2...............')], [12, D16('1.........1.....', '2.........2.....')]] },
+		{ name: 'Halftime dubstep', kit: 'dubstep', bpm: 140, swing: 0, lanes: [
+			[0, D16('x.........x.....', 'x......x..x.....')], [1, '........x.......'], [2, 'x.o.x.o.x.o.x.o.'],
+			[4, D16('x...............', '................')], [6, D16('................', '...............x')],
+			[12, D16('1.1.....1...1.1.', '2.2.....2...2...')]] },
+		{ name: 'UK garage 2-step', kit: 'house', bpm: 132, swing: 0.2, lanes: [
+			[0, D16('x.........x.....', 'x......x..x.....')], [1, '....x.......x...'], [2, '..x...x...x...x.'], [5, '.......o.o.....o'],
+			[8, D16('1..1..1.........', '2..2..2.........')], [12, D16('1.........1.....', '2.........2.....')]] },
+		{ name: 'Deep house', kit: 'house', bpm: 124, swing: 0.1, lanes: [
+			[0, 'x...x...x...x...'], [1, '....x.......x...'], [3, '..x...x...x...x.'], [4, '.o.o.o.o.o.o.o.o'],
+			[8, D16('...1..1....1....', '...2..2....2....')], [12, D16('..1...1...1...1.', '..2...2...2...2.')]] },
+		{ name: 'Roller disco', kit: 'disco', bpm: 118, swing: 0, lanes: [
+			[0, 'x...x...x...x...'], [1, '....x.......x...'], [3, '..x...x...x...x.'], [4, 'o.o.o.o.o.o.o.o.'], [6, '......o..o....o.'],
+			[8, D16('1...............', '2...............', '3...............', '4...............')],
+			[12, D16('1.1.....1.1...1.', '2.2.....2.2...2.', '3.3.....3.3...3.', '4.4.....4.4...4.')]] },
+		{ name: 'Boom bap soul', kit: 'soul', bpm: 90, swing: 0.25, lanes: [
+			[0, 'x......x..x.....'], [1, '....x.......x...'], [2, 'x.x.x.x.x.x.x.x.'],
+			[8, D16('1...............', '2...............')], [14, D16('1......1..1.....', '2......2..2.....')]] },
+		{ name: 'Trap 808', kit: '808', bpm: 140, swing: 0, lanes: [
+			[0, D16('x.........x.....', 'x......x..x.....')], [2, '........x.......'], [3, 'x.x.x.x.x.x.xxxx'],
+			[8, D16('1.........1.....', '3......3..2.....')]] },
+	];
+	let beatOn = null, beatNext = null, bStep = 0, bAt = 0, bTimer = 0;
+	function flash(i, at) {
+		setTimeout(() => els[i].animate([{ filter: 'brightness(1.9)' }, { filter: 'brightness(1)' }], { duration: 180 }), Math.max(0, (at - ac.currentTime) * 1000));
+	}
+	function beatHit(b, i, at, vel) { playPad(b.kit, i, at, vel); if (b.kit === kit && mode === 'pads') flash(i, at); }
+	function beatTick() { // books the next ~120 ms of hits ahead of time, so the groove never waits on the page
+		while (beatOn && bAt < ac.currentTime + 0.12) {
+			if (bStep % 16 === 0 && beatNext) { useBeat(beatNext); bStep = 0; } // switch beats on the next bar
+			const b = beatOn, spb = 60 / (metro?.bpm || b.bpm) / 4, at = bAt + (bStep % 2 ? b.swing * spb : 0);
+			for (const [p, pat] of b.lanes) {
+				const ch = pat[bStep % pat.length];
+				if (ch === 'x' || ch === 'o') beatHit(b, p, at, ch === 'x' ? 1 : 0.45);
+				else if (ch >= '1' && ch <= '8') beatHit(b, p + (+ch - 1), at, 0.9);
+			}
+			if (bStep % 4 === 0) { const acc = bStep % 16 === 0; setTimeout(() => window.wiggler?.beat(acc), Math.max(0, (at - ac.currentTime) * 1000)); }
+			bStep++; bAt += spb;
+		}
+	}
+	function useBeat(b) {
+		beatOn = b; beatNext = null;
+		ctl['metro.bpm']?.set(b.bpm);
+		if (mode === 'pads' && kit !== b.kit) { kit = b.kit; label(); }
+		beatUi();
+	}
+	async function beatPlay(b) {
+		const c = audio();
+		if (c.state === 'suspended') c.resume();
+		await renderKit(b.kit);
+		if (beatOn) { beatNext = b; return; } // already rolling: change over on the next bar
+		useBeat(b); bStep = 0; bAt = c.currentTime + 0.08;
+		bTimer = setInterval(beatTick, 25); beatTick();
+	}
+	function beatStop() { clearInterval(bTimer); bTimer = 0; beatOn = beatNext = null; beatUi(); }
+	const beatBar = document.createElement('div');
+	beatBar.className = 'beats'; beatBar.setAttribute('role', 'group'); beatBar.setAttribute('aria-label', 'Beats to jam over');
+	beatBar.innerHTML = `<select class="track beats__pick" aria-label="Pick a beat">${BEATS.map((b, i) => `<option value="${i}">${b.name} · ${b.bpm}</option>`).join('')}</select><button class="track beats__go" type="button" aria-pressed="false">▶ Play beat</button>`;
+	grid.before(beatBar);
+	const beatPick = beatBar.querySelector('.beats__pick'), beatGo = beatBar.querySelector('.beats__go');
+	function beatUi() {
+		beatGo.textContent = beatOn ? '■ Stop beat' : '▶ Play beat';
+		beatGo.setAttribute('aria-pressed', String(!!beatOn)); beatGo.classList.toggle('is-on', !!beatOn);
+	}
+	beatGo.addEventListener('click', () => beatOn ? beatStop() : beatPlay(BEATS[beatPick.value]));
+	beatPick.addEventListener('change', () => { if (beatOn) beatPlay(BEATS[beatPick.value]); });
 
 	// Most sample files start with a few ms of silence; cut it so the hit lands the instant you tap.
 	function trim(buf) {
@@ -1740,7 +1923,7 @@
 	}));
 	rig.querySelector('.rig__close').addEventListener('click', () => rig.close());
 	rig.addEventListener('click', e => { if (e.target === rig) rig.close(); }); // tap the backdrop to close
-	rig.addEventListener('close', () => { window.wiggler?.stop(); roll?.stop(); metro.stop(); loops?.sleep(); synthUi?.panic(); commit(); saveAll(); });
+	rig.addEventListener('close', () => { beatStop(); window.wiggler?.stop(); roll?.stop(); metro.stop(); loops?.sleep(); synthUi?.panic(); commit(); saveAll(); });
 
 	// Keyboard: 1-4 / Q-R / A-F / Z-V, but only while the popup is open.
 	addEventListener('keydown', e => {
