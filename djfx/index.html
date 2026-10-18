@@ -65,7 +65,7 @@ canvas.zoom{height:96px} canvas.ovw{height:34px;cursor:pointer}
 .hot button.set{background:#3a2a6b;border-color:#7b61ff}
 .pitch{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center}
 input[type=range]{width:100%;accent-color:var(--accent);height:30px}
-.loop{display:grid;grid-template-columns:auto 1fr auto auto;gap:6px;align-items:center}
+.loop{display:grid;grid-template-columns:auto 1fr auto auto auto;gap:6px;align-items:center}
 .loop .len{text-align:center;font:700 16px var(--mono)}
 .grid-edit{display:flex;flex-wrap:wrap;gap:6px}
 .grid-edit button{min-height:36px;padding:4px 8px;font-size:13px}
@@ -166,6 +166,9 @@ body.phone #phoneBack{display:none}
 .ph-fxc button{min-height:48px;font-weight:700}
 .ph-fxc [data-arm].on{background:var(--amber);border-color:var(--amber);color:#111}
 .ph-fxc [data-fire].on{background:var(--red);border-color:var(--red);color:#fff}
+.ph-loop{display:grid;grid-template-columns:auto 1fr auto 1.3fr;gap:8px}
+.ph-loop button{min-height:56px;font-weight:800} .ph-lp.on{background:#5c4a0f;border-color:#ffd23f} .ph-kick{background:#0f3a5c;border-color:#34d6ff}
+.ph-len{min-height:0;padding:2px 8px;margin-left:6px;font-size:12px;font-weight:700}
 .ph-cut{display:grid;grid-template-columns:1fr 1.4fr;gap:8px}
 .ph-cut button{min-height:72px;font-size:18px;font-weight:800}
 .ph-cutall{background:#5c0f16;border-color:var(--red)} .ph-cutall.pending{background:var(--red);animation:pulse .25s infinite alternate}
@@ -264,11 +267,11 @@ body.phone #phoneBack{display:none}
   <div class="row" style="justify-content:flex-end"><button id="settingsClose">Done</button></div>
 </dialog>
 
-<script src="js/analysis.js"></script>
-<script src="js/keylock.js"></script>
-<script src="js/engine.js"></script>
-<script src="js/app.js"></script>
-<script src="js/phone.js"></script>
-<script src="js/defaults.js"></script>
+<script src="js/analysis.js?v=20261018s"></script>
+<script src="js/keylock.js?v=20261018s"></script>
+<script src="js/engine.js?v=20261018s"></script>
+<script src="js/app.js?v=20261018s"></script>
+<script src="js/phone.js?v=20261018s"></script>
+<script src="js/defaults.js?v=20261018s"></script>
 </body>
 </html>

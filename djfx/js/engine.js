@@ -222,6 +222,13 @@ window.DJ = window.DJ || {};
       if (this.src) this.src.loopEnd = L.end;
       if (this.src && p >= L.end) this.seek(this.anchorPos, t);
     }
+    // Kick back into the song: on the loop's next bar line, jump to where the looped bars end and play on
+    kickOut() {
+      if (!this.loop.on || !this.playing) return null;
+      const T = this.nextDownbeat(0.05); if (!T) return null;
+      this.seek(this.loop.end, T);
+      return T;
+    }
     exitLoop() {
       if (!this.loop.on) return;
       const t = this.ctx.currentTime; this.reanchor(t);
@@ -255,7 +262,7 @@ window.DJ = window.DJ || {};
   }
 
   /* ------------------------------------------------------------------ FX unit */
-  const DIVS = { '1/16': 0.25, '1/8': 0.5, '3/16': 0.75, '1/4': 1, '1/2': 2, '3/4': 3, '1': 4, '2': 8, '4': 16 };   // in beats; '1' = 1 bar
+  const DIVS = { '1/16': 0.25, '1/8': 0.5, '3/16': 0.75, '1/4': 1, '1/2': 2, '3/4': 3, '1': 4, '2': 8, '4': 16, '8': 32, '16': 64, '32': 128, '64': 256 };   // in beats; '1' = 1 bar
   function impulse(ctx, secs, decay = 3) {
     const n = Math.floor(ctx.sampleRate * secs), b = ctx.createBuffer(2, n, ctx.sampleRate);
     for (let c = 0; c < 2; c++) { const d = b.getChannelData(c); for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / n, decay); }
@@ -324,7 +331,7 @@ window.DJ = window.DJ || {};
       af.bq = ctx.createBiquadFilter(); af.bq.type = 'lowpass'; af.bq.frequency.value = 1200; af.bq.Q.value = 6;
       af.lfo = ctx.createOscillator(); af.lfo.type = 'sine'; af.depth = ctx.createGain(); af.depth.gain.value = 1000;
       af.lfo.connect(af.depth); af.depth.connect(af.bq.frequency); af.lfo.start();
-      af.in.connect(af.bq); af.bq.connect(af.wet); af.params = { amount: 1, div: '1', shape: 'swish' };
+      af.in.connect(af.bq); af.bq.connect(af.wet); af.params = { amount: 1, div: '8', shape: 'swish' };
       af.sync = bpm => { af.lfo.frequency.value = bpm / 60 / DIVS[af.params.div]; };
       // 'lfo' = wobbling low-pass; 'swish' = one high-pass sweep up that ends on the bar line `div` bars ahead; 'dive' = low-pass sweep down
       const baseFire = af.fire.bind(af);
@@ -341,7 +348,10 @@ window.DJ = window.DJ || {};
           hold(af.depth.gain, when); af.depth.gain.setValueAtTime(0, when);
           af.bq.type = shape === 'swish' ? 'highpass' : 'lowpass'; setAt(af.bq.Q, shape === 'swish' ? 9 : 7, when);
           const [f0, f1] = shape === 'swish' ? [40, 9000] : [16000, 180];
-          setAt(af.bq.frequency, f0, when); af.bq.frequency.exponentialRampToValueAtTime(f1, end);
+          // sinusoidal in pitch: eases in and out, so a long sweep (8-64 bars) moves gently and never jumps
+          const n = 256, curve = new Float32Array(n);
+          for (let i = 0; i < n; i++) curve[i] = f0 * Math.pow(f1 / f0, (1 - Math.cos(Math.PI * i / (n - 1))) / 2);
+          setAt(af.bq.frequency, f0, when); af.bq.frequency.setValueCurveAtTime(curve, when + 0.001, Math.max(0.05, end - when - 0.001));
           af.sweepEnd = end;
         } else if (on) { af.bq.type = 'lowpass'; setAt(af.depth.gain, 1000, when); setAt(af.bq.frequency, 1200, when); setAt(af.bq.Q, 6, when); }
         baseFire(on, when);

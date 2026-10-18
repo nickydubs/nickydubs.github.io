@@ -141,7 +141,7 @@
       <canvas class="ovw"></canvas>
       <div class="transport"><button data-a="cue">CUE</button><button data-a="play" class="btn-play">▶ PLAY</button><button data-a="sync">SYNC</button><button data-a="kl" title="Key lock: tempo changes keep the pitch">KEY</button><button data-a="q" class="on" title="Quantize cues and loops to the beat grid">Q</button></div>
       <div class="hot">${[0, 1, 2, 3].map(i => `<button data-h="${i}" title="Tap: set or jump (on the NEXT deck: drop it on the 1). Long-press: delete">Q${i + 1}</button>`).join('')}</div>
-      <div class="loop"><button data-a="lhalf" aria-label="Halve loop">◀</button><span class="len" data-f="loop">4 beats</span><button data-a="ldouble" aria-label="Double loop">▶</button><button data-a="loop">LOOP</button></div>
+      <div class="loop"><button data-a="lhalf" aria-label="Halve loop">◀</button><span class="len" data-f="loop">4 beats</span><button data-a="ldouble" aria-label="Double loop">▶</button><button data-a="loop">LOOP</button><button data-a="kick" title="Leave the loop on its next bar line, straight back into the song, with the high-pass filter on">OUT · HPF</button></div>
       <div class="pitch"><button data-a="range" title="Pitch range">±8%</button><input type="range" min="-1" max="1" step="0.0005" value="0" data-f="pitch" aria-label="Pitch"><div class="row"><button data-a="nd" title="Nudge slower (hold)">−</button><button data-a="nu" title="Nudge faster (hold)">+</button></div></div>
       <details class="gridbox"><summary>Beat grid</summary><div class="grid-edit"><button data-a="g-">◀ 10ms</button><button data-a="g+">10ms ▶</button><button data-a="down">Set downbeat here</button><button data-a="q1here">Q1 = first downbeat</button><button data-a="b/2">BPM ÷2</button><button data-a="b*2">BPM ×2</button><input type="number" step="0.01" min="40" max="250" data-f="bpmEdit" style="width:84px" aria-label="Track BPM"></div></details>`;
     const u = UI[id] = { el, f: n => $(`[data-f="${n}"]`, el), ovw: $('canvas.ovw', el), ovImg: null, peaks: null };
@@ -165,6 +165,7 @@
     act('lhalf', () => d.resizeLoop(LOOPS[Math.max(0, loopIdx() - 1)]));
     act('ldouble', () => d.resizeLoop(LOOPS[Math.min(LOOPS.length - 1, loopIdx() + 1)]));
     act('loop', () => { if (!d.loaded) return; d.loop.on ? d.exitLoop() : d.setLoop(d.loop.beats); });
+    act('kick', () => kickOut(id));
     $$('[data-h]', el).forEach(b => {
       let timer = null, long = false; const i = Number(b.dataset.h);
       b.addEventListener('pointerdown', () => { long = false; timer = setTimeout(() => { long = true; d.hotCue(i, true); saveDeckMeta(id); }, 500); });
@@ -387,9 +388,10 @@
 
   /* ---------------------------------------------------------------- FX UI */
   const SHAPES = ['lfo', 'swish', 'dive'];
+  const SWISH = ['1', '2', '4', '8', '16', '32', '64'];   // swish lengths in bars; 8 by default so it builds gradually
   const FXP = {
     filter: [{ k: 'pos', label: 'LPF·HPF', min: -1, max: 1, def: 0.5, fmt: v => v < -0.02 ? 'LP' : v > 0.02 ? 'HP' : '—' }, { k: 'res', label: 'Res', min: 0, max: 1, def: 0.3 }],
-    autofilter: [{ k: 'shape', label: 'Shape', list: SHAPES, def: 'swish' }, { k: 'div', label: 'Length', div: true, def: '1' }],
+    autofilter: [{ k: 'shape', label: 'Shape', list: SHAPES, def: 'swish' }, { k: 'div', label: 'Length', div: true, list: SWISH, def: '8' }],
     flanger: [{ k: 'amount', label: 'Mix', min: 0, max: 1, def: 0.7 }, { k: 'div', label: 'Rate', div: true, def: '2' }],
     crush: [{ k: 'bits', label: 'Bits', min: 2, max: 10, def: 5, fmt: v => Math.round(v) }],
     trans: [{ k: 'div', label: 'Chop', div: true, def: '1/8' }],
@@ -397,7 +399,8 @@
     reverb: [{ k: 'amount', label: 'Mix', min: 0, max: 1, def: 0.5 }, { k: 'size', label: 'Size', min: 0.8, max: 6, def: 3, fmt: v => v.toFixed(1) + 's' }],
     noise: [{ k: 'amount', label: 'Level', min: 0, max: 0.6, def: 0.25 }, { k: 'tone', label: 'Tone', min: 0, max: 1, def: 0.3 }],
   };
-  const DIVK = Object.keys(DJ.DIVS);
+  const DIVK = Object.keys(DJ.DIVS).filter(k => DJ.DIVS[k] <= 16);   // echo, flanger and chop stop at 4 bars
+  const knobs = {};
   const divLabel = k => DJ.DIVS[k] >= 4 ? k + (k === '1' ? ' bar' : ' bars') : k;
   function applyParam(s, k, v) {
     if (k === 'amount') s.setAmount(v);
@@ -413,6 +416,7 @@
     const rack = $('#fxrack'); rack.innerHTML = '';
     for (const s of eng.fx.stages) {
       const saved = S.fx[s.id] || {};
+      if (s.id === 'autofilter' && !saved.len8) { delete saved.div; saved.len8 = true; S.fx[s.id] = saved; }   // the swish now defaults to 8 bars
       s.armed = !!saved.armed;
       const card = document.createElement('div'); card.className = 'fx'; card.dataset.fx = s.id;
       card.innerHTML = `<span class="name">${s.name}</span><div class="kr"></div><div class="btns"><button class="arm" aria-pressed="false">ARM</button><button class="fire" aria-pressed="false">FIRE</button></div>`;
@@ -422,7 +426,7 @@
         const start = saved[p.k] ?? s.params[p.k] ?? p.def;
         if (p.div || p.list) {
           const L = p.list || DIVK, i = Math.max(0, L.indexOf(start));
-          knob(holder, { label: p.label, min: 0, max: L.length - 1, value: i, def: L.indexOf(p.def), fmt: v => p.div ? divLabel(L[Math.round(v)]) : L[Math.round(v)],
+          knobs[s.id + '.' + p.k] = knob(holder, { label: p.label, min: 0, max: L.length - 1, value: i, def: L.indexOf(p.def), fmt: v => p.div ? divLabel(L[Math.round(v)]) : L[Math.round(v)],
             onInput: v => { const dv = L[Math.round(v)]; applyParam(s, p.k, dv); saveFx(s, p.k, dv); } });
           applyParam(s, p.k, L[i]);
         } else {
@@ -457,6 +461,20 @@
       a.classList.toggle('on', s.armed); a.setAttribute('aria-pressed', String(s.armed));
       f.classList.toggle('on', s.on); f.setAttribute('aria-pressed', String(s.on)); f.textContent = s.on ? 'ON' : 'FIRE';
     }
+  }
+  // One press out of a loop: the deck jumps back into the song on the next bar line and the filter opens up as a high-pass
+  function kickOut(id) {
+    const d = eng.decks[id], T = d.kickOut();
+    if (T == null) { toast('Loop some bars first'); return; }
+    const role = R.now === id ? 'now' : 'next', f = eng.fx.by.filter;
+    if (!S.route || ((S.route === 'now' || S.route === 'next') && S.route !== role)) setRoute(role);
+    if (!(f.params.pos > 0.2)) f.params.pos = 0.55;   // keep a high-pass you already dialled in, otherwise about 300 Hz
+    eng.fx.fire('filter', true, T);
+    setTimeout(renderFx, Math.max(0, (T - ctx.currentTime) * 1000));
+  }
+  function swishLen(step) {   // phone: cycle the swish length
+    const k = knobs['autofilter.div']; if (!k) return;
+    k.set((Math.round(k.get()) + step + SWISH.length) % SWISH.length);
   }
   function fireAll() {
     if (!eng.fx.stages.some(s => s.armed)) { toast('Arm some effects first'); return; }
@@ -770,5 +788,5 @@
     $('#foot').textContent = 'Audio: ' + ctx.sampleRate + ' Hz · output latency ~' + Math.round(((ctx.baseLatency || 0) + (ctx.outputLatency || 0)) * 1000) + ' ms · key lock ' + (ok ? 'ready (KEY button on each deck)' : 'unavailable in this browser: tempo changes shift pitch');
   });
   requestAnimationFrame(frame);
-  window.DJFX = { eng, tracks, addFiles, applyHint, saveMeta, loadDeck, AM, R, setAutomix, mixNow, cutAll, dropNext, S, ensureNext };
+  window.DJFX = { kickOut, swishLen, SWISH, eng, tracks, addFiles, applyHint, saveMeta, loadDeck, AM, R, setAutomix, mixNow, cutAll, dropNext, S, ensureNext };
 })();
