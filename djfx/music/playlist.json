@@ -1,50 +1,41 @@
 {
-  "note": "Default playlist: Nicky Dubs songs made on Google Flow Music. The audio streams from Flow Music's own public storage (nothing is copied into this repo); a backup lives in Nicky's private repo. bpm = tempo measured offline (2026-10-18); the deck only uses it when its own reading is more than 6% off.",
+  "note": "Default playlist: Nicky Dubs songs made on Google Flow Music, hosted here next to the app (a backup also lives in Nicky's private repo). bpm = tempo measured offline (2026-10-18); the deck only uses it when its own reading is more than 6% off.",
   "tracks": [
     {
       "file": "Nicky Dubs - Before the Frost.m4a",
-      "bpm": 171.9,
-      "url": "https://storage.googleapis.com/producer-app-public/clips/91bcd9ea-95d2-4978-a13a-31ade7c150b8.m4a"
+      "bpm": 171.9
     },
     {
       "file": "Nicky Dubs - In the Rain.m4a",
-      "bpm": 170.0,
-      "url": "https://storage.googleapis.com/producer-app-public/clips/df01012b-3381-4083-aa1b-2b20b3557336.m4a"
+      "bpm": 170.0
     },
     {
       "file": "Nicky Dubs - All In.m4a",
-      "bpm": 170.0,
-      "url": "https://storage.googleapis.com/producer-app-public/clips/51a9fdda-c6b9-4af9-a9eb-6426ebcd0fcb.m4a"
+      "bpm": 170.0
     },
     {
       "file": "Nicky Dubs - Double Take.m4a",
-      "bpm": 175.0,
-      "url": "https://storage.googleapis.com/producer-app-public/clips/3644021e-3970-4b02-8704-6f7942b026c4.m4a"
+      "bpm": 175.0
     },
     {
       "file": "Nicky Dubs - All In (take 2).m4a",
-      "bpm": 170.0,
-      "url": "https://storage.googleapis.com/producer-app-public/clips/6ecacf78-4151-45a8-9cb5-59241328f737.m4a"
+      "bpm": 170.0
     },
     {
       "file": "Nicky Dubs - Double Take (take 2).m4a",
-      "bpm": 170.0,
-      "url": "https://storage.googleapis.com/producer-app-public/clips/73f6e7de-024a-48b6-b479-7612dddc8860.m4a"
+      "bpm": 170.0
     },
     {
       "file": "Nicky Dubs - They Come Around.m4a",
-      "bpm": 122.0,
-      "url": "https://storage.googleapis.com/producer-app-public/clips/d13caf36-d484-44c2-a01a-f18099d9fb12.m4a"
+      "bpm": 122.0
     },
     {
       "file": "Nicky Dubs - They Come Around (take 2).m4a",
-      "bpm": 124.0,
-      "url": "https://storage.googleapis.com/producer-app-public/clips/431d1fe8-80eb-405d-9d57-d87c098cc93c.m4a"
+      "bpm": 124.0
     },
     {
       "file": "Nicky Dubs - Roll With Me.m4a",
-      "bpm": 124.5,
-      "url": "https://storage.googleapis.com/producer-app-public/clips/b523f257-ce40-45df-ab93-8decacadd2ce.m4a"
+      "bpm": 124.5
     }
   ]
 }
