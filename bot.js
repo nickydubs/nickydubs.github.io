@@ -3,6 +3,8 @@
 // character ramp, with a Sobel outline) is rendered ONCE per size. After that, each frame only
 // swaps the eyes, mouth and the lamps on its saucer ring, and touches the page only when a
 // character actually changed. Nods, wobbles and hit pulses are CSS transforms (GPU, no layout).
+// Particles are faked inside the same character grid: at most 28 sparks, a few numbers each, so
+// they add no page elements and hit() still only bumps a counter.
 (() => {
 	const COLS = 56, ROWS = 22, VIEW_H = 3.1; // world units visible top to bottom
 	const N = COLS * ROWS, CY = -0.28;        // CY: where the head sits vertically
@@ -98,6 +100,43 @@
 	let t = 0, energy = 0, lastHit = -99, lastBeat = -99, beats = 0, blinkUntil = 0, nextBlink = 2;
 	let wowUntil = 0, pulse = 0, nod = 0, wob = 0, wobV = 0, lookX = 0, hitGroup = 'd', lastHtml = '';
 
+	// ── Fake particles: sparks off the antenna on hits, a ripple of dots off the saucer ring on accents ──
+	const SPARK = "*+x'.", MAX_SPARKS = 28, sparks = [];
+	let pendHit = 0, pendRing = 0;
+	function toGrid(x, y, z) {
+		const wx = R[0] * x + R[1] * y + R[2] * z, wy = R[3] * x + R[4] * y + R[5] * z + CY;
+		return [wx / cw + COLS / 2 - 0.5, ROWS / 2 - 0.5 - wy / ch];
+	}
+	function spawn(c, r, vc, vr, max, k, slow) { if (sparks.length < MAX_SPARKS) sparks.push({ c, r, vc, vr, life: 0, max, k, slow }); }
+	function particles(dt, tint) {
+		if (reduce) { sparks.length = 0; pendHit = pendRing = 0; return; }
+		if (pendHit) {
+			const [ac, ar] = toGrid(0, 1.33, 0);
+			for (; pendHit > 0; pendHit--) {
+				const a = Math.random() * Math.PI * 2, v = 9 + Math.random() * 11;
+				spawn(ac, ar, Math.cos(a) * v, Math.sin(a) * v * 0.5 - 5, 0.45 + Math.random() * 0.35, tint, false);
+			}
+		}
+		if (pendRing) {
+			pendRing = 0;
+			for (let j = 0; j < 8; j++) {
+				const a = j / 8 * Math.PI * 2, [rc, rr] = toGrid(Math.cos(a) * 1.2, 0.55, Math.sin(a) * 1.2);
+				spawn(rc, rr, Math.cos(a) * 7, Math.sin(a) * 1.5, 0.5, C_LIGHT, true);
+			}
+		}
+		for (let j = sparks.length - 1; j >= 0; j--) {
+			const p = sparks[j];
+			p.life += dt; if (!p.slow) p.vr += 16 * dt;
+			p.c += p.vc * dt; p.r += p.vr * dt;
+			const c = Math.round(p.c), r = Math.round(p.r);
+			if (p.life > p.max || c < 0 || c >= COLS || r < 0 || r >= ROWS) { sparks.splice(j, 1); continue; }
+			const i = r * COLS + c;
+			if (cls[i] === C_FACE) continue; // never paint over the eyes or mouth
+			chars[i] = p.slow ? '.' : SPARK[Math.min(SPARK.length - 1, Math.floor(p.life / p.max * SPARK.length))];
+			cls[i] = p.k;
+		}
+	}
+
 	function mood() {
 		if (t < wowUntil) return 'wow';
 		if (t - lastHit < 0.45) return energy > 1.3 ? 'hype' : 'joy';
@@ -125,6 +164,7 @@
 		for (const ex of [-0.4, 0.4]) stamp(eyes, ex, 0.02, -0.74);
 		stamp([MOUTH[m]], 0, -0.4, -0.74);
 		if (t > nextBlink) { blinkUntil = t + 0.13; nextBlink = t + 1.8 + Math.random() * 3.5; }
+		particles(dt, tint);
 		draw();
 
 		// motion: GPU transforms only (no reflow, no re-render)
@@ -213,7 +253,8 @@
 			energy = Math.min(2, energy + 0.22 * strength);
 			lastHit = t; hitGroup = group; pulse = Math.min(1, pulse + 0.6 * strength);
 			wobV += (Math.random() - 0.5) * 3 * strength;
+			pendHit = Math.min(8, pendHit + 3 + Math.round(strength * 2));
 		},
-		beat(accent) { beats++; lastBeat = t; nod = accent ? 1 : 0.5; },
+		beat(accent) { beats++; lastBeat = t; nod = accent ? 1 : 0.5; if (accent) pendRing = 1; },
 	};
 })();
