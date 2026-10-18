@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>DJFX Car Deck</title>
+<meta name="description" content="DJFX: a two-deck DJ player with beat-synced FX that runs in your browser. Tracks play from your own device; nothing is uploaded.">
+<meta name="theme-color" content="#0b0d10">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="DJFX">
+<style>
+:root{
+  --bg:#0b0d10; --panel:#14181d; --panel2:#1b2027; --line:#2a313a; --fg:#e8edf2; --muted:#8a96a3;
+  --a:#3fb6ff; --b:#ff8a3d; --accent:#ffd23f; --red:#ff3b47; --green:#33d17a; --amber:#ffb020;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; --r:10px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.35 system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-user-select:none;user-select:none;touch-action:manipulation}
+body{padding:10px max(10px,env(safe-area-inset-right)) 24px max(10px,env(safe-area-inset-left))}
+button{font:inherit;color:var(--fg);background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:8px 10px;min-height:40px;cursor:pointer;touch-action:manipulation}
+button:active{transform:translateY(1px)}
+button.on{background:var(--accent);color:#111;border-color:var(--accent)}
+button.red{background:var(--red);border-color:var(--red);color:#fff}
+button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+select,input[type=text],input[type=number]{font:inherit;color:var(--fg);background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:6px 8px;min-height:36px}
+.row{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:10px;min-width:0}
+.lbl{font:600 11px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.mono{font-family:var(--mono)}
+header{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;justify-content:space-between;margin-bottom:10px}
+header h1{margin:0;font-size:22px;letter-spacing:.04em}
+header h1 b{color:var(--accent)}
+.led{display:inline-block;width:12px;height:12px;border-radius:50%;background:#2b1013;border:1px solid #000;vertical-align:middle}
+.led.on{background:var(--red);box-shadow:0 0 10px var(--red)}
+.led.amber.on{background:var(--amber);box-shadow:0 0 10px var(--amber)}
+.led.big{width:22px;height:22px}
+.led.beat.on{background:#ff6a6a;box-shadow:0 0 8px #ff3b47}
+.led.beat.down{background:var(--red);box-shadow:0 0 18px var(--red)}
+
+.roll{padding:8px;margin-bottom:10px}
+canvas.roll{height:250px;cursor:default}
+@media (max-width:620px){canvas.roll{height:200px}}
+.decks{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px}
+@media (max-width:860px){.decks{grid-template-columns:1fr}}
+.deck .role{font:800 13px/1 var(--mono);letter-spacing:.1em;padding:4px 8px;border-radius:6px;background:var(--panel2)}
+.deck.now{border-color:var(--green)} .deck.now .role{background:var(--green);color:#06210f}
+.deck.next .role{background:var(--accent);color:#111}
+.gridbox summary{cursor:pointer;color:var(--muted);font-size:13px;min-height:28px}
+.deck{display:flex;flex-direction:column;gap:8px}
+.deck .title{font-weight:600;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.deck[data-id=A] .tag{color:var(--a)} .deck[data-id=B] .tag{color:var(--b)}
+.tag{font:700 20px/1 var(--mono)}
+.readout{display:flex;flex-wrap:wrap;gap:4px 12px;align-items:baseline;font-family:var(--mono)}
+.readout .bpm{font-size:22px;font-weight:700}
+.readout .key{padding:2px 6px;border-radius:6px;background:var(--panel2);border:1px solid var(--line)}
+.readout .key.good{border-color:var(--green);color:var(--green)}
+canvas{display:block;width:100%;border-radius:6px;background:#07090b}
+canvas.zoom{height:96px} canvas.ovw{height:34px;cursor:pointer}
+.transport{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.transport button{min-height:52px;font-weight:700}
+.btn-play.on{background:var(--green);border-color:var(--green);color:#06210f}
+.hot{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.hot button{min-height:44px;font-family:var(--mono)}
+.hot button.set{background:#3a2a6b;border-color:#7b61ff}
+.pitch{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center}
+input[type=range]{width:100%;accent-color:var(--accent);height:30px}
+.loop{display:grid;grid-template-columns:auto 1fr auto auto;gap:6px;align-items:center}
+.loop .len{text-align:center;font:700 16px var(--mono)}
+.grid-edit{display:flex;flex-wrap:wrap;gap:6px}
+.grid-edit button{min-height:36px;padding:4px 8px;font-size:13px}
+
+.mixer{display:flex;flex-direction:column;gap:10px}
+.strips{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.strip .srole{font:700 11px var(--mono);color:var(--muted)}
+.strip{display:flex;flex-direction:column;align-items:center;gap:6px;background:var(--panel2);border-radius:8px;padding:6px 4px}
+.strip .tag{font-size:16px}
+.vfader{writing-mode:vertical-lr;direction:rtl;width:36px;height:140px}
+.meter{width:10px;height:140px;background:#07090b;border-radius:4px;position:relative;overflow:hidden}
+.meter i{position:absolute;left:0;right:0;bottom:0;background:linear-gradient(to top,var(--green) 0 70%,var(--amber) 70% 90%,var(--red) 90%)}
+.fmrow{display:flex;gap:8px;align-items:flex-end}
+.xf{display:flex;flex-direction:column;gap:6px}
+.xf input{height:40px}
+
+.knob{display:flex;flex-direction:column;align-items:center;gap:2px;touch-action:none;cursor:ns-resize;min-width:46px}
+.knob .kn{width:38px;height:38px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#3a4350,#161a20);border:1px solid #000;position:relative}
+.knob .kn i{position:absolute;left:50%;top:3px;width:3px;height:13px;margin-left:-1.5px;background:var(--accent);border-radius:2px}
+.knob .kl{font:600 10px var(--mono);color:var(--muted);text-transform:uppercase}
+.knob .kv{font:11px var(--mono)}
+
+.fxunit{display:grid;grid-template-columns:200px 1fr;gap:10px;margin-top:10px}
+@media (max-width:760px){.fxunit{grid-template-columns:1fr}}
+.fxhead{display:flex;flex-direction:column;gap:8px}
+.bpmbig{font:700 40px/1 var(--mono);color:var(--red);text-shadow:0 0 12px rgba(255,59,71,.5);display:flex;align-items:center;gap:10px}
+.bpmbig small{font-size:12px;color:var(--muted);text-shadow:none}
+.route button{flex:1;font-weight:700}
+.fxrack{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.fx{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:8px;display:flex;flex-direction:column;gap:6px}
+.fx.armed{border-color:var(--amber)} .fx.live{border-color:var(--red);box-shadow:inset 0 0 0 1px var(--red)}
+.fx .name{font-weight:700}
+.fx .btns{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.fx .btns button{min-height:38px}
+.fx .arm.on{background:var(--amber);border-color:var(--amber);color:#111}
+.fx .fire.on{background:var(--red);border-color:var(--red);color:#fff}
+.fx .kr{display:flex;gap:6px;justify-content:space-around;align-items:flex-end}
+.cutbar{display:grid;grid-template-columns:1fr 1.6fr 1.6fr 1fr;gap:8px;margin-top:8px}
+@media (max-width:620px){.cutbar{grid-template-columns:1fr 1fr}}
+#dropNext{background:#123d24;border-color:var(--green);font-size:19px}
+#dropNext.pending{background:var(--green);color:#06210f}
+.cutbar button{min-height:64px;font-size:17px;font-weight:800;letter-spacing:.04em}
+#cutAll{background:#5c0f16;border-color:var(--red);font-size:22px}
+#cutAll.pending{background:var(--red);animation:pulse .25s infinite alternate}
+@keyframes pulse{to{filter:brightness(1.35)}}
+@media (prefers-reduced-motion:reduce){#cutAll.pending{animation:none}}
+
+.lower{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.5fr);gap:10px;margin-top:10px}
+.leftcol{display:flex;flex-direction:column;gap:10px;min-width:0}
+@media (max-width:960px){.lower{grid-template-columns:1fr}}
+.pads{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.pads button{min-height:70px;font-weight:700;display:flex;flex-direction:column;justify-content:center;gap:2px;background:linear-gradient(#262d36,#1a1f26)}
+.pads button small{font:11px var(--mono);color:var(--muted)}
+.pads button.hit{background:var(--accent);color:#111}
+.plist{background:var(--panel2);border-radius:8px;padding:6px;min-height:120px;display:flex;flex-direction:column;gap:4px}
+.plist.drop{outline:2px dashed var(--accent)}
+.trk{display:grid;grid-template-columns:1fr auto;gap:2px 8px;padding:6px;border-radius:6px;background:var(--panel);border:1px solid var(--line);cursor:grab}
+.trk.playing{border-color:var(--green)} .trk.played{opacity:.55} .trk.next{border-color:var(--accent)}
+.trk .badge{font:700 11px var(--mono);padding:1px 6px;border-radius:5px;margin-right:6px}
+.trk .badge.now{background:var(--green);color:#06210f} .trk .badge.next{background:var(--accent);color:#111}
+.trk .tn{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600}
+.trk .tm{font:12px var(--mono);color:var(--muted)}
+.trk .tm .good{color:var(--green)}
+.trk .tb{display:flex;gap:4px;grid-row:span 2;align-items:center}
+.trk .tb button{min-height:34px;padding:2px 8px}
+.am{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.am .status{font:12px var(--mono);color:var(--muted)}
+.hint{font-size:12px;color:var(--muted)}
+.dropzone-hint{position:fixed;inset:0;background:rgba(255,210,63,.12);border:4px dashed var(--accent);display:none;align-items:center;justify-content:center;font-size:28px;font-weight:800;z-index:9;pointer-events:none}
+body.dragging .dropzone-hint{display:flex}
+dialog{background:var(--panel);color:var(--fg);border:1px solid var(--line);border-radius:var(--r);max-width:min(560px,92vw)}
+dialog::backdrop{background:rgba(0,0,0,.6)}
+.toast{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:8px 14px;border-radius:999px;z-index:10}
+
+/* Phone mode (js/phone.js): one screen for the drive; the full deck stays on the page, hidden */
+#phone{display:none}
+body.phone #phone{display:flex;flex-direction:column;gap:10px;margin-bottom:10px}
+body.phone header .am,body.phone header .row,body.phone #foot{display:none}
+/* the full deck stays laid out offscreen so its canvases keep a real size and keep drawing */
+body.phone .decks,body.phone .fxunit,body.phone .lower{position:absolute;left:-10000px;top:0;width:960px;visibility:hidden;pointer-events:none}
+body.phone{overflow-x:hidden}
+body.phone canvas.roll{height:150px}
+body.phone #phoneBack{display:none}
+.ph-track{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center;min-width:0}
+.ph-track .role{font:800 12px/1 var(--mono);letter-spacing:.1em;padding:5px 8px;border-radius:6px}
+.ph-now .role{background:var(--green);color:#06210f} .ph-next .role{background:var(--accent);color:#111}
+.ph-t{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.ph-now .ph-t{font-size:17px}
+.ph-b{font-size:15px;font-weight:700}
+.ph-main{display:grid;grid-template-columns:1fr 1.4fr;gap:8px}
+.ph-main button{min-height:84px;font-size:20px;font-weight:800}
+.ph-play.on{background:var(--green);border-color:var(--green);color:#06210f}
+.ph-drop{background:#123d24;border-color:var(--green)} .ph-drop.pending{background:var(--green);color:#06210f}
+.ph-fx{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.ph-fxc{display:grid;grid-template-columns:1fr 1fr;gap:6px;background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:8px}
+.ph-fxc .name{grid-column:1/-1;font-weight:700}
+.ph-fxc.armed{border-color:var(--amber)} .ph-fxc.live{border-color:var(--red)}
+.ph-fxc button{min-height:48px;font-weight:700}
+.ph-fxc [data-arm].on{background:var(--amber);border-color:var(--amber);color:#111}
+.ph-fxc [data-fire].on{background:var(--red);border-color:var(--red);color:#fff}
+.ph-cut{display:grid;grid-template-columns:1fr 1.4fr;gap:8px}
+.ph-cut button{min-height:72px;font-size:18px;font-weight:800}
+.ph-cutall{background:#5c0f16;border-color:var(--red)} .ph-cutall.pending{background:var(--red);animation:pulse .25s infinite alternate}
+.ph-foot{display:grid;grid-template-columns:1.3fr 1fr 1fr;gap:8px}
+.ph-foot button{min-height:52px;font-weight:700}
+</style>
+</head>
+<body>
+<header>
+  <h1>DJ<b>FX</b> <span class="lbl">car deck</span></h1>
+  <div class="am panel" id="automix">
+    <button id="amToggle">Automix off</button>
+    <label class="lbl" for="amBeats">Mix</label>
+    <select id="amBeats"><option value="8">8 beats</option><option value="16">16 beats</option><option value="32">32 beats</option><option value="64">64 beats</option></select>
+    <select id="amTempo" aria-label="Tempo change"><option value="smooth">Smooth tempo</option><option value="snap">Snap tempo</option></select>
+    <select id="amStyle" aria-label="Transition"><option value="swell">Swell + cut on downbeat</option><option value="blend">Smooth blend</option></select>
+    <button id="amNow" title="Start the next transition at the next bar (M)">Mix now</button>
+    <span class="status" id="amStatus"></span>
+  </div>
+  <div class="row">
+    <span class="lbl">Master</span><div id="masterKnob"></div>
+    <span class="led" id="masterClip" title="Master clip (before limiter)"></span>
+    <span class="led amber" id="limLed" title="Limiter working"></span>
+    <button id="settingsBtn" aria-label="Settings">⚙</button>
+  </div>
+</header>
+
+<section class="panel roll">
+  <canvas class="roll" id="roll" aria-label="Audio roll: the playing track on top, the next track below, lined up on the drop point"></canvas>
+</section>
+<section class="decks">
+  <div class="panel deck" data-id="A" id="deckA"></div>
+  <div class="panel deck" data-id="B" id="deckB"></div>
+</section>
+
+<section class="panel fxunit" id="fxunit">
+  <div class="fxhead">
+    <span class="lbl">FX unit</span>
+    <div class="bpmbig"><span class="led beat big" id="beatLed"></span><span id="fxBpm">---.-</span><small id="fxBpmSrc">auto</small></div>
+    <div class="row"><button id="tapBtn" style="flex:1">TAP</button><button id="autoBpmBtn" style="flex:1" class="on">AUTO</button></div>
+    <span class="lbl">Apply to</span>
+    <div class="row route" id="route"><button data-r="now">Current track</button><button data-r="next">Next track</button><button data-r="M">Master</button></div>
+  </div>
+  <div>
+    <div class="fxrack" id="fxrack"></div>
+    <div class="cutbar">
+      <button id="fireAll" title="Turn on every armed effect (F)">FIRE ALL</button>
+      <button id="dropNext" title="Start the next track from Q1 on the next downbeat, cut all FX and switch to it (N)">▶ NEXT ON THE 1</button>
+      <button id="cutAll" title="Cut all effects on the next downbeat">CUT ALL</button>
+      <button id="cutNow" title="Cut all effects right now (X)">CUT NOW</button>
+    </div>
+    <p class="hint" id="cutHint"></p>
+  </div>
+</section>
+
+<section class="lower">
+  <div class="leftcol">
+  <div class="panel">
+    <div class="row" style="justify-content:space-between;margin-bottom:8px"><span class="lbl">Sampler · keys 1–8</span><span class="hint">Drop a file on a pad, or long-press it to load one</span></div>
+    <div class="pads" id="pads"></div>
+  </div>
+  <div class="panel mixer" id="mixer"></div>
+  </div>
+  <div class="panel">
+    <div class="row" style="justify-content:space-between;margin-bottom:8px">
+      <span class="lbl">Playlist · plays top to bottom</span>
+      <div class="row">
+        <button id="openFiles">Open files</button><button id="openFolder">Open folder</button>
+        <button id="keySort" title="Order the rest of the playlist by key and tempo">Key sort</button>
+        <button id="clearLib">Clear</button>
+      </div>
+    </div>
+    <div class="plist" id="plist"></div>
+    <p class="hint">Drag files or folders anywhere onto the page. Nothing is uploaded: the deck plays files from this device only.</p>
+  </div>
+</section>
+<p class="hint mono" id="foot"></p>
+
+<input type="file" id="fileIn" accept="audio/*,.mp3,.wav,.flac,.ogg,.m4a,.aac,.opus" multiple hidden>
+<input type="file" id="dirIn" webkitdirectory multiple hidden>
+<input type="file" id="padIn" accept="audio/*" hidden>
+<div class="dropzone-hint">Drop tracks or folders</div>
+
+<dialog id="settings">
+  <h3 style="margin-top:0">Settings</h3>
+  <p><label class="lbl" for="cutKeys">CUT ALL shortcut (keys held together)</label><br><input type="text" id="cutKeys" placeholder="Space+Enter"> <span class="hint">e.g. Space+Enter, Shift+C</span></p>
+  <p><label class="lbl" for="xfCurve">Crossfader curve</label><br><select id="xfCurve"><option value="smooth">Smooth (constant power)</option><option value="linear">Blend (full at centre)</option><option value="cut">Sharp cut (scratch)</option></select></p>
+  <p><label class="lbl" for="maxStretch">Automix: biggest tempo change to beat-match (%)</label><br><input type="number" id="maxStretch" min="2" max="30" step="1"> <span class="hint">bigger gaps get an echo-out cut instead</span></p>
+  <p><label class="lbl" for="dropTempo">Tempo when the next track drops</label><br><select id="dropTempo"><option value="glide">Start at the current tempo, then glide to its own</option><option value="match">Stay at the current tempo</option><option value="native">Its own tempo straight away</option></select>
+     <select id="glideBeats" aria-label="Glide length"><option value="8">over 2 bars</option><option value="16">over 4 bars</option><option value="32">over 8 bars</option><option value="64">over 16 bars</option></select></p>
+  <p><label><input type="checkbox" id="amFx"> Automix swells FX (armed effects, or filter + echo + reverb if none are armed)</label></p>
+  <p class="hint">Keys: N next on the 1 · shortcut above = CUT ALL on the next downbeat · X cut now · F fire all armed FX · M automix mix now · 1–8 pads.</p>
+  <div class="row" style="justify-content:flex-end"><button id="settingsClose">Done</button></div>
+</dialog>
+
+<script src="js/analysis.js"></script>
+<script src="js/keylock.js"></script>
+<script src="js/engine.js"></script>
+<script src="js/app.js"></script>
+<script src="js/phone.js"></script>
+</body>
+</html>
