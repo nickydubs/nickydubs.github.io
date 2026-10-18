@@ -1,5 +1,6 @@
-// Default playlist: when the deck opens with no tracks, play Nicky's own songs from music/playlist.json
-// (served next to the app on the site). Built for phone data:
+// Default playlist: when the deck opens with no tracks, play Nicky's own songs listed in music/playlist.json.
+// The audio streams from each entry's url (Flow Music's public storage), so no song files sit in the public
+// site repo. Built for phone data:
 //  - only NOW and NEXT download at the start; each later song downloads when it is about to be needed;
 //  - every song is kept in this browser's cache after its first download, so it never costs data again;
 //  - "Save songs offline" downloads the rest ahead of time (do it on Wi-Fi).
@@ -7,20 +8,22 @@
 (() => {
   const DIR = 'music/', CACHE = 'djfx-songs-v1', START = 2, AHEAD = 3; // NOW + NEXT at first; once playing, keep one spare
   let list = [], idx = 0, busy = false, app = null;
-  const url = name => DIR + encodeURIComponent(name);
   const nameOf = e => typeof e === 'string' ? e : e.file;
+  // a playlist entry streams from its own url (Flow Music's storage) or falls back to a file next to the app
+  const url = e => (typeof e === 'object' && e.url) || DIR + encodeURIComponent(nameOf(e));
 
-  async function cached(name) {
-    try { return await (await caches.open(CACHE)).match(url(name)); } catch (e) { return null; }
+  async function cached(entry) {
+    try { return await (await caches.open(CACHE)).match(url(entry)); } catch (e) { return null; }
   }
-  async function getBlob(name) {
+  async function getBlob(entry) {
+    const u = url(entry);
     try {
       const c = await caches.open(CACHE);
-      let r = await c.match(url(name));
-      if (!r) { r = await fetch(url(name)); if (!r.ok) return null; await c.put(url(name), r.clone()); }
+      let r = await c.match(u);
+      if (!r) { r = await fetch(u); if (!r.ok) return null; await c.put(u, r.clone()); }
       return await r.blob();
     } catch (e) { // no Cache Storage (old browser, private mode): plain fetch
-      const r = await fetch(url(name)); return r.ok ? r.blob() : null;
+      const r = await fetch(u); return r.ok ? r.blob() : null;
     }
   }
 
@@ -28,7 +31,7 @@
     if (idx >= list.length) return;
     const entry = list[idx++], name = nameOf(entry);
     try {
-      const blob = await getBlob(name);
+      const blob = await getBlob(entry);
       if (!blob) return;
       const [t] = app.addFiles([new File([blob], name, { type: blob.type || 'audio/mp4' })]);
       // a known tempo from the playlist corrects the analyser only when it is clearly off (see applyHint)
@@ -45,7 +48,7 @@
 
   // ── "Save songs offline" button (phone panel and the full deck's playlist bar) ──
   const btns = [];
-  async function savedCount() { let n = 0; for (const e of list) if (await cached(nameOf(e))) n++; return n; }
+  async function savedCount() { let n = 0; for (const e of list) if (await cached(e)) n++; return n; }
   async function paint(note) {
     if (!btns.length) return;
     const n = await savedCount(), all = n === list.length;
@@ -53,7 +56,7 @@
   }
   async function saveAll() {
     let i = 0;
-    for (const e of list) { i++; paint(`Saving ${i}/${list.length}…`); await getBlob(nameOf(e)); }
+    for (const e of list) { i++; paint(`Saving ${i}/${list.length}…`); await getBlob(e); }
     paint();
   }
   function addButtons() {
