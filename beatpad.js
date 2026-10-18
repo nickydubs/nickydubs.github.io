@@ -1,4 +1,4 @@
-// Nicky Dubs beat pad: 16 pads, seven kits synthesized right here in the browser (no samples to download,
+// Nicky Dubs beat pad: 16 pads, seven kits plus one you record yourself synthesized right here in the browser (no samples to download,
 // nothing copyrighted), plus reverb + delay. Sounds are pre-rendered into buffers, so a hit is just
 // "start this buffer now": the lowest latency the browser can do. Lives in a popup so the page can't
 // scroll under your fingers, with the Air Wiggler (bot.js) reacting above the pads.
@@ -848,6 +848,128 @@
 	}
 	beatGo.addEventListener('click', () => beatOn ? beatStop() : beatPlay(BEATS[beatPick.value]));
 	beatPick.addEventListener('change', () => { if (beatOn) beatPlay(BEATS[beatPick.value]); });
+
+	// ── Mic kit: record anything (beatbox, claps, pots and pans) and every hit lands on its own pad ──
+	// Hits are found by sudden jumps in loudness, each one trimmed to its natural decay and sorted low to high
+	// (kick-like sounds first). Pads it can't fill keep the kit you had on, so all 16 are always playable.
+	// The kit is saved in this browser and shows up as the last kit in the list.
+	const MIC = 'mic', MIC_MAX = 12; // seconds
+	let micRec = null, micFill = 'soul', micRestored = false;
+	const recBtn = document.createElement('button');
+	recBtn.type = 'button'; recBtn.className = 'track beats__rec'; recBtn.textContent = '● Rec kit';
+	recBtn.title = 'Record hits from your mic (beatbox, claps, anything); each one gets its own pad';
+	beatBar.append(recBtn);
+	recBtn.addEventListener('click', () => micRec ? micRec.stop() : micStart());
+	async function micStart() { // raw samples straight off the mic: nothing to encode or decode, works the same on every phone
+		const c = audio();
+		if (c.state === 'suspended') c.resume();
+		let stream;
+		try { stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } }); }
+		catch { alert('Could not open your microphone. Check the browser permission for this site.'); return; }
+		const src = c.createMediaStreamSource(stream), tap = c.createScriptProcessor(4096, 1, 1), mute = c.createGain();
+		const parts = [], t0 = performance.now();
+		let got = 0;
+		mute.gain.value = 0; // the tap has to reach the speakers to keep running; silent so you never hear yourself
+		tap.onaudioprocess = e => { if (got < c.sampleRate * MIC_MAX) { const d = e.inputBuffer.getChannelData(0); parts.push(new Float32Array(d)); got += d.length; } };
+		chain(src, tap, mute, c.destination);
+		const tick = setInterval(() => {
+			const sec = (performance.now() - t0) / 1000;
+			recBtn.textContent = `■ Stop ${sec.toFixed(1)}s`;
+			if (sec >= MIC_MAX) micRec.stop();
+		}, 100);
+		micRec = { stop: async () => {
+			if (!micRec) return;
+			clearInterval(tick); micRec = null;
+			src.disconnect(); tap.disconnect(); stream.getTracks().forEach(t => t.stop());
+			recBtn.classList.remove('is-rec'); recBtn.textContent = 'Cutting…';
+			let msg = '● Rec kit';
+			try {
+				if (got < c.sampleRate * 0.1) throw new Error('too short');
+				const rec = c.createBuffer(1, got, c.sampleRate);
+				let at = 0; for (const d of parts) { rec.copyToChannel(d, 0, at); at += d.length; }
+				const n = await micKit(rec);
+				if (n) msg = `✓ ${n} hit${n > 1 ? 's' : ''} on pads`;
+			} catch (e) { console.warn(e); alert('Could not use that recording. Try again, a little longer.'); }
+			recBtn.textContent = msg;
+			setTimeout(() => { if (!micRec) recBtn.textContent = '● Rec kit'; }, 2500);
+		} };
+		recBtn.classList.add('is-rec'); recBtn.textContent = '■ Stop 0.0s';
+	}
+	function sliceHits(buf) { // → up to 16 { data, name }, low sounds first
+		const sr = buf.sampleRate, n = buf.length, x = new Float32Array(n);
+		for (let ch = 0; ch < buf.numberOfChannels; ch++) { const d = buf.getChannelData(ch); for (let i = 0; i < n; i++) x[i] += d[i] / buf.numberOfChannels; }
+		const hop = Math.round(sr * 0.005), F = Math.floor(n / hop), db = new Float32Array(F);
+		let top = -120;
+		for (let f = 0; f < F; f++) {
+			let e = 0;
+			for (let i = f * hop, j = Math.min(n, i + 2 * hop); i < j; i++) e += x[i] * x[i];
+			db[f] = 10 * Math.log10(e / (2 * hop) + 1e-12); top = Math.max(top, db[f]);
+		}
+		const onsets = []; // a 9 dB jump over the last 30 ms, within 32 dB of the loudest hit, at least 80 ms apart
+		for (let f = 6, last = -99; f < F; f++) {
+			let base = 0; for (let k = 1; k <= 6; k++) base += db[f - k]; base /= 6;
+			if (db[f] > top - 32 && db[f] - base > 9 && f - last > 16) {
+				let st = f; while (st > f - 4 && st > 0 && db[st - 1] < db[st]) st--; // back up to where the rise began
+				onsets.push(st); last = f;
+			}
+		}
+		const hits = [];
+		onsets.forEach((f, k) => {
+			const stopF = Math.min(k + 1 < onsets.length ? onsets[k + 1] : F, f + 200); // next hit, or 1 s at most
+			let peakDb = -120; for (let g = f; g < Math.min(stopF, f + 20); g++) peakDb = Math.max(peakDb, db[g]);
+			let endF = stopF; for (let g = f + 4; g < stopF; g++) if (db[g] < peakDb - 36) { endF = g; break; } // natural decay
+			const start = Math.max(0, f * hop - Math.round(sr * 0.002)), end = Math.min(n, (endF + 1) * hop);
+			if (end - start < sr * 0.03) return;
+			const d = x.slice(start, end);
+			let pk = 0; for (const v of d) pk = Math.max(pk, Math.abs(v));
+			if (pk < 1e-4) return;
+			const fi = Math.round(sr * 0.002), fo = Math.min(Math.round(sr * 0.02), d.length >> 2);
+			for (let i = 0; i < fi; i++) d[i] *= i / fi;
+			for (let i = 0; i < fo; i++) d[d.length - 1 - i] *= i / fo;
+			for (let i = 0; i < d.length; i++) d[i] *= 0.9 / pk;
+			let zc = 0, lo = 0, lp = 0, all = 0; const L = Math.min(d.length, Math.round(sr * 0.08)), a = 1 - Math.exp(-2 * Math.PI * 150 / sr);
+			for (let i = 1; i < L; i++) {
+				if ((d[i] >= 0) !== (d[i - 1] >= 0)) zc++;
+				lp += a * (d[i] - lp); lo += lp * lp; all += d[i] * d[i]; // share of energy under ~150 Hz
+			}
+			hits.push({ data: d, peak: pk, zcr: zc / (L / sr), low: lo / (all || 1), len: d.length / sr });
+		});
+		const best = hits.sort((a, b) => b.peak - a.peak).slice(0, 16).sort((a, b) => a.zcr - b.zcr);
+		const count = {};
+		return best.map(h => {
+			const w = h.low > 0.3 ? 'Boom' : h.len < 0.1 ? 'Tss' : 'Snap'; // deep, short and bright, or in between
+			count[w] = (count[w] || 0) + 1;
+			return { data: h.data, name: `${w} ${count[w]}` };
+		});
+	}
+	async function buildMicKit(hits, sr, fill) {
+		if (!KITS[fill] || fill === MIC) fill = 'soul';
+		await renderKit(fill);
+		const pads = [], bufs = [];
+		for (let i = 0; i < 16; i++) {
+			if (i < hits.length) {
+				const b = ac.createBuffer(1, hits[i].data.length, sr); b.copyToChannel(hits[i].data, 0);
+				pads.push([hits[i].name, null, 0, 'u']); bufs.push(b);
+			} else { pads.push(KITS[fill].pads[i]); bufs.push(buffers[fill][i]); } // the rest of the kit you had on
+		}
+		KITS[MIC] = { name: '🎙 My mic kit', dusty: false, pads };
+		buffers[MIC] = bufs; renders[MIC] = Promise.resolve(); custom[MIC] ||= []; micFill = fill;
+		if (!KIT_ORDER.includes(MIC)) { KIT_ORDER.push(MIC); kitSel?.insertAdjacentHTML('beforeend', `<option value="${MIC}">${KITS[MIC].name}</option>`); }
+	}
+	async function micKit(rec) {
+		const hits = sliceHits(rec);
+		if (!hits.length) { alert('No hits found. Try claps, beatbox or taps, a little closer to the mic.'); return 0; }
+		await buildMicKit(hits, rec.sampleRate, kit === MIC ? micFill : kit);
+		store.put('micKit', { sr: rec.sampleRate, fill: micFill, hits });
+		kit = MIC; setMode('pads');
+		hits.forEach((h, i) => setTimeout(() => els[i].animate([{ filter: 'brightness(2)' }, { filter: 'brightness(1)' }], { duration: 300 }), i * 60));
+		return hits.length;
+	}
+	async function restoreMic() { // the last mic kit, saved in this browser
+		if (micRestored) return; micRestored = true;
+		const v = await store.get('micKit');
+		if (v?.hits?.length) await buildMicKit(v.hits, v.sr, v.fill);
+	}
 
 	// Most sample files start with a few ms of silence; cut it so the hit lands the instant you tap.
 	function trim(buf) {
@@ -1916,12 +2038,15 @@
 		rig.showModal();
 		const c = audio();
 		if (c.state === 'suspended') c.resume();
-		renderAll();
+		renderAll(); restoreMic();
 		if (view === 'stage') window.wiggler?.start();
 		loops?.wake();
 		setTimeout(showLatency, 400); // outputLatency is only known once audio is actually flowing
 	}));
 	rig.querySelector('.rig__close').addEventListener('click', () => rig.close());
+	rig.querySelector('.pad__fx')?.addEventListener('click', e => { // phones: the effects rack folds away so the pads get the room
+		const on = rig.classList.toggle('show-fx'); e.currentTarget.setAttribute('aria-pressed', String(on));
+	});
 	rig.addEventListener('click', e => { if (e.target === rig) rig.close(); }); // tap the backdrop to close
 	rig.addEventListener('close', () => { beatStop(); window.wiggler?.stop(); roll?.stop(); metro.stop(); loops?.sleep(); synthUi?.panic(); commit(); saveAll(); });
 

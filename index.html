@@ -233,7 +233,19 @@ details.crypto .addr { margin-bottom: 10px; }
 .pad__kit option, .beats__pick option { color: #111; }
 .beats { display: flex; gap: 8px; align-items: center; margin: 0 0 10px; }
 .beats__pick { flex: 1; min-width: 0; max-width: none; }
-.beats__go { white-space: nowrap; }
+.beats__go, .beats__rec { white-space: nowrap; }
+.beats__rec.is-rec { border-color: #ff2a2a; color: #fff; background: rgba(255, 42, 42, 0.25); animation: blink 0.8s steps(2) infinite; }
+.pad__fx { display: none; }
+/* Phone mode: the pads fill the width, the effects rack folds behind the FX button, the robot shrinks */
+@media (max-width: 640px) {
+	dialog.rig .pad { justify-content: flex-start; padding: 10px 10px 14px; }
+	dialog.rig .pad__grid { width: 100%; min-width: 0; gap: 8px; }
+	dialog.rig:not(.show-fx) .rack { display: none; }
+	.pad__fx { display: inline-flex; }
+	.beats { flex-wrap: wrap; }
+	.beats__pick { flex: 1 1 100%; }
+	.beats__go, .beats__rec { flex: 1; }
+}
 .pad__cut:hover { border-color: #ff3b5c; }
 .pad__grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
 .pad__btn { --c: var(--blue); position: relative; aspect-ratio: 1; padding: 0; border: 0; border-radius: 14px; cursor: pointer;
@@ -608,7 +620,7 @@ footer img { vertical-align: middle; }
 	<div class="scene__inner">
 		<p class="eyebrow">04 · Play</p>
 		<h2>Wiggle some air yourself</h2>
-		<p class="lead">A beat pad and synth you can play right here in your browser, watched over by the Air Wiggler, a little robot that dances to whatever you play. 16 pads, seven kits (Soul MPC, 808 Trap, Jungle, Liquid DnB, Dubstep, House, Roller Disco), eight ready-made beats to jam over, and a metronome. Tap the pads or use your keyboard (<b>1–4 · Q–R · A–F · Z–V</b>), and record your own loops into the 8 slots underneath (<b>5–8 · T–I</b>). <strong>Right-click a pad</strong> to load your own sample.</p>
+		<p class="lead">A beat pad and synth you can play right here in your browser, watched over by the Air Wiggler, a little robot that dances to whatever you play. 16 pads, seven kits (Soul MPC, 808 Trap, Jungle, Liquid DnB, Dubstep, House, Roller Disco), eight ready-made beats to jam over, and a metronome. Tap the pads or use your keyboard (<b>1–4 · Q–R · A–F · Z–V</b>), record your own loops into the 8 slots underneath (<b>5–8 · T–I</b>), or tap <b>Rec kit</b> and beatbox, clap or tap anything: every hit lands on its own pad. <strong>Right-click a pad</strong> to load your own sample.</p>
 		<button class="btn rig-open" type="button"><i class="fa fa-play" aria-hidden="true"></i> Open the beat pad &amp; synth</button>
 		<dialog class="rig" aria-label="Air Wiggler beat pad">
 		<div class="pad">
@@ -629,6 +641,7 @@ footer img { vertical-align: middle; }
 					<button class="chip pad__undo" type="button" aria-label="Undo" disabled>↶</button>
 					<button class="chip pad__redo" type="button" aria-label="Redo" disabled>↷</button>
 					<button class="track pad__cut" type="button" title="Kill every effect tail right now">Cut FX</button>
+					<button class="chip pad__fx" type="button" aria-pressed="false" title="Show the effects">FX</button>
 					<span class="pad__lat" title="Audio latency"></span>
 				</div>
 			</div>
@@ -1102,8 +1115,8 @@ footer img { vertical-align: middle; }
 	}
 })();
 </script>
-<script src="bot.js?v=20261018b" defer></script>
+<script src="bot.js?v=20261018c" defer></script>
 <script src="synth.js?v=20261018" defer></script>
-<script src="beatpad.js?v=20261018c" defer></script>
+<script src="beatpad.js?v=20261018f" defer></script>
 </body>
 </html>

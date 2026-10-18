@@ -222,7 +222,7 @@
 		probe.remove();
 		const lh = parseFloat(getComputedStyle(pre).lineHeight) / parseFloat(getComputedStyle(pre).fontSize) || 1;
 		const a = ratio / lh;
-		const tall = innerHeight * 0.22 / ROWS; // never let the bot eat more than ~22% of the screen height
+		const tall = innerHeight * (innerWidth <= 640 ? 0.12 : 0.22) / ROWS; // ~22% of the screen height at most, ~12% on phones
 		pre.style.fontSize = Math.min(13, tall, Math.floor(width / (COLS * ratio) * 10) / 10).toFixed(1) + 'px';
 		if (Math.abs(a - aspect) > 0.005 || !mask.some(Boolean)) { aspect = a; cw = ch * aspect; render(); }
 	}
