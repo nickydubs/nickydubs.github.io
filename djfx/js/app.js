@@ -77,6 +77,12 @@
     added.forEach(t => { if (!t.meta) queue.push(t); }); pump(); renderList(); ensureNext();
     return added;
   }
+  // A playlist can carry a known tempo (track.bpmHint). The analyser sometimes locks onto 2/3 or 1/2 of the
+  // real beat; when its reading is more than 6% off the hint, use the hint, as if fixed by hand.
+  function applyHint(t) {
+    if (!t.bpmHint || !t.meta || t.meta.edited) return;
+    if (Math.abs(t.meta.bpm - t.bpmHint) / t.bpmHint > 0.06) { t.meta.bpm = t.bpmHint; t.meta.edited = true; }
+  }
   const queue = []; let busy = false;
   async function pump() {
     if (busy || !queue.length) return; busy = true;
@@ -85,7 +91,7 @@
       const buf = await ctx.decodeAudioData(await t.file.arrayBuffer());
       const r = await DJ.analyze(buf);
       if (!(META[t.key] && META[t.key].edited)) META[t.key] = Object.assign(META[t.key] || {}, { bpm: r.bpm, firstBeat: r.firstBeat, q1: r.q1, key: r.key, duration: buf.duration });
-      t.meta = META[t.key]; saveMeta(); t.status = 'ready';
+      t.meta = META[t.key]; applyHint(t); saveMeta(); t.status = 'ready';
     } catch (e) { t.status = 'error'; console.warn('analysis failed', t.name, e); }
     busy = false; renderList(); pump();
   }
@@ -764,5 +770,5 @@
     $('#foot').textContent = 'Audio: ' + ctx.sampleRate + ' Hz · output latency ~' + Math.round(((ctx.baseLatency || 0) + (ctx.outputLatency || 0)) * 1000) + ' ms · key lock ' + (ok ? 'ready (KEY button on each deck)' : 'unavailable in this browser: tempo changes shift pitch');
   });
   requestAnimationFrame(frame);
-  window.DJFX = { eng, tracks, addFiles, loadDeck, AM, R, setAutomix, mixNow, cutAll, dropNext, S, ensureNext };
+  window.DJFX = { eng, tracks, addFiles, applyHint, saveMeta, loadDeck, AM, R, setAutomix, mixNow, cutAll, dropNext, S, ensureNext };
 })();

@@ -1,0 +1,41 @@
+{
+  "note": "Default playlist: Nicky Dubs songs made on Google Flow Music (flowmusic.app). Loaded when the deck opens with no tracks. bpm = tempo measured offline (autocorrelation, 2026-10-18); the deck only uses it when its own reading is more than 6% off (e.g. a 2/3 or 1/2 misread).",
+  "tracks": [
+    {
+      "file": "Nicky Dubs - Before the Frost.m4a",
+      "bpm": 171.9
+    },
+    {
+      "file": "Nicky Dubs - In the Rain.m4a",
+      "bpm": 170.0
+    },
+    {
+      "file": "Nicky Dubs - All In.m4a",
+      "bpm": 170.0
+    },
+    {
+      "file": "Nicky Dubs - Double Take.m4a",
+      "bpm": 175.0
+    },
+    {
+      "file": "Nicky Dubs - All In (take 2).m4a",
+      "bpm": 170.0
+    },
+    {
+      "file": "Nicky Dubs - Double Take (take 2).m4a",
+      "bpm": 170.0
+    },
+    {
+      "file": "Nicky Dubs - They Come Around.m4a",
+      "bpm": 122.0
+    },
+    {
+      "file": "Nicky Dubs - They Come Around (take 2).m4a",
+      "bpm": 124.0
+    },
+    {
+      "file": "Nicky Dubs - Roll With Me.m4a",
+      "bpm": 124.5
+    }
+  ]
+}
