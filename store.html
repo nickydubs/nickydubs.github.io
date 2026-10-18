@@ -4,7 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Store | Nicky Dubs</title>
-<meta name="description" content="Drum breaks, sample packs, stems and beats from Nicky Dubs. Instant downloads.">
+<meta name="description" content="Handmade gear and sample packs from Edmonton drummer Nicky Dubs, including the Kick Drum Light Rig.">
+<link rel="canonical" href="https://nickydubs.github.io/store.html">
 <link rel="icon" href="favicon.ico">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -112,7 +113,7 @@ footer { margin-top: 48px; text-align: center; color: var(--muted); font-size: 0
 	<section class="notes" aria-label="How buying works">
 		<div class="note">
 			<h3>How downloads work</h3>
-			<p>Checkout runs through Lemon Squeezy. Pay by card, Apple Pay or PayPal, and the files land in your inbox right away.</p>
+			<p>Tracks and albums are on <a href="https://nickydubs.bandcamp.com" target="_blank" rel="noopener">Bandcamp</a>. Sample packs land here as they are finished. Handmade gear is paid by PayPal or Interac e-Transfer.</p>
 		</div>
 		<div class="note">
 			<h3>What you can do with them</h3>
@@ -176,9 +177,9 @@ const PRODUCTS = [
 	{
 		kind: "gear", label: "Handmade gear", icon: "fa-lightbulb-o",
 		name: "Kick Drum Light Rig",
-		about: "An infinity mirror that clips into almost any kick drum, with sound-reactive LEDs that hit when you hit. Handmade by me.",
+		about: "An infinity mirror that clips into almost any kick drum, with sound-reactive LEDs that hit when you hit. Each piece is handcrafted to order, one at a time.",
 		specs: ["Fits most kicks", "Sound-reactive"],
-		price: 360, checkout: "", order: "Kick Drum Light Rig order", preview: ""
+		price: 1360, checkout: "", order: "Kick Drum Light Rig order", preview: ""
 	}
 ];
 
@@ -201,7 +202,7 @@ function card(p) {
 	const foot = el("div", "item__foot");
 	const price = el("div", "price", `$${p.price}`);
 	const live = Boolean(p.checkout);
-	price.append(el("small", null, live ? "instant download" : "planned price"));
+	price.append(el("small", null, live ? "instant download" : "handcrafted to order"));
 	let btn;
 	if (live) {
 		btn = el("a", "btn lemonsqueezy-button"); btn.href = p.checkout;
@@ -214,12 +215,17 @@ function card(p) {
 			location.href = "mailto:" + [...MAIL].reverse().join("") + "?subject=" + encodeURIComponent(p.order);
 		});
 	} else {
-		btn = el("span", "btn btn--soon", "Coming soon"); btn.setAttribute("aria-disabled", "true");
+		return null;                               // not for sale yet: leave it off the page
 	}
 	foot.append(price, btn); a.append(foot);
 	return a;
 }
-PRODUCTS.forEach(p => grid.append(card(p)));
+PRODUCTS.forEach(p => { const c = card(p); if (c) grid.append(c); });
+// hide filter chips for kinds with nothing on sale yet
+document.querySelectorAll("[data-filter]").forEach(chip => {
+	const f = chip.dataset.filter;
+	if (f !== "all" && !grid.querySelector(`.item[data-kind="${f}"]`)) chip.closest("li").hidden = true;
+});
 
 // Load Lemon Squeezy's overlay checkout only once something is actually for sale.
 if (PRODUCTS.some(p => p.checkout)) {

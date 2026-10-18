@@ -639,11 +639,11 @@
 	async function hit(i) {
 		const c = audio();
 		if (c.state === 'suspended') c.resume();
-		els[i].animate([{ transform: 'scale(0.93)', filter: 'brightness(1.9)' }, { transform: 'scale(1)', filter: 'brightness(1)' }],
-			{ duration: 260, easing: 'cubic-bezier(0.2, 0.9, 0.3, 1.2)' });
 		const own = custom[kit][i];
 		if (!own && !buffers[kit]) await renderAll();
-		playPad(kit, i, c.currentTime);
+		playPad(kit, i, c.currentTime);            // sound first; every visual waits until it's scheduled
+		els[i].animate([{ transform: 'scale(0.93)', filter: 'brightness(1.9)' }, { transform: 'scale(1)', filter: 'brightness(1)' }],
+			{ duration: 260, easing: 'cubic-bezier(0.2, 0.9, 0.3, 1.2)' });
 		window.wiggler?.hit(own ? 'u' : KITS[kit].pads[i][3], i === 0 || /kick/i.test(KITS[kit].pads[i][0]) ? 1.2 : 0.8);
 		roll?.capture(kit, i, 1);
 		league?.score('p' + i);
