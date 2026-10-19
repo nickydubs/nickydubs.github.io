@@ -231,18 +231,28 @@ details.crypto .addr { margin-bottom: 10px; }
 .pad__kits { display: flex; gap: 8px; min-width: 0; }
 .pad__kit, .beats__pick { font: inherit; color: inherit; background-color: transparent; max-width: 46vw; }
 .pad__kit option, .beats__pick option { color: #111; }
-.beats { display: flex; gap: 8px; align-items: center; margin: 0 0 10px; }
-.beats__pick { flex: 1; min-width: 0; max-width: none; }
+.beats { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; align-items: center; margin: 0 0 10px; }
+.beats__pick { flex: 1 1 100%; min-width: 0; max-width: none; }
 .beats__go, .beats__rec, .beats__midi { white-space: nowrap; }
 .beats__parts { display: flex; gap: 4px; }
 .beats__part { min-width: 34px; font-weight: 700; }
 .beats__part[aria-pressed="true"] { color: var(--text); border-color: var(--orange); box-shadow: inset 0 0 8px -2px var(--orange); }
 .beats__part.is-wait { animation: blink 0.5s steps(2) infinite; }
+.beats__gen { display: flex; align-items: center; gap: 4px; }
+.beats__gen [hidden], .padmodes__chop[hidden] { display: none; }
+.beats__gen .chip:disabled { opacity: 0.35; cursor: default; }
+.beats__dice { padding-inline: 12px; font-size: 1rem; }
+.flav { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 2px 10px; margin: 0 0 8px; }
+.flav .kn { width: 48px; }
+.flav .knob { width: 26px; height: 26px; }
+.flav .knob::after { top: 2px; height: 9px; transform-origin: 50% 11px; }
+.flav__kn.is-on small { color: var(--orange); }
+.padmodes__chop { border-color: var(--orange); color: var(--text); }
 .fxrow { justify-content: space-around; }
 .fxrow .kn { width: 70px; }
 .fxrow__time { margin-top: 3px; padding: 2px 9px; font-size: 0.62rem; }
 .beats__rec.is-rec { border-color: #ff2a2a; color: #fff; background: rgba(255, 42, 42, 0.25); animation: blink 0.8s steps(2) infinite; }
-.pad__fx { display: none; }
+dialog.rig:not(.show-more) .more-only { display: none !important; }
 /* Phone mode: the pads fill the width, the effects rack folds behind the FX button, the robot shrinks */
 @media (max-width: 640px) {
 	dialog.rig .pad { justify-content: flex-start; padding: 10px 10px 14px; }
@@ -251,8 +261,6 @@ details.crypto .addr { margin-bottom: 10px; }
 	dialog.rig .pad__key { top: 4px; right: 5px; font-size: 0.55rem; }
 	dialog.rig .pad__name { left: 5px; right: 3px; bottom: 9px; font-size: 0.56rem; overflow: hidden; white-space: nowrap; text-overflow: clip; }
 	dialog.rig .pad__btn::after { left: 6px; right: 6px; bottom: 4px; height: 2px; }
-	dialog.rig:not(.show-fx) .rack { display: none; }
-	.pad__fx { display: inline-flex; }
 	.beats { flex-wrap: wrap; }
 	.beats__pick { flex: 1 1 100%; }
 	.beats__go, .beats__rec, .beats__midi { flex: 1; }
@@ -645,7 +653,7 @@ footer img { vertical-align: middle; }
 	<div class="scene__inner">
 		<p class="eyebrow">04 · Play</p>
 		<h2>Wiggle some air yourself</h2>
-		<p class="lead">A beat pad and synth you can play right here in your browser, watched over by the Air Wiggler, a little robot that dances to whatever you play. 24 pads and twelve kits (Soul MPC, 808 Trap, Jungle, Liquid DnB, Neuro DnB, Dubstep, Halftime, UK Garage, House, Tech House, Roller Disco, Dub Reggae), each with drums, six chords and six bass notes with a sub underneath. Every kit has a pattern with a Part A and a Part B, 32 bars each, to jam over or download as MIDI. Tap the pads or use your keyboard (<b>1–6 · Q–Y · A–H · Z–N</b>), record your own loops into the 8 slots underneath (<b>7–0 · U–P</b>), or tap <b>Rec kit</b> and beatbox, clap or tap anything: every hit lands on its own pad. <strong>Right-click a pad</strong> to load your own sample.</p>
+		<p class="lead">A beat pad and synth you can play right here in your browser, watched over by the Air Wiggler, a little robot that dances to whatever you play. 24 pads and twelve kits (Soul MPC, 808 Trap, Jungle, Liquid DnB, Neuro DnB, Dubstep, Halftime, UK Garage, House, Tech House, Roller Disco, Dub Reggae), each with drums, six chords and six bass notes with a sub underneath. Every kit has a pattern with a Part A and a Part B, 32 bars each, to jam over or download as MIDI. Tap <b>🎲</b> for a fresh one, and season the whole kit with the <b>Sweet, Sour, Smoky and Fizz</b> knobs. Tap the pads or use your keyboard (<b>1–6 · Q–Y · A–H · Z–N</b>), record your own loops into the 8 slots underneath (<b>7–0 · U–P</b>), or tap <b>Rec kit</b> and beatbox, clap or say something: every hit and every word lands on its own pad, and the whole phrase becomes a Hook. <strong>Right-click a pad</strong> to load your own sample.</p>
 		<button class="btn rig-open" type="button"><i class="fa fa-play" aria-hidden="true"></i> Open the beat pad &amp; synth</button>
 		<dialog class="rig" aria-label="Air Wiggler beat pad">
 		<div class="pad">
@@ -653,9 +661,9 @@ footer img { vertical-align: middle; }
 				<button class="rig__close" type="button" aria-label="Close the beat pad"><i class="fa fa-times" aria-hidden="true"></i></button>
 				<div class="pad__kits">
 					<select class="track pad__kit is-on" aria-label="Drum kit"></select>
-					<button class="track" type="button" data-mode="synth">Synth</button>
+					<button class="track more-only" type="button" data-mode="synth">Synth</button>
 				</div>
-				<div class="metro" aria-label="Metronome">
+				<div class="metro more-only" aria-label="Metronome">
 					<button class="metro__on" type="button" aria-pressed="false" title="Metronome on/off"><span class="metro__led"></span></button>
 					<output class="metro__bpm" title="Tempo (BPM)">120.0</output>
 					<span class="knob" data-knob="coarse" aria-label="Tempo, coarse" title="Coarse tempo: drag, scroll or arrow keys"></span>
@@ -663,16 +671,16 @@ footer img { vertical-align: middle; }
 					<button class="metro__tap" type="button" title="Tap tempo: sets on the 3rd tap">Tap</button>
 				</div>
 				<div class="pad__tools">
-					<button class="chip pad__undo" type="button" aria-label="Undo" disabled>↶</button>
-					<button class="chip pad__redo" type="button" aria-label="Redo" disabled>↷</button>
-					<button class="track pad__cut" type="button" title="Kill every effect tail right now">Cut FX</button>
-					<button class="chip pad__fx" type="button" aria-pressed="false" title="Show the effects">FX</button>
-					<span class="pad__lat" title="Audio latency"></span>
+					<button class="chip pad__undo more-only" type="button" aria-label="Undo" disabled>↶</button>
+					<button class="chip pad__redo more-only" type="button" aria-label="Redo" disabled>↷</button>
+					<button class="track pad__cut more-only" type="button" title="Kill every effect tail right now">Cut FX</button>
+					<button class="chip pad__fx" type="button" aria-pressed="false" title="More: the metronome, undo, every effect knob, the synth and the loop tools">More</button>
+					<span class="pad__lat more-only" title="Audio latency"></span>
 				</div>
 			</div>
 			<div class="stage">
 				<pre class="bot" aria-hidden="true"></pre>
-				<div class="rack" aria-label="Master effects"></div>
+				<div class="rack more-only" aria-label="Master effects"></div>
 			</div>
 			<div class="roll" hidden></div>
 			<div class="league" hidden></div>
@@ -1141,9 +1149,10 @@ footer img { vertical-align: middle; }
 	}
 })();
 </script>
-<script src="audio-core.js?v=20261019a" defer></script>
+<script src="audio-core.js?v=20261019b" defer></script>
 <script src="bot.js?v=20261019a" defer></script>
 <script src="synth.js?v=20261018" defer></script>
-<script src="beatpad.js?v=20261019c" defer></script>
+<script src="synesthesia.js?v=20261019a" defer></script>
+<script src="beatpad.js?v=20261019d" defer></script>
 </body>
 </html>

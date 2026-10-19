@@ -148,7 +148,7 @@
 		bass808: n => (c, out) => {
 			const f = hz(n), o = c.createOscillator();
 			o.frequency.setValueAtTime(f * 2.2, 0); o.frequency.exponentialRampToValueAtTime(f, 0.06);
-			chain(o, shaper(c, 2.6), envGain(c, 0, 0.003, 0.8, 1.5), out); o.start(0);
+			chain(o, shaper(c, 1.8), envGain(c, 0, 0.003, 0.8, 1.5), out); o.start(0);
 		},
 		ride: (c, out) => { // bell + wash: detuned squares through a bandpass, long tail
 			const bp = filt(c, 'bandpass', 6500, 0.6), hp = filt(c, 'highpass', 4000);
@@ -196,7 +196,7 @@
 		},
 		reese: n => (c, out) => { // jungle reese: two detuned saws, low-passed, phasing against each other
 			const lp = filt(c, 'lowpass', 520, 1.5);
-			chain(lp, shaper(c, 1.8), envGain(c, 0, 0.01, 0.7, 1.1), out);
+			chain(lp, shaper(c, 1.4), envGain(c, 0, 0.01, 0.7, 1.1), out);
 			for (const d of [-22, 22]) { const o = c.createOscillator(); o.type = 'sawtooth'; o.frequency.value = hz(n); o.detune.value = d; o.connect(lp); o.start(0); }
 			const sub = c.createOscillator(); sub.frequency.value = hz(n); chain(sub, envGain(c, 0, 0.01, 0.6, 1.1), out); sub.start(0);
 		},
@@ -209,7 +209,7 @@
 			const lp = c.createBiquadFilter(); lp.type = 'lowpass'; lp.Q.value = 9; lp.frequency.value = 600;
 			const lfo = c.createOscillator(), depth = c.createGain(); lfo.frequency.value = 7; depth.gain.value = 520;
 			chain(lfo, depth, lp.frequency); lfo.start(0);
-			chain(lp, shaper(c, 2.2), envGain(c, 0, 0.005, 0.55, 0.85), out);
+			chain(lp, shaper(c, 1.6), envGain(c, 0, 0.005, 0.55, 0.85), out);
 			for (const [t, d] of [['sawtooth', -7], ['square', 7]]) { const o = c.createOscillator(); o.type = t; o.frequency.value = hz(n); o.detune.value = d; o.connect(lp); o.start(0); }
 		},
 		slap: n => (c, out) => { // funk slap bass: a bright pluck that closes fast
@@ -266,7 +266,7 @@
 			const car = c.createOscillator(), mod = c.createOscillator(), idx = c.createGain(), bp = filt(c, 'bandpass', 300, 4);
 			car.type = 'sawtooth'; car.frequency.value = hz(n); mod.frequency.value = hz(n) * 1.5; idx.gain.value = hz(n) * 2.5;
 			bp.frequency.setValueAtTime(250, 0); bp.frequency.exponentialRampToValueAtTime(2200, 0.12); bp.frequency.exponentialRampToValueAtTime(350, 0.42);
-			chain(mod, idx, car.frequency); chain(car, bp, shaper(c, 3), filt(c, 'lowpass', 3200), envGain(c, 0, 0.004, 0.6, 0.5), out);
+			chain(mod, idx, car.frequency); chain(car, bp, shaper(c, 2.2), filt(c, 'lowpass', 3200), envGain(c, 0, 0.004, 0.6, 0.5), out);
 			car.start(0); mod.start(0);
 		},
 	};
@@ -361,9 +361,9 @@
 		const [, build, len] = def;
 		const c = new OfflineAudioContext(1, Math.ceil(SR * len), SR);
 		let out = c.destination;
-		if (dusty) { // a little tape warmth + rolled-off top for the MPC feel
+		if (dusty) { // a little tape warmth + rolled-off top for the MPC feel (kept gentle: warmth, not grit)
 			const g = c.createGain(); g.gain.value = 0.9;
-			chain(g, shaper(c, 1.6), filt(c, 'lowpass', 7500), out);
+			chain(g, shaper(c, 1.15), filt(c, 'lowpass', 9500), out);
 			out = g;
 		}
 		build(c, out);
@@ -388,15 +388,16 @@
 		if (t !== undefined) return t;
 		const d = buf.getChannelData(0), w = Math.max(1, Math.round(buf.sampleRate * 0.15)), a = Math.exp(-2 * Math.PI * 120 / buf.sampleRate);
 		const sq = new Float32Array(d.length);
-		let hp = 0, prev = 0, sum = 0, best = 0;
+		let hp = 0, prev = 0, sum = 0, best = 0, pk = 0;
 		for (let i = 0; i < d.length; i++) {
+			if (d[i] > pk) pk = d[i]; else if (-d[i] > pk) pk = -d[i];
 			hp = a * (hp + d[i] - prev); prev = d[i]; // one-pole high-pass at 120 Hz
 			sq[i] = hp * hp; sum += sq[i];
 			if (i >= w) sum -= sq[i - w];
 			if (sum > best) best = sum;
 		}
 		const db = 10 * Math.log10(best / Math.min(w, d.length) + 1e-12);
-		t = 10 ** (Math.max(-6, Math.min(6, (TARGET_DB - db) / 2)) / 20);
+		t = Math.min(10 ** (Math.max(-6, Math.min(6, (TARGET_DB - db) / 2)) / 20), 1 / Math.max(pk, 0.05)); // never pushed past full scale: a quiet voice chop would hit the limiter and sound crushed
 		trims.set(buf, t);
 		return t;
 	}
@@ -430,6 +431,7 @@
 	const hist = { list: [], pos: 0 };    // each entry: [[path, from, to], ...] for one gesture
 	const HIST_MAX = 1e6;
 	let pendingEdit = {}, editTimer = 0, saveTimer = 0, restoring = false;
+	let flavBake = () => {}; // set by the Flavour row: a hand on the FX (or undo) makes the flavoured settings the real ones
 	// Controls call touch() with their value from before the change. A gesture is committed once it has
 	// been still for 400 ms (you let go of the knob, stopped scrolling, etc.), so one drag = one undo step.
 	function touch(path, before) {
@@ -451,7 +453,7 @@
 		undoUi(); saveSoon();
 	}
 	function step(dir) {
-		commit();
+		flavBake(); commit();
 		if (dir < 0 ? !hist.pos : hist.pos >= hist.list.length) return;
 		const ch = dir < 0 ? hist.list[--hist.pos] : hist.list[hist.pos++];
 		restoring = true;
@@ -569,7 +571,7 @@
 			return { input: conv, output: lp, conv };
 		},
 		dly() { // tape echo: a little darker and dirtier every repeat
-			const dl = ac.createDelay(4), sat = shaper(ac, 1.3), tone = filt(ac, 'lowpass', 3200), fb = ac.createGain();
+			const dl = ac.createDelay(4), sat = shaper(ac, 1.1), tone = filt(ac, 'lowpass', 3200), fb = ac.createGain();
 			const lfo = ac.createOscillator(), depth = ac.createGain();
 			lfo.frequency.value = 0.55; depth.gain.value = 0.0005; chain(lfo, depth, dl.delayTime); lfo.start();
 			chain(dl, sat, tone, fb, dl);
@@ -753,7 +755,7 @@
 			const out = el.querySelector('.kn__v'), show = () => { out.textContent = fmt(FXP[key]); };
 			const kn = knob(el.querySelector('.knob'), {
 				min, max: 1, step: 0.01, value: FXP[key],
-				onInput: v => { const before = FXP[key]; FXP[key] = key === 'filter' && Math.abs(v) < 0.02 ? 0 : v; show(); apply(target); touch('fx.' + key, before); },
+				onInput: v => { flavBake(); const before = FXP[key]; FXP[key] = key === 'filter' && Math.abs(v) < 0.02 ? 0 : v; show(); apply(target); touch('fx.' + key, before); },
 			});
 			ctl['fx.' + key] = { get: () => FXP[key], set: v => { FXP[key] = v; kn.set(v, false); show(); apply(target); } };
 			show();
@@ -761,12 +763,73 @@
 				const b = document.createElement('button');
 				b.type = 'button'; b.className = 'rack__opt fxrow__time'; b.title = 'Echo time, locked to the tempo';
 				const lbl = () => { b.textContent = ECHO_DIVS[FXP.div][0]; };
-				b.addEventListener('click', () => { const before = FXP.div; FXP.div = (FXP.div + 1) % ECHO_DIVS.length; lbl(); apply('dly'); touch('fx.div', before); });
+				b.addEventListener('click', () => { flavBake(); const before = FXP.div; FXP.div = (FXP.div + 1) % ECHO_DIVS.length; lbl(); apply('dly'); touch('fx.div', before); });
 				ctl['fx.div'] = { get: () => FXP.div, set: v => { FXP.div = v; lbl(); apply('dly'); } };
 				lbl(); el.append(b);
 			}
 		}
 	}
+
+	// ── Flavours: four macro knobs that each move several FX at once, plus 🎲 Surprise ──
+	// They sit on top of your own FX settings (the base): the knobs show the blend, and bringing every flavour back to
+	// 0 puts your settings back exactly. Touch an FX knob (or undo) while a flavour is up and the blend becomes your
+	// new settings. Surprise is filtered random: one or two flavours, never more than the ear can take.
+	const FLAVS = [ // amounts added per unit of flavour; div = the echo time it prefers
+		['sweet', 'Sweet', { filter: -0.25, glue: 0.5, echo: 0.12 }, 'Soft and warm: a gentle low-pass, a little room and echo'],
+		['sour', 'Sour', { filter: 0.3, echo: 0.3, crush: 0.15, div: 0 }, 'Thin and tangy: high-pass, a short echo, a touch of crush'],
+		['smoky', 'Smoky', { filter: -0.45, echo: 0.45, duck: 0.5, div: 2 }, 'Dark and slow: a deep low-pass, a long echo, the kick pumping the rest'],
+		['fizz', 'Fizz', { filter: 0.18, crush: 0.45, echo: 0.2, div: 0 }, 'Bright and sparkly: crush and a fast echo'],
+	];
+	const FXKEYS = ['filter', 'echo', 'duck', 'glue', 'crush', 'div'];
+	const flav = { sweet: 0, sour: 0, smoky: 0, fizz: 0 }, flavKn = {};
+	let flavBase = null;
+	function flavApply() {
+		const on = Object.values(flav).some(v => v > 0);
+		if (!on) { if (flavBase) { const b = flavBase; flavBase = null; for (const k of FXKEYS) ctl['fx.' + k]?.set(b[k]); } return; }
+		flavBase ||= Object.fromEntries(FXKEYS.map(k => [k, FXP[k]]));
+		const out = { ...flavBase };
+		let pull = 0;
+		for (const [id, , adds] of FLAVS) for (const [k, d] of Object.entries(adds)) {
+			if (k !== 'div') out[k] += d * flav[id];
+			else if (flav[id] * adds.echo > pull) { pull = flav[id] * adds.echo; out.div = d; }
+		}
+		out.filter = Math.max(-1, Math.min(1, out.filter));
+		for (const k of ['echo', 'duck', 'glue', 'crush']) out[k] = Math.max(0, Math.min(1, out[k]));
+		for (const k of FXKEYS) if (FXP[k] !== out[k]) ctl['fx.' + k]?.set(k === 'div' ? out[k] : +out[k].toFixed(3));
+	}
+	flavBake = () => {
+		if (!flavBase) return;
+		flavBase = null;
+		for (const id in flav) { flav[id] = 0; flavKn[id]?.set(0, false); flavKn[id]?.show(); }
+	};
+	for (const k of FXKEYS) { // what gets saved and undone is your own setting, never the flavoured one
+		const c = ctl['fx.' + k];
+		if (c) { const g = c.get; c.get = () => flavBase ? flavBase[k] : g(); }
+	}
+	const flavRow = document.createElement('div');
+	flavRow.className = 'flav'; flavRow.setAttribute('role', 'group'); flavRow.setAttribute('aria-label', 'Flavours');
+	for (const [id, lab, , tip] of FLAVS) {
+		const el = document.createElement('div');
+		el.className = 'kn flav__kn'; el.title = tip + '. Double-click for 0.';
+		el.innerHTML = `<span class="knob" aria-label="${lab}"></span><small>${lab}</small>`;
+		flavRow.append(el);
+		const kn = knob(el.querySelector('.knob'), { min: 0, max: 1, step: 0.01, value: 0, onInput: v => { flav[id] = v; kn.show(); flavApply(); } });
+		kn.show = () => el.classList.toggle('is-on', flav[id] > 0);
+		flavKn[id] = kn;
+	}
+	const surprise = document.createElement('button');
+	surprise.type = 'button'; surprise.className = 'chip flav__dice'; surprise.textContent = '✨ Surprise';
+	surprise.title = 'Surprise: a random blend of one or two flavours';
+	surprise.addEventListener('click', () => {
+		const ids = FLAVS.map(f => f[0]).sort(() => Math.random() - 0.5), two = Math.random() < 0.6;
+		for (const id in flav) flav[id] = 0;
+		flav[ids[0]] = 0.35 + Math.random() * 0.45;
+		if (two) flav[ids[1]] = 0.2 + Math.random() * 0.3;
+		if (flav.sour + flav.fizz > 0.9) { const k = 0.9 / (flav.sour + flav.fizz); flav.sour *= k; flav.fizz *= k; } // both at once get harsh
+		for (const id in flav) { flavKn[id].set(flav[id], false); flavKn[id].show(); }
+		flavApply();
+	});
+	flavRow.append(surprise);
 
 	// ── Pads ──
 	let kit = 'soul';
@@ -852,6 +915,15 @@
 		glowing[i]?.cancel();
 		glowing[i] = glows[i].animate([{ opacity: 0.9 }, { opacity: 0 }], { duration: ms, easing: 'ease-out' });
 	}
+	// Synesthesia (synesthesia.js, when it is there): every hit becomes colour, from its pitch or, for drums, how bright it is
+	const BRIGHT = [0.1, 0.5, 0.6, 0.9, 0.85, 0.8, 0.55, 0.7, 0.95, 0.4, 0.9, 0.75];
+	const midiHz = n => 440 * 2 ** ((n - 69) / 12);
+	function synNote(k, i, strength) {
+		if (!window.NDSyn) return;
+		const own = custom[k]?.[i], h = KITS[k]?.harm;
+		if (own || i < CHORD || !h) NDSyn.note(null, own ? 0.5 : BRIGHT[i] ?? 0.5, strength);
+		else NDSyn.note(midiHz(i < BASS ? h[i - CHORD].notes[0] : h[i - BASS].bass), i < BASS ? 0.6 : 0.2, strength);
+	}
 
 	async function hit(i) {
 		const c = audio();
@@ -860,6 +932,7 @@
 		if (!own && !buffers[kit]) await renderKit(kit);
 		playPad(kit, i, c.currentTime);            // sound first; every visual waits until it's scheduled
 		flash(i, 260);
+		synNote(kit, i, 1);
 		if (!NDAudio.prefs.lite) {
 			pressing[i]?.cancel();
 			pressing[i] = els[i].animate([{ transform: 'scale(0.93)' }, { transform: 'scale(1)' }], { duration: 220, easing: 'cubic-bezier(0.2, 0.9, 0.3, 1.2)' });
@@ -949,7 +1022,7 @@
 				if (ch !== 'x' && ch !== 'o') continue;
 				if (fill && s >= (big ? 8 : 12) && 'SGHOC'.includes(ln)) continue; // the fill takes over the end of the bar
 				if ((b === 15 || big) && ln === 'K' && s >= 12) continue;           // a breath before the next phrase
-				add(s, SLOT[ln], ch === 'x' ? 1 : 0.45);
+				add(s, SLOT[ln] ?? +ln.slice(1), ch === 'x' ? 1 : 0.45);           // '#7' = pad 7 (a chop lane)
 			}
 			if (b === 0 || b === 16) add(0, SLOT.X, 0.9);
 			if (vary) { add(14, SLOT.O, 0.6); add(15, SLOT.G, 0.4); }
@@ -983,6 +1056,7 @@
 			const beat = pat.step % 4 === 0, acc = pat.step === 0, bar = pat.step === 0 ? pat.bar : -1;
 			if (lit.length || beat) setTimeout(() => { // one timer per 16th, not one per hit
 				if (p.kit === kit && mode === 'pads') for (const i of lit) flash(i, 160);
+				for (const i of lit) synNote(p.kit, i, 0.6);
 				if (beat) window.wiggler?.beat(acc);
 				if (bar >= 0) patUi(bar);
 			}, Math.max(0, (at - ac.currentTime) * 1000));
@@ -1012,6 +1086,7 @@
 		+ `<button class="track beats__go" type="button" aria-pressed="false">▶ Play</button>`
 		+ `<button class="chip beats__midi" type="button" title="Download this pattern (Part A then B, 64 bars) as a MIDI file">⇩ MIDI</button>`;
 	grid.before(beatBar);
+	beatBar.after(flavRow);
 	const beatPick = beatBar.querySelector('.beats__pick'), beatGo = beatBar.querySelector('.beats__go'), partBtns = [...beatBar.querySelectorAll('.beats__part')];
 	let partSel = 'A';
 	function patUi(bar) {
@@ -1032,6 +1107,207 @@
 		if (pat.on) pat.want = { p: pat.want?.p || pat.on, part: partSel };
 		patUi();
 	}));
+
+	// ── 🎲 Generate: a fresh Part A and B for the kit on screen, from rules a drummer would follow ──
+	// Filtered randomness: each kit's genre gives the backbone (where the kick and snare go), the hats get a density and
+	// accents, ghosts and one percussion lane are sprinkled where they cannot clash with the snare, the bass mostly
+	// locks to the kick, and the chords walk one of a few progressions that always resolve. compile() then adds the
+	// crashes, the variations and the fills. A chop kit (your recordings) plays its chops instead: low and sharp ones
+	// as drums, words and hooks as phrases that are never cut off by their own next hit. Every take is a seed, so the
+	// last ones come back with ◀ ▶, and Keep puts one in the pattern list for good.
+	function rng(seed) { // mulberry32
+		let a = seed >>> 0;
+		const r = () => { a = a + 0x6d2b79f5 >>> 0; let t = a; t = Math.imul(t ^ t >>> 15, t | 1); t ^= t + Math.imul(t ^ t >>> 7, t | 61); return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+		r.pick = arr => arr[Math.floor(r() * arr.length)];
+		r.chance = p => r() < p;
+		r.range = ([a, b]) => a + r() * (b - a);
+		return r;
+	}
+	const FEEL = { // bpm, swing, kick and snare backbones, hat lanes, which lanes may sprinkle, chord rhythms, bass mode
+		boom: { bpm: [86, 96], swing: [0.18, 0.28], snare: 'S', K: ['x......x..x.....', 'x.........x..x..', 'x......x.xx.....', 'x..x......x.....'], S: ['....x.......x...'],
+			H: ['x.x.x.x.x.x.x.x.', 'x.xxx.x.x.xxx.x.'], perc: ['M', 'T', 'R'], ghost: 0.12, ch: ['x...............', 'x.....x.........', 'x.......x.......'], bass: 'kick' },
+		trap: { bpm: [136, 146], swing: [0, 0], snare: 'S', clap: true, K: ['x.........x.....x......x..x.....', 'x..x......x.....x.....x...x..x..', 'x.......x.x.....x......x........'],
+			S: ['........x.......'], H: ['x.x.x.x.x.x.x.x.', 'x.x.x.xxx.x.xxxx', 'xxx.x.x.x.xxx.x.'], perc: ['R', 'M', 'T'], ghost: 0, ch: ['x...............', 'x.......x.......'], bass: 'kick' },
+		dnb: { bpm: [170, 175], swing: [0, 0], snare: 'S', K: ['x.........x.....', 'x.........x.....x.........x..x..', 'x.x.......xx......xx......x.....'], S: ['....x.......x...'],
+			H: ['..x...x...x...x.', 'x.x.x.x.x.x.x.x.'], perc: ['T', 'R'], ghost: 0.14, ch: ['x...............', 'x.......x.......'], bass: 'kick' },
+		wob: { bpm: [140, 140], swing: [0, 0], snare: 'S', K: ['x.........x.....x......x..x.....', 'x...............x.........x.....'], S: ['........x.......'],
+			H: ['x.o.x.o.x.o.x.o.', 'x.x.x.x.x.x.x.x.'], perc: ['O', 'R'], ghost: 0.06, ch: ['x...............' + '......x.........', 'x...............'], bass: 'kick' },
+		half: { bpm: [76, 84], swing: [0.12, 0.18], snare: 'S', K: ['x.....x...x.....x.....x.x.......', 'x.....x...x..x..x.....x.x.....x.'], S: ['........x.......'],
+			H: ['x.x.x.x.x.x.x.x.', 'x.x.xxx.x.x.x.xx'], perc: ['T', 'M'], ghost: 0.1, ch: ['x.......x.......', 'x.....x.........'], bass: 'kick' },
+		step2: { bpm: [130, 134], swing: [0.18, 0.24], snare: 'S', K: ['x.........x.....x......x..x.....', 'x.........x.....x.........x.....'], S: ['....x.......x...'],
+			H: ['..x...x...x...x.'], perc: ['T', 'R'], ghost: 0.16, ch: ['...x..x.........' + '...x..x....x....', '...x..x...x.....'], bass: 'kick' },
+		four: { bpm: [122, 127], swing: [0.04, 0.1], snare: 'C', K: ['x...x...x...x...'], S: ['....x.......x...'], H: ['..x...x...x...x.'], hatLane: 'O',
+			perc: ['P', 'M'], ghost: 0, ch: ['...x..x....x....', 'x...............', '...x......x.....'], bass: 'off' },
+		disco: { bpm: [116, 122], swing: [0, 0.04], snare: 'S', K: ['x...x...x...x...'], S: ['....x.......x...'], H: ['..x...x...x...x.'], hatLane: 'O',
+			perc: ['P'], ghost: 0, ch: ['x...............', 'x.......x.......'], bass: 'octave' },
+		dub: { bpm: [72, 78], swing: [0.12, 0.18], snare: 'M', K: ['........x.......'], S: ['........x.......'], H: ['x.x.x.x.x.x.x.x.'],
+			perc: ['T'], ghost: 0, ch: ['....x.......x...', '..x...x...x...x.'], bass: 'dub' },
+	};
+	const KIT_FEEL = { soul: 'boom', 808: 'trap', jungle: 'dnb', liquid: 'dnb', neuro: 'dnb', dubstep: 'wob', half: 'half', ukg: 'step2', house: 'four', tech: 'four', disco: 'disco', dub: 'dub' };
+	const PROGS = [[0, 1, 2, 3], [0, 3, 1, 4], [0, 0, 1, 1], [0, 2, 3, 4], [0, 5, 3, 4], [0, 4, 1, 3], [0, 1, 4, 3], [0, 0, 3, 3]];
+	const GEN_NAMES = [['Pocket', 'Velvet', 'Rubber', 'Midnight', 'Dusty', 'Golden', 'Sunday', 'Heavy', 'Paper', 'Honey', 'Static', 'Moss', 'Neon', 'Rattle'],
+		['Shuffle', 'Engine', 'Lantern', 'Signal', 'Ladder', 'Bounce', 'Riddim', 'Parade', 'Wiggle', 'Roller', 'Puddle', 'Tunnel', 'Kettle', 'Comet']];
+	// One lane string: c at each step where p(step) says so
+	const laneOf = (len, p, c = 'x') => Array.from({ length: len }, (_, s) => (p(s) ? (typeof c === 'function' ? c(s) : c) : '.')).join('');
+	function hatsWithAccents(r, lane) { // downbeats loud, the rest a mix of soft and loud, so the hats breathe
+		return [...lane].map((c, s) => c === '.' ? '.' : s % 4 === 0 ? 'x' : r.chance(0.6) ? 'o' : 'x').join('');
+	}
+	function mutateKick(r, k, snare) { // sometimes one extra kick, on a free step that is not the snare's
+		const free = [...k].map((c, s) => c === '.' && snare[s % snare.length] === '.' && snare[(s + 1) % snare.length] === '.' && s % 16 > 2 ? s : -1).filter(s => s >= 0);
+		if (!free.length || !r.chance(0.45)) return k;
+		const s = r.pick(free), a = [...k]; a[s] = 'x';
+		return a.join('');
+	}
+	function bassFor(r, F, kick) { // the bass follows the kick (or its genre's own move), and sometimes leads into the next bar
+		if (F.bass === 'off') return r.pick(['..x...x...x...x.', '..xx..xx..xx..xx', '..x..xx...x..xx.']);
+		if (F.bass === 'octave') return r.pick(['x.x.....x.x...x.', 'x.x.x.x.x.x.x.x.', 'x...x.x.x...x.x.']);
+		if (F.bass === 'dub') return r.pick(['x.....x.x.......x.....x...x.x...', 'x...x...x.x.....x.....x.x.......', 'x.....x.x...x...x.....x...x.x.n.']);
+		return laneOf(Math.max(16, kick.length), s => kick[s % kick.length] === 'x' ? r.chance(0.88) : (s % 16 === 14 && r.chance(0.25)) || (s % 2 === 0 && r.chance(0.04)),
+			s => kick[s % kick.length] === 'x' ? 'x' : s % 16 === 14 ? 'n' : 'o');
+	}
+	function drumPart(r, F, B) { // B = Part B: busier, a different kick and progression, an fx hit at the end of the phrase
+		const d = {}, snare = r.pick(F.S);
+		let K = mutateKick(r, r.pick(F.K), snare);
+		if (B) K = mutateKick(r, K, snare);
+		if (F.bass === 'dub' && B && r.chance(0.5)) K = 'x...x...x...x...'; // steppers for the B
+		d.K = K; d[F.snare] = snare;
+		if (F.clap && r.chance(0.6)) d.C = snare;
+		const hats = B && F.H.length > 1 ? F.H[1 + Math.floor(r() * (F.H.length - 1))] : F.H[0];
+		d[F.hatLane || 'H'] = hatsWithAccents(r, hats);
+		if (F.hatLane) d.T = r.pick(['.o.o.o.o.o.o.o.o', 'o.o.o.o.o.o.o.o.', 'o.ox.oxoo.ox.oxo']);
+		if (F.ghost) d.G = laneOf(16, s => s % 2 === 1 && snare[s] === '.' && snare[(s + 1) % 16] !== 'x' && r.chance(F.ghost * (B ? 1.5 : 1)), 'o');
+		const perc = r.pick(F.perc);
+		if (!d[perc]) d[perc] = laneOf(32, s => s % 4 !== 0 && snare[s % snare.length] === '.' && r.chance(B ? 0.16 : 0.1), 'o');
+		if (B && r.chance(0.5)) d.F = Z(30) + 'x.';
+		return d;
+	}
+	// Chop kits: what each chop is good for, from its name and length (Boom/Snap/Tss come from the slicer, Word and Hook from speech)
+	function chopRoles(k) {
+		const pads = KITS[k].pads, bufs = buffers[k] || [], own = i => custom[k]?.[i];
+		const roles = { low: [], snap: [], tick: [], word: [], hook: [] };
+		for (let i = 0; i < CHORD; i++) {
+			if (!own(i) && pads[i][3] !== 'u') continue; // a pad the kit underneath filled in
+			const name = own(i)?.name || pads[i][0], len = (own(i)?.buffer || bufs[i])?.duration || 0;
+			if (/^Hook/.test(name) || len > 1.2) roles.hook.push([i, len]);
+			else if (/^Word/.test(name) || len > 0.35) roles.word.push([i, len]);
+			else if (/^Boom/.test(name)) roles.low.push([i, len]);
+			else if (/^Tss/.test(name)) roles.tick.push([i, len]);
+			else roles.snap.push([i, len]);
+		}
+		return roles;
+	}
+	// Words and hooks: a chop only starts once the last one has rung out, so nothing is ever cut off mid-word
+	function phraseLanes(r, roles, bpm, B) {
+		const lanes = {}, s16 = 60 / bpm / 4, len = 64; // 4 bars, repeating
+		const put = (i, s) => { const k = '#' + i; lanes[k] ||= Z(len).split(''); lanes[k][s] = 'x'; };
+		let free = 0;
+		for (let s = 0; s < len; s++) {
+			if (s < free) continue;
+			const hooks = roles.hook.filter(([, l]) => l / s16 < len - 2); // a hook longer than the 4 bars would cut itself off
+			if (s === 0 && hooks.length) { const [i, l] = r.pick(hooks); put(i, s); free = s + Math.ceil(l / s16) + 2; continue; }
+			const call = s % 32 < 16; // call and answer: words on the first bar of each two, a sparser reply on the second
+			if (roles.word.length && s % 2 === 0 && r.chance(call ? (B ? 0.22 : 0.16) : 0.08)) { const [i, l] = r.pick(roles.word); put(i, s); free = s + Math.max(2, Math.ceil(l / s16)); }
+		}
+		for (const k in lanes) lanes[k] = lanes[k].join('');
+		return lanes;
+	}
+	function chopPart(r, F, roles, bpm, B, isChop) {
+		const d = {}, base = drumPart(r, F, B), by = a => [...a].sort((x, y) => x[1] - y[1]).map(x => x[0]);
+		const low = by(roles.low), snap = by(roles.snap), tick = by(roles.tick);
+		const kick = low[0] ?? snap[0], snare = snap.find(i => i !== kick) ?? low[1] ?? tick[1], hat = tick[0];
+		const lane = (i, letter, l) => { if (i != null) d['#' + i] = l; else if (!isChop(SLOT[letter])) d[letter] = l; }; // no chop for it: the kit underneath, unless that pad is a chop too
+		lane(kick, 'K', base.K); lane(snare, F.snare, base[F.snare]); lane(hat, 'H', base[F.hatLane || 'H']);
+		const used = new Set([kick, snare, hat]), spare = [...low, ...snap, ...tick].filter(i => !used.has(i));
+		for (const i of spare.sort(() => r() - 0.5).slice(0, B ? 3 : 2)) // the other hits answer in the gaps
+			d['#' + i] = laneOf(32, s => s % 4 !== 0 && base[F.snare][s % base[F.snare].length] === '.' && r.chance(B ? 0.14 : 0.09), () => r.chance(0.5) ? 'x' : 'o');
+		Object.assign(d, phraseLanes(r, roles, bpm, B));
+		return { d, kick: base.K };
+	}
+	function generate(seed, k = kit) {
+		const r = rng(seed), F = FEEL[KIT_FEEL[k === MIC ? micFill : k] || 'boom'];
+		const bpm = Math.round(r.range(F.bpm)), swing = +r.range(F.swing).toFixed(2), chop = k === MIC || !!custom[k]?.some(Boolean);
+		const roles = chop ? chopRoles(k) : null, isChop = i => !!custom[k]?.[i] || KITS[k].pads[i]?.[3] === 'u';
+		const part = B => {
+			const c = chop ? chopPart(r, F, roles, bpm, B, isChop) : null, d = c ? c.d : drumPart(r, F, B);
+			return { d, prog: r.pick(PROGS), ch: r.pick(F.ch), bs: bassFor(r, F, c ? c.kick : d.K) };
+		};
+		const A = part(false), B = part(true);
+		if (chop) A.ch = Z(16); // the chops lead Part A; the chords come in for B
+		const p = { name: `${r.pick(GEN_NAMES[0])} ${r.pick(GEN_NAMES[1])}`, kit: k, bpm, swing, A, B, seed, gen: true };
+		p.bars = { A: compile(A), B: compile(B) };
+		if (chop) { // the crashes and fills compile() adds must not land on a word or the hook and cut it off
+			const keep = new Set([...roles.word, ...roles.hook].map(x => x[0]));
+			for (const [part, pt] of [['A', A], ['B', B]]) p.bars[part] = p.bars[part].map((ev, b) => ev.filter(([st, i]) => {
+				const ln = pt.d['#' + i];
+				return !keep.has(i) || (ln && 'xo'.includes(ln[(b * 16 + st) % ln.length]));
+			}));
+		}
+		return p;
+	}
+	const gen = { list: [], at: -1, kept: [] }; // recent takes (seeds) and the ones kept
+	const genBar = document.createElement('span');
+	genBar.className = 'beats__gen';
+	genBar.innerHTML = `<button class="track beats__dice" type="button" title="Generate a fresh Part A and B for this kit and play it">🎲</button>`
+		+ `<button class="chip beats__gprev" type="button" aria-label="Previous take" title="The take before" hidden>◀</button>`
+		+ `<button class="chip beats__gnext" type="button" aria-label="Next take" title="The take after" hidden>▶</button>`
+		+ `<button class="chip beats__keep" type="button" title="Keep this take in the pattern list" hidden>Keep</button>`;
+	beatGo.after(genBar);
+	const genOpt = document.createElement('option');
+	const [diceBtn, gPrev, gNext, keepBtn] = genBar.children;
+	function genUi() {
+		const cur = gen.list[gen.at];
+		gPrev.hidden = gNext.hidden = keepBtn.hidden = !cur;
+		if (!cur) return;
+		gPrev.disabled = gen.at <= 0; gNext.disabled = gen.at >= gen.list.length - 1;
+		keepBtn.disabled = gen.kept.some(g => g.seed === cur.seed);
+		keepBtn.textContent = keepBtn.disabled ? '✓ Kept' : 'Keep';
+	}
+	async function genShow(i) {
+		gen.at = i;
+		const { seed, kit: k } = gen.list[i];
+		if (k === MIC) await restoreMic();
+		if (!KITS[k]) return;
+		await renderKit(k);
+		const p = generate(seed, k), at = PATTERNS.findIndex(x => x.gen && !x.kept);
+		if (at >= 0) PATTERNS[at] = p; else PATTERNS.push(p);
+		genOpt.value = PATTERNS.indexOf(p); genOpt.textContent = `🎲 ${KITS[k].name} · ${p.name} · ${p.bpm}`;
+		if (!genOpt.parentNode) beatPick.prepend(genOpt);
+		beatPick.value = genOpt.value;
+		genUi();
+		patPlay(p, partSel);
+	}
+	diceBtn.addEventListener('click', () => {
+		gen.list = gen.list.slice(0, gen.at + 1);
+		gen.list.push({ seed: (Math.random() * 2 ** 32) >>> 0, kit });
+		if (gen.list.length > 12) gen.list.shift();
+		genShow(gen.list.length - 1);
+	});
+	gPrev.addEventListener('click', () => gen.at > 0 && genShow(gen.at - 1));
+	gNext.addEventListener('click', () => gen.at < gen.list.length - 1 && genShow(gen.at + 1));
+	function keepTake(g) {
+		const p = generate(g.seed, g.kit);
+		p.kept = true; PATTERNS.push(p);
+		beatPick.insertAdjacentHTML('beforeend', `<option value="${PATTERNS.length - 1}">⭐ ${KITS[g.kit].name} · ${p.name} · ${p.bpm}</option>`);
+		return p;
+	}
+	keepBtn.addEventListener('click', () => {
+		const g = gen.list[gen.at];
+		if (!g || gen.kept.some(x => x.seed === g.seed)) return;
+		gen.kept.push({ seed: g.seed, kit: g.kit });
+		keepTake(g); store.put('genKept', gen.kept); genUi();
+	});
+	async function restoreKept() { // kept takes come back as patterns (chop kit takes once the mic kit is back)
+		if (gen.restored) return;
+		gen.restored = true;
+		const list = await store.get('genKept');
+		if (!Array.isArray(list)) return;
+		for (const g of list) {
+			if (g.kit === MIC) await restoreMic();
+			if (!KITS[g.kit]) continue;
+			if (g.kit === MIC || custom[g.kit]?.some(Boolean)) await renderKit(g.kit);
+			gen.kept.push(g); keepTake(g);
+		}
+	}
 
 	// ⇩ MIDI: a standard type-1 file at 96 ticks per beat: tempo, then drums on channel 10 (General MIDI notes), chords, bass
 	const GM = [36, 38, 39, 42, 46, 51, 40, 37, 70, 63, 49, 56];
@@ -1077,8 +1353,8 @@
 	});
 
 	// ── Mic kit: record anything (beatbox, claps, pots and pans) and every hit lands on its own pad ──
-	// Hits are found by sudden jumps in loudness, each one trimmed to its natural decay and sorted low to high
-	// (kick-like sounds first) onto the 12 drum pads. The chords, the bass and any drum pads it can't fill keep the kit
+	// Hits and words are found by chopTake() (transients for the starts, gaps for the ends) and land on the 12 drum
+	// pads: hits low to high (kick-like sounds first), then standout words, then the whole phrase as a Hook. The chords, the bass and any drum pads it can't fill keep the kit
 	// you had on, so all 24 are always playable.
 	// The kit is saved in this browser and shows up as the last kit in the list.
 	const MIC = 'mic', MIC_MAX = 12; // seconds
@@ -1139,12 +1415,15 @@
 	}
 
 	// ── Pad modes, under the patterns: Play, Rec Pads, Vol, Send ──
-	const MODES = [['play', 'Play', 'Tap a pad to play it'], ['rec', 'Rec Pads', 'Tap a pad to record your mic into it, tap again to stop (4 seconds at most)'],
+	const MODES = [['play', 'Play', 'Tap a pad to play it'], ['rec', 'Rec Pads', 'Tap a pad to record your mic into it, tap again to stop (8 seconds at most). A take with several sounds can then be chopped across the pads.'],
 		['vol', 'Vol', 'Drag a pad up or down to set its volume'], ['send', 'Send', 'Drag a pad up or down to set how much of it goes to the echo, the room and the crush']];
 	modeBar = document.createElement('div');
 	modeBar.className = 'padmodes'; modeBar.setAttribute('role', 'group'); modeBar.setAttribute('aria-label', 'What a pad tap does');
-	modeBar.innerHTML = MODES.map(([id, lab, tip]) => `<button type="button" class="chip padmodes__b" data-pm="${id}" aria-pressed="${id === padMode}" title="${tip}">${lab}</button>`).join('');
+	modeBar.innerHTML = MODES.map(([id, lab, tip]) => `<button type="button" class="chip padmodes__b" data-pm="${id}" aria-pressed="${id === padMode}" title="${tip}">${lab}</button>`).join('')
+		+ `<button type="button" class="chip padmodes__chop" hidden title="Spread the last take across the pads: each hit or word on its own pad, the whole phrase as a Hook">✂ Chop</button>`;
 	grid.before(modeBar);
+	const chopBtn = modeBar.querySelector('.padmodes__chop');
+	let lastTake = null; // { rec, i, kit }: the last Rec Pads take, while it can still be chopped
 	function setPadMode(id) {
 		if (padRec) padRecTap(padRec.i); // leaving Rec Pads finishes a take that is still running
 		padMode = id;
@@ -1153,9 +1432,21 @@
 		showVals();
 	}
 	modeBar.addEventListener('click', e => { const b = e.target.closest('[data-pm]'); if (b) setPadMode(b.dataset.pm); });
+	chopBtn.addEventListener('click', () => { // the chops go onto the drum pads, from the one you recorded into: hits, then words, then the hook
+		const t = lastTake; chopBtn.hidden = true; lastTake = null;
+		if (!t) return;
+		const chops = chopTake(t.rec).sort((a, b) => (a.name === 'Hook') - (b.name === 'Hook'));
+		const start = t.i < CHORD ? t.i : 0;
+		chops.slice(0, CHORD - start).forEach((c, k) => {
+			const b = ac.createBuffer(1, c.data.length, t.rec.sampleRate); b.copyToChannel(c.data, 0);
+			custom[t.kit][start + k] = { buffer: b, name: c.name }; levelTrim(b);
+			setTimeout(() => flash(start + k, 300), k * 60);
+		});
+		label();
+	});
 	grid.dataset.pm = padMode;
 	// Rec Pads: the mic goes straight into one pad (this kit, this visit), trimmed and brought up to a playable level
-	const PAD_REC_MAX = 4;
+	const PAD_REC_MAX = 8;
 	let padRec = null;
 	async function padRecTap(i) {
 		if (padRec) { const r = padRec; padRec = null; r.end(); return; }
@@ -1168,60 +1459,136 @@
 			clearInterval(auto); els[i].classList.remove('is-rec');
 			const rec = m.stop();
 			if (!rec) return;
-			const buffer = trim(rec), d = buffer.getChannelData(0);
-			let pk = 0; for (const v of d) pk = Math.max(pk, Math.abs(v));
-			if (pk > 1e-4) for (let k = 0; k < d.length; k++) d[k] *= 0.9 / pk;
+			const buffer = tighten(rec); // from just before the first transient, silence trimmed, peak at 0.9
 			custom[kit][i] = { buffer, name: 'Rec ' + KEY_LABELS[i] };
 			levelTrim(buffer); label(); hit(i);
+			const many = rec.duration > 0.8 && piecesOf(monoOf(rec), rec.sampleRate).pieces.length > 1;
+			lastTake = many ? { rec, i, kit } : null; chopBtn.hidden = !many;
 		};
 		if (padRec) padRec.end = end; else end(); // the take was stopped while the mic was still opening
 	}
-	function sliceHits(buf) { // → up to 12 { data, name }, low sounds first
-		const sr = buf.sampleRate, n = buf.length, x = new Float32Array(n);
-		for (let ch = 0; ch < buf.numberOfChannels; ch++) { const d = buf.getChannelData(ch); for (let i = 0; i < n; i++) x[i] += d[i] / buf.numberOfChannels; }
-		const hop = Math.round(sr * 0.005), F = Math.floor(n / hop), db = new Float32Array(F);
+	// ── Chopping a recording: transients for where a chop starts, silences for where it may end ──
+	// Every 5 ms we measure the loudness and the "edge" (energy of the sample-to-sample difference, which jumps on clicks,
+	// consonants and stick hits before the body of a sound arrives). An onset is a sharp rise in either, at least 80 ms
+	// after the last; its start is walked back to where the rise began and set 3 ms earlier, so the attack is kept.
+	// Chops only ever end in a gap: sound is grouped into runs that stay above the floor (dips under 70 ms are inside a
+	// word), and a run is only split at an onset when the sound before it fell well away (a hit's tail, not a syllable).
+	// So a word is never cut in half, a phrase can run whole as a Hook, and beatbox hits still come apart.
+	function analyseTake(x, sr) {
+		const hop = Math.round(sr * 0.005), F = Math.floor(x.length / hop), db = new Float32Array(F), eb = new Float32Array(F);
 		let top = -120;
 		for (let f = 0; f < F; f++) {
-			let e = 0;
-			for (let i = f * hop, j = Math.min(n, i + 2 * hop); i < j; i++) e += x[i] * x[i];
-			db[f] = 10 * Math.log10(e / (2 * hop) + 1e-12); top = Math.max(top, db[f]);
+			let e = 0, h = 0;
+			for (let i = f * hop, j = Math.min(x.length, i + 2 * hop); i < j; i++) { e += x[i] * x[i]; const d = x[i] - (i ? x[i - 1] : 0); h += d * d; }
+			db[f] = 10 * Math.log10(e / (2 * hop) + 1e-12); eb[f] = 10 * Math.log10(h / (2 * hop) + 1e-12); top = Math.max(top, db[f]);
 		}
-		const onsets = []; // a 9 dB jump over the last 30 ms, within 32 dB of the loudest hit, at least 80 ms apart
-		for (let f = 6, last = -99; f < F; f++) {
-			let base = 0; for (let k = 1; k <= 6; k++) base += db[f - k]; base /= 6;
-			if (db[f] > top - 32 && db[f] - base > 9 && f - last > 16) {
-				let st = f; while (st > f - 4 && st > 0 && db[st - 1] < db[st]) st--; // back up to where the rise began
-				onsets.push(st); last = f;
+		const sorted = Float32Array.from(db).sort(), floor = sorted[Math.floor(F * 0.1)] || -120;
+		const thr = Math.max(top - 38, floor + 9);
+		const rise = f => { let a = 0, b = 0; for (let k = 1; k <= 6; k++) { a += db[f - k]; b += eb[f - k]; } return Math.max(db[f] - a / 6, eb[f] - b / 6); };
+		const onsets = [];
+		for (let f = 6, last = -99; f < F - 1; f++) {
+			if (db[f] < top - 32 || db[f] < thr || f - last < 16) continue;
+			const r = rise(f);
+			if (r < 9 || r < rise(f + 1)) continue; // the steepest frame of the rise
+			let st = f; while (st > f - 6 && st > 0 && db[st - 1] < db[st] - 0.5) st--;
+			onsets.push(st); last = f;
+		}
+		const runs = []; // stretches above the floor, with short dips merged in
+		for (let f = 0, a = -1, quiet = 0; f <= F; f++) {
+			const on = f < F && db[f] >= thr;
+			if (on) { if (a < 0) a = f; quiet = 0; }
+			else if (a >= 0 && (++quiet > 14 || f === F)) { runs.push([a, f - quiet + 1]); a = -1; quiet = 0; }
+		}
+		return { hop, F, db, top, thr, onsets, runs };
+	}
+	// → pieces [{ a, b } in samples, start just before the transient, end in the gap], in time order
+	function piecesOf(x, sr) {
+		const A = analyseTake(x, sr), { hop, db, onsets, runs } = A, pre = Math.round(sr * 0.003), out = [];
+		const refine = s => { // a frame only says "in these 10 ms": find the first sample that is really part of the attack
+			const end = Math.min(x.length, s + Math.round(sr * 0.025));
+			let pk = 0; for (let i = s; i < end; i++) pk = Math.max(pk, Math.abs(x[i]));
+			let fl = 0; for (let i = Math.max(0, s - hop * 2); i < s; i++) fl = Math.max(fl, Math.abs(x[i]));
+			const th = Math.max(pk * 0.1, fl * 2);
+			for (let i = s, j = Math.min(x.length, s + hop * 3); i < j; i++) if (Math.abs(x[i]) > th) return Math.max(0, i - pre);
+			return Math.max(0, s - pre);
+		};
+		for (const [ra, rb] of runs) {
+			let peak = -120; for (let f = ra; f < rb; f++) peak = Math.max(peak, db[f]);
+			if (rb - ra < 6 && peak < A.top - 20) continue; // a blip
+			const cuts = [ra];
+			for (const o of onsets) {
+				if (o <= ra + 8 || o >= rb - 4) continue;
+				let dip = 0; for (let f = Math.max(ra, o - 6); f < o; f++) dip = Math.min(dip, db[f] - peak);
+				if (dip < -15) cuts.push(o); // the sound before had died away: a new hit, not the next syllable
+			}
+			const first = onsets.find(o => o >= ra - 4 && o <= ra + 8);
+			if (first !== undefined) cuts[0] = Math.min(cuts[0], first);
+			cuts.push(rb);
+			for (let k = 0; k < cuts.length - 1; k++) {
+				const a = refine(cuts[k] * hop), b = Math.min(x.length, k === cuts.length - 2 ? cuts[k + 1] * hop + hop * 4 : refine(cuts[k + 1] * hop));
+				if (b - a > sr * 0.03) out.push({ a, b });
 			}
 		}
-		const hits = [];
-		onsets.forEach((f, k) => {
-			const stopF = Math.min(k + 1 < onsets.length ? onsets[k + 1] : F, f + 200); // next hit, or 1 s at most
-			let peakDb = -120; for (let g = f; g < Math.min(stopF, f + 20); g++) peakDb = Math.max(peakDb, db[g]);
-			let endF = stopF; for (let g = f + 4; g < stopF; g++) if (db[g] < peakDb - 36) { endF = g; break; } // natural decay
-			const start = Math.max(0, f * hop - Math.round(sr * 0.002)), end = Math.min(n, (endF + 1) * hop);
-			if (end - start < sr * 0.03) return;
-			const d = x.slice(start, end);
-			let pk = 0; for (const v of d) pk = Math.max(pk, Math.abs(v));
-			if (pk < 1e-4) return;
-			const fi = Math.round(sr * 0.002), fo = Math.min(Math.round(sr * 0.02), d.length >> 2);
-			for (let i = 0; i < fi; i++) d[i] *= i / fi;
-			for (let i = 0; i < fo; i++) d[d.length - 1 - i] *= i / fo;
-			for (let i = 0; i < d.length; i++) d[i] *= 0.9 / pk;
-			let zc = 0, lo = 0, lp = 0, all = 0; const L = Math.min(d.length, Math.round(sr * 0.08)), a = 1 - Math.exp(-2 * Math.PI * 150 / sr);
-			for (let i = 1; i < L; i++) {
-				if ((d[i] >= 0) !== (d[i - 1] >= 0)) zc++;
-				lp += a * (d[i] - lp); lo += lp * lp; all += d[i] * d[i]; // share of energy under ~150 Hz
+		return { pieces: out, A };
+	}
+	function chopData(x, a, b, sr) { // copy, 1 ms fade in, 5 ms fade out, peak at 0.9
+		const d = x.slice(a, b), fi = Math.round(sr * 0.001), fo = Math.min(Math.round(sr * 0.005), d.length >> 2);
+		let pk = 0; for (const v of d) pk = Math.max(pk, Math.abs(v));
+		if (pk < 1e-4) return null;
+		for (let i = 0; i < fi; i++) d[i] *= i / fi;
+		for (let i = 0; i < fo; i++) d[d.length - 1 - i] *= i / fo;
+		for (let i = 0; i < d.length; i++) d[i] *= 0.9 / pk;
+		return d;
+	}
+	function monoOf(buf) {
+		const n = buf.length, x = new Float32Array(n);
+		for (let ch = 0; ch < buf.numberOfChannels; ch++) { const d = buf.getChannelData(ch); for (let i = 0; i < n; i++) x[i] += d[i] / buf.numberOfChannels; }
+		return x;
+	}
+	function colourOf(d, sr) { // zero crossings and the share of energy under ~150 Hz, over the first 80 ms
+		let zc = 0, lo = 0, lp = 0, all = 0; const L = Math.min(d.length, Math.round(sr * 0.08)), a = 1 - Math.exp(-2 * Math.PI * 150 / sr);
+		for (let i = 1; i < L; i++) { if ((d[i] >= 0) !== (d[i - 1] >= 0)) zc++; lp += a * (d[i] - lp); lo += lp * lp; all += d[i] * d[i]; }
+		return { zcr: zc / (L / sr), low: lo / (all || 1) };
+	}
+	// A whole take → up to 12 { data, name }: hits low to high first, then standout words, then the hook (the longest phrase, whole)
+	function chopTake(buf) {
+		const sr = buf.sampleRate, x = monoOf(buf), { pieces, A } = piecesOf(x, sr);
+		const hits = [], words = [], lens = pieces.map(p => (p.b - p.a) / sr).sort((a, b) => a - b);
+		const wordLen = lens.length && lens[lens.length >> 1] > 0.3 ? 0.15 : 0.35; // a take that is mostly talk: short words are words, not hits
+		for (const p of pieces) {
+			const len = (p.b - p.a) / sr, d = chopData(x, p.a, p.b, sr);
+			if (!d) continue;
+			let pk = -120; for (let f = Math.floor(p.a / A.hop); f < Math.min(A.F, p.b / A.hop); f++) pk = Math.max(pk, A.db[f]);
+			const item = { data: d, len, loud: pk, ...colourOf(d, sr), at: p.a };
+			(len < wordLen ? hits : words).push(item);
+		}
+		let hook = null; // the longest run of words with gaps under 300 ms between them
+		if (words.length >= 2) {
+			let best = null;
+			for (let i = 0; i < pieces.length; i++) {
+				let j = i; while (j + 1 < pieces.length && (pieces[j + 1].a - pieces[j].b) / sr < 0.3) j++;
+				const len = (pieces[j].b - pieces[i].a) / sr;
+				if (j > i && (!best || len > best.len) && len <= MIC_MAX) best = { a: pieces[i].a, b: pieces[j].b, len };
+				i = j;
 			}
-			hits.push({ data: d, peak: pk, zcr: zc / (L / sr), low: lo / (all || 1), len: d.length / sr });
-		});
-		const best = hits.sort((a, b) => b.peak - a.peak).slice(0, CHORD).sort((a, b) => a.zcr - b.zcr);
-		const count = {};
-		return best.map(h => {
-			const w = h.low > 0.3 ? 'Boom' : h.len < 0.1 ? 'Tss' : 'Snap'; // deep, short and bright, or in between
-			count[w] = (count[w] || 0) + 1;
-			return { data: h.data, name: `${w} ${count[w]}` };
-		});
+			if (best) { const d = chopData(x, best.a, best.b, sr); if (d) hook = { data: d, name: 'Hook' }; }
+		}
+		if (!hook) { const long = words.filter(w => w.len > 1.2).sort((a, b) => b.len - a.len)[0]; if (long) hook = { data: long.data, name: 'Hook' }; } // one long phrase on its own
+		const wordsCut = words.filter(w => w.len <= 1.2).sort((a, b) => b.loud - a.loud).slice(0, CHORD - (hook ? 1 : 0) - Math.min(hits.length, 6)).sort((a, b) => a.at - b.at);
+		const room = CHORD - wordsCut.length - (hook ? 1 : 0);
+		const best = hits.sort((a, b) => b.loud - a.loud).slice(0, room).sort((a, b) => a.zcr - b.zcr);
+		const count = {}, name = w => { count[w] = (count[w] || 0) + 1; return `${w} ${count[w]}`; };
+		return [...best.map(h => ({ data: h.data, name: name(h.low > 0.3 ? 'Boom' : h.len < 0.1 ? 'Tss' : 'Snap') })),
+			...wordsCut.map(w => ({ data: w.data, name: name('Word') })), ...(hook ? [hook] : [])];
+	}
+	// One pad's take, tightened: from just before its first transient to the end of its last sound, 5 ms fade out
+	function tighten(buf) {
+		const sr = buf.sampleRate, x = monoOf(buf), { pieces } = piecesOf(x, sr);
+		if (!pieces.length) return trim(buf);
+		const d = chopData(x, pieces[0].a, pieces.at(-1).b, sr);
+		if (!d) return trim(buf);
+		const out = ac.createBuffer(1, d.length, sr); out.copyToChannel(d, 0);
+		return out;
 	}
 	async function buildMicKit(hits, sr, fill) {
 		if (!KITS[fill] || fill === MIC) fill = 'soul';
@@ -1238,7 +1605,7 @@
 		if (!KIT_ORDER.includes(MIC)) { KIT_ORDER.push(MIC); kitSel?.insertAdjacentHTML('beforeend', `<option value="${MIC}">${KITS[MIC].name}</option>`); }
 	}
 	async function micKit(rec) {
-		const hits = sliceHits(rec);
+		const hits = chopTake(rec);
 		if (!hits.length) { alert('No hits found. Try claps, beatbox or taps, a little closer to the mic.'); return 0; }
 		await buildMicKit(hits, rec.sampleRate, kit === MIC ? micFill : kit);
 		store.put('micKit', { sr: rec.sampleRate, fill: micFill, hits });
@@ -1393,7 +1760,7 @@
 		let recSlot = -1, pending = null, delMode = false, micSrc = null, scratch = null, repeats = [];
 		const spb = () => 60 / tempo;
 
-		box.innerHTML = `<div class="loops__slots"></div><div class="loops__bar">
+		box.innerHTML = `<div class="loops__slots"></div><div class="loops__bar more-only">
 			<button type="button" class="chip" data-o="loop" aria-pressed="true" title="On: slots loop. Off: one-shot, each tap plays it once">Loop</button>
 			<button type="button" class="chip" data-o="count" aria-pressed="true" title="Count-in: a bar of click first, recording starts on the downbeat and snaps to whole beats">Count-in</button>
 			<button type="button" class="chip" data-o="mic" aria-pressed="false" title="Record source: the pads (with FX), or your microphone">Src: Pads</button>
@@ -2350,24 +2717,33 @@
 	})();
 
 	// ── The popup: opening it warms up audio + renders the kits, so the very first hit is instant ──
+	let synMounted = false;
 	const bot = pad.querySelector('.bot');
 	if (bot && window.wiggler) wiggler.mount(bot);
 	document.querySelectorAll('.rig-open').forEach(b => b.addEventListener('click', () => {
 		rig.showModal();
 		const c = audio();
 		if (c.state === 'suspended') c.resume();
-		renderAll(); restoreMic();
+		renderAll(); restoreMic().then(restoreKept);
+		if (window.NDSyn && !synMounted) { // the colours read the kit after the DJ filter
+			synMounted = true;
+			const an = c.createAnalyser(); an.fftSize = 256; lpF.connect(an);
+			NDSyn.mount(pad, { analyser: an });
+			NDSyn.toggleButton(pad.querySelector('.pad__tools'));
+		}
 		if (view === 'stage') window.wiggler?.start();
 		loops?.wake();
 		setTimeout(showLatency, 400); // outputLatency is only known once audio is actually flowing
 	}));
 	try { if (sessionStorage.getItem('bp-reopen')) { sessionStorage.removeItem('bp-reopen'); document.querySelector('.rig-open')?.click(); } } catch {} // back from a Safe/Tight switch
 	rig.querySelector('.rig__close').addEventListener('click', () => rig.close());
-	rig.querySelector('.pad__fx')?.addEventListener('click', e => { // phones: the effects rack folds away so the pads get the room
-		const on = rig.classList.toggle('show-fx'); e.currentTarget.setAttribute('aria-pressed', String(on));
+	rig.querySelector('.pad__fx')?.addEventListener('click', e => { // More: everything not needed to play folds away, so the pads get the room
+		const on = rig.classList.toggle('show-more'); e.currentTarget.setAttribute('aria-pressed', String(on));
 	});
 	rig.addEventListener('click', e => { if (e.target === rig) rig.close(); }); // tap the backdrop to close
 	rig.addEventListener('close', () => { beatStop(); window.wiggler?.stop(); roll?.stop(); metro.stop(); loops?.sleep(); synthUi?.panic(); commit(); saveAll(); });
+
+	window.BEATPAD = { generate, chopTake, piecesOf, midiFile, compile, PATTERNS, KITS, FXP, flav, ctl, buffers, custom, pat, gen, get kit() { return kit; }, set kit(k) { kit = k; label(); } }; // for tests and the curious
 
 	// Keyboard: 1-4 / Q-R / A-F / Z-V, but only while the popup is open.
 	addEventListener('keydown', e => {
