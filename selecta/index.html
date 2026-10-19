@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Robo-Selecta | Nicky Dubs</title>
+<meta name="description" content="An endless DJ set that writes its own tracks as it plays: tech house, garage, dubstep, halftime, liquid and jungle, mixed in key.">
+<meta name="theme-color" content="#0b0e22">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<style>
+:root { --bg: #0b0e22; --panel: #141836; --line: rgba(255, 255, 255, 0.09); --text: #eef0ff; --muted: #9aa0c3; --orange: #ff7a3d; --blue: #5c74ff; --cyan: #34d6ff; --green: #7dffb0; }
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.45 Inter, system-ui, -apple-system, "Segoe UI", sans-serif; }
+body { min-height: 100dvh; padding: 16px; display: flex; justify-content: center; }
+main { width: min(720px, 100%); display: grid; gap: 12px; align-content: start; }
+header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+h1 { margin: 0; font-size: 1.35rem; letter-spacing: 0.02em; }
+h1 small { display: block; color: var(--muted); font-size: 0.75rem; font-weight: 500; letter-spacing: 0; }
+header a { color: var(--muted); font-size: 0.8rem; }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 14px; }
+.now b, .next b { display: block; font-size: 1.25rem; }
+.next b { font-size: 1rem; }
+.role { color: var(--muted); font-size: 0.68rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; }
+.meta { color: var(--muted); font-size: 0.85rem; }
+.sec { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: baseline; }
+#section { color: var(--orange); font-weight: 700; font-variant-numeric: tabular-nums; }
+#dipole { color: var(--cyan); font-size: 0.85rem; }
+canvas { display: block; width: 100%; height: 110px; margin-top: 10px; border-radius: 10px; background: #0f1330; }
+.transport { display: grid; grid-template-columns: 1.6fr 1fr 1fr; gap: 8px; }
+button { font: inherit; color: var(--text); background: #1c2147; border: 1px solid var(--line); border-radius: 12px; padding: 12px; cursor: pointer; }
+button:hover { border-color: rgba(255, 255, 255, 0.25); }
+#play { font-size: 1.2rem; font-weight: 800; background: linear-gradient(180deg, #2a3170, #1c2147); }
+#play.on, #hold.on { border-color: var(--orange); box-shadow: 0 0 16px -4px var(--orange); }
+#faders { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; }
+.fader { display: grid; justify-items: center; gap: 6px; font-size: 0.72rem; color: var(--muted); cursor: pointer; }
+.fader input { writing-mode: vertical-lr; direction: rtl; width: 34px; height: 130px; accent-color: var(--orange); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.chip { padding: 7px 11px; border-radius: 999px; font-size: 0.8rem; color: var(--muted); }
+.chip.on { color: var(--text); border-color: var(--blue); box-shadow: inset 0 0 10px -3px var(--blue); }
+.vol { display: flex; align-items: center; gap: 10px; margin-top: 12px; color: var(--muted); font-size: 0.8rem; }
+.vol input { flex: 1; accent-color: var(--green); }
+#history { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+#history li { display: grid; grid-template-columns: 1fr auto; gap: 0 10px; font-size: 0.85rem; }
+#history span { color: var(--muted); grid-column: 1; }
+#history i { color: var(--muted); font-size: 0.75rem; grid-column: 2; grid-row: 1 / 3; align-self: center; }
+.muted { color: var(--muted); }
+details summary { cursor: pointer; color: var(--muted); font-size: 0.85rem; }
+details p { color: var(--muted); font-size: 0.85rem; margin: 8px 0 0; }
+@media (max-width: 520px) {
+	body { padding: 12px; }
+	#faders { gap: 2px; }
+	.fader input { height: 110px; }
+	.fader span { font-size: 0.62rem; }
+}
+</style>
+</head>
+<body>
+<main>
+	<header>
+		<h1>Robo-Selecta<small>An endless set that writes its own tracks as it plays them</small></h1>
+		<a href="../">nickydubs</a>
+	</header>
+	<section class="panel now">
+		<span class="role">Now playing</span>
+		<b id="nowName">Press play</b>
+		<span class="meta" id="nowMeta">Tech house, garage, dubstep, halftime, liquid and jungle, mixed in key</span>
+		<div class="sec"><span id="section"></span><span id="dipole"></span></div>
+		<canvas id="arc" aria-label="This track's arrangement and where the set is in it"></canvas>
+	</section>
+	<section class="panel next">
+		<span class="role">Next</span>
+		<b id="nextName">…</b>
+		<span class="meta" id="nextMeta">Chosen while the current track plays</span>
+	</section>
+	<div class="transport">
+		<button id="play" type="button">▶ Play</button>
+		<button id="next" type="button" title="Skip ahead to the mix into the next track">Mix next ⏭</button>
+		<button id="hold" type="button" title="Loop the section that is playing now">Hold section</button>
+	</div>
+	<section class="panel">
+		<div id="faders"></div>
+		<div class="chips" id="genres" aria-label="Genres in the set"></div>
+		<label class="vol">Volume <input id="vol" type="range" min="0" max="1" step="0.01"></label>
+	</section>
+	<section class="panel">
+		<span class="role">Played</span>
+		<ul id="history"></ul>
+	</section>
+	<details class="panel">
+		<summary>How it works</summary>
+		<p>Every track is written on the spot from a genre's rules: its drums, its bass, its chords and a key on the Camelot wheel. Tracks are built in 32-bar chunks so they line up with how people dance: an intro, a breakdown and build, a drop and a switch-up, then an outro. One breakdown-to-drop cycle takes about 90 to 120 seconds (the Cycle fader).</p>
+		<p>The next key is always a harmonic mix: the same key, one step round the wheel, or the relative major or minor. When the tempos are close, the next track blends in over 32 bars with a bass swap halfway. When they are far apart, the old track winds up, echoes out and the new one drops on the 1.</p>
+		<p>Melodies play as call and response between two opposite ideas, named on screen while they play: low against high, straight against triplet, harmony against dissonance, nostalgia against now, and more.</p>
+	</details>
+</main>
+<script src="selecta.js?v=1"></script>
+</body>
+</html>
