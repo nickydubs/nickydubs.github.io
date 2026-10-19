@@ -8,7 +8,7 @@ function DJStretchWorklet() {
   class Loader extends AudioWorkletProcessor {
     constructor() {
       super();
-      this.port.onmessage = e => { const d = e.data; if (d.cmd === 'put') BUFS.set(d.id, d.ch); else if (d.cmd === 'del') BUFS.delete(d.id); };
+      this.port.onmessage = e => { const d = e.data; if (d.cmd === 'put') BUFS.set(d.id, { ch: d.ch, dm: d.dm }); else if (d.cmd === 'del') BUFS.delete(d.id); };
     }
     process() { return true; }
   }
@@ -18,8 +18,8 @@ function DJStretchWorklet() {
     static get parameterDescriptors() { return [{ name: 'rate', defaultValue: 1, minValue: 0.25, maxValue: 4, automationRate: 'a-rate' }]; }
     constructor(opts) {
       super();
-      this.ch = BUFS.get(opts.processorOptions.id) || [new Float32Array(1)];
-      this.len = this.ch[0].length;
+      const b = BUFS.get(opts.processorOptions.id) || { ch: [new Float32Array(1)], dm: new Float32Array(1) };
+      this.ch = b.ch; this.dm = b.dm; this.len = this.ch[0].length;
       const N = sampleRate > 60000 ? 4096 : 2048;                 // ~43-46 ms frames, and a search of +-12 ms (one 40 Hz cycle is 25 ms),
       this.N = N; this.Hs = N / 2; this.D = Math.round(sampleRate * 0.012);   // so subs keep their pitch, not just mids and highs
       this.win = new Float32Array(N); for (let k = 0; k < N; k++) this.win[k] = 0.5 - 0.5 * Math.cos(2 * Math.PI * k / N);
@@ -40,21 +40,48 @@ function DJStretchWorklet() {
       return i >= 0 && i < this.len ? ch[i] : 0;
     }
     mono(i) { return this.read(0, i) + (this.ch.length > 1 ? this.read(1, i) : 0); }
+    rdm(j) {                                  // the quarter-rate mono copy, with the loop wrap (slow path only)
+      if (this.loopOn && this.le > this.ls) { const a = this.ls >> 2, b = this.le >> 2; if (j >= b && b > a) j = a + ((j - a) % (b - a)); }
+      return j >= 0 && j < this.dm.length ? this.dm[j] : 0;
+    }
+    // Plain index ranges [lo, hi) can be read straight from the arrays: inside the track and not across the loop end
+    flat(lo, hi) { return lo >= 0 && hi <= this.len && !(this.loopOn && this.le > this.ls && hi > this.le); }
     hop(rate) {
       const N = this.N, Hs = this.Hs, D = this.D;
       let t = Math.round(this.pos), best = 0;
       if (this.prev >= 0 && Math.abs(rate - 1) > 1e-4) {
-        // WSOLA: pick the offset whose start best continues what the previous frame would have played next
-        const nat = this.prev + Hs, L = Hs, st = 4;
-        let bestC = -Infinity;
-        const corr = d => { let c = 0; for (let k = 0; k < L; k += st) c += this.mono(nat + k) * this.mono(t + d + k); return c; };
-        for (let d = -D; d <= D; d += 4) { const c = corr(d); if (c > bestC) { bestC = c; best = d; } }
-        for (let d = best - 3; d <= best + 3; d++) { if (d === best || d < -D || d > D) continue; const c = corr(d); if (c > bestC) { bestC = c; best = d; } }
+        // WSOLA: pick the offset whose start best continues what the previous frame would have played next.
+        // Coarse search on the quarter-rate mono copy (every candidate, every other sample), then refine at full rate.
+        const nat = this.prev + Hs, dm = this.dm, n4 = nat >> 2, t4 = t >> 2, D4 = D >> 2, L4 = Hs >> 2;
+        let bestC = -Infinity, b4 = 0;
+        if (this.flat(Math.min(nat, t - D), Math.max(nat, t + D) + Hs + 8)) {
+          for (let d = -D4; d <= D4; d++) {
+            let c = 0; const o = t4 + d;
+            for (let k = 0; k < L4; k += 2) c += dm[n4 + k] * dm[o + k];
+            if (c > bestC) { bestC = c; b4 = d; }
+          }
+        } else {
+          for (let d = -D4; d <= D4; d++) {
+            let c = 0;
+            for (let k = 0; k < L4; k += 2) c += this.rdm(n4 + k) * this.rdm(t4 + d + k);
+            if (c > bestC) { bestC = c; b4 = d; }
+          }
+        }
+        bestC = -Infinity;
+        const L = this.ch[0], R = this.ch[this.ch.length > 1 ? 1 : 0], ff = this.flat(Math.min(nat, t + b4 * 4 - 3), Math.max(nat, t + b4 * 4 + 3) + Hs);
+        for (let d = b4 * 4 - 3; d <= b4 * 4 + 3; d++) {
+          if (d < -D || d > D) continue;
+          let c = 0; const o = t + d;
+          if (ff) for (let k = 0; k < Hs; k += 4) c += (L[nat + k] + R[nat + k]) * (L[o + k] + R[o + k]);
+          else for (let k = 0; k < Hs; k += 4) c += this.mono(nat + k) * this.mono(o + k);
+          if (c > bestC) { bestC = c; best = d; }
+        }
       }
-      const src = t + best, w = this.win;
+      const src = t + best, w = this.win, fast = this.flat(src, src + N);
       for (let c = 0; c < 2; c++) {
-        const a = this.acc[c];
-        for (let k = 0; k < N; k++) a[k] += this.read(c, src + k) * w[k];
+        const a = this.acc[c], ch = this.ch[c < this.ch.length ? c : 0];
+        if (fast) for (let k = 0; k < N; k++) a[k] += ch[src + k] * w[k];
+        else for (let k = 0; k < N; k++) a[k] += this.read(c, src + k) * w[k];
         const q = this.q[c]; q.set(a.subarray(0, Hs), this.qn);
         a.copyWithin(0, Hs); a.fill(0, N - Hs);
       }
@@ -98,7 +125,10 @@ window.DJ = window.DJ || {};
     if (!eng.keyLockReady) return null;
     const id = 'b' + (++nextId), ch = [];
     for (let c = 0; c < buffer.numberOfChannels; c++) ch.push(buffer.getChannelData(c).slice());
-    eng.loader.port.postMessage({ cmd: 'put', id, ch }, ch.map(a => a.buffer));
+    // a quarter-rate mono copy for the stretcher's offset search (16x less work than searching the full signal)
+    const n = ch[0].length >> 2, dm = new Float32Array(n), k = 1 / (4 * ch.length);
+    for (const x of ch) for (let i = 0, j = 0; i < n; i++, j += 4) dm[i] += (x[j] + x[j + 1] + x[j + 2] + x[j + 3]) * k;
+    eng.loader.port.postMessage({ cmd: 'put', id, ch, dm }, [...ch.map(a => a.buffer), dm.buffer]);
     return id;
   };
   DJ.dropBuffer = function (eng, id) { if (id && eng.loader) eng.loader.port.postMessage({ cmd: 'del', id }); };

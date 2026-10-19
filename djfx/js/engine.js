@@ -1,6 +1,6 @@
 /* DJFX audio engine: two decks, mixer, FX unit, sampler. Web Audio only.
    Signal: deck src -> trim -> EQ (lo/mid/hi) -> [insert A|B] -> fader -> crossfader -> master sum
-           sampler -> master sum -> [insert M] -> master level -> limiter -> out
+           sampler -> master sum -> [insert M] -> shared master (NDAudio: glue, level, limiter, soft clip) -> out
    The FX unit is patched into exactly one insert (A, B or M). Timing uses the AudioContext clock. */
 window.DJ = window.DJ || {};
 (function (DJ) {
@@ -146,7 +146,7 @@ window.DJ = window.DJ || {};
     }
     pause() {
       if (!this.playing) return;
-      const t = this.ctx.currentTime; this.pausedPos = this.pos(t); this._stopSrc(t); this.playing = false;
+      const t = this.ctx.currentTime; this.pausedPos = this.pos(t); this._stopSrc(t); this.playing = false; this.tl = [];   // a paused deck forgets its tempo ramps
     }
     stop() { this.pause(); }
     toggle() { this.playing ? this.pause() : this.play(); }
@@ -271,13 +271,24 @@ window.DJ = window.DJ || {};
 
   class Fx {
     // One stage: in -> dry -> out, in -> [effect] -> wet -> out. 'send' effects keep dry at 1 and ring out when released.
+    // An effect that is off costs nothing: engage() wires up its processing (and starts its oscillators) when it fires,
+    // idle() unwires it once it is off and its tail has rung out.
     constructor(ctx, id, name, kind) {
       this.ctx = ctx; this.id = id; this.name = name; this.kind = kind;   // kind: 'send' | 'replace'
       this.in = ctx.createGain(); this.out = ctx.createGain(); this.dry = ctx.createGain(); this.wet = ctx.createGain(); this.send = ctx.createGain();
       this.in.connect(this.dry); this.dry.connect(this.out); this.wet.connect(this.out);
       this.wet.gain.value = 0; this.send.gain.value = 0; this.on = false; this.armed = false; this.params = {};
+      this.live = false; this.tail = 0.05; this._idle = 0;
+    }
+    engage() {} idle() {}
+    wake() { clearTimeout(this._idle); if (!this.live) { this.live = true; this.engage(); } }
+    sleepAfter(t) {
+      clearTimeout(this._idle);
+      const tail = typeof this.tail === 'function' ? this.tail() : this.tail;
+      this._idle = setTimeout(() => { if (!this.on && this.live) { this.live = false; this.idle(); } }, Math.max(0, (t - this.ctx.currentTime + tail) * 1000) + 80);
     }
     fire(on, when = this.ctx.currentTime) {
+      if (on) this.wake();
       this.on = on; const a = this.params.amount ?? 0.6;
       if (this.kind === 'send') {
         setAt(this.send.gain, on ? 1 : 0, when);
@@ -286,10 +297,12 @@ window.DJ = window.DJ || {};
         setAt(this.dry.gain, this.dry.gain.value, when); this.dry.gain.linearRampToValueAtTime(on ? 1 - a : 1, when + 0.015);
         setAt(this.wet.gain, this.wet.gain.value, when); this.wet.gain.linearRampToValueAtTime(on ? a : 0, when + 0.015);
       }
+      if (!on) this.sleepAfter(when + 0.02);
     }
     cut(when) {                           // audio cut at `when`; FxUnit.cutAll flips the on flags at that moment
       setAt(this.send.gain, 0, when); setAt(this.wet.gain, 0, when); setAt(this.dry.gain, 1, when);
       if (this.flush) this.flush(when);
+      if (this.live) this.sleepAfter(when + 0.02);
     }
     setAmount(a) {
       this.params.amount = a;
@@ -314,58 +327,57 @@ window.DJ = window.DJ || {};
       filt.params = { pos: 0.5, res: 0.3, amount: 1 };
       filt.freqs = v => v < 0 ? { lp: 22000 * Math.pow(160 / 22000, -v), hp: 10 } : { lp: 22000, hp: 10 * Math.pow(7000 / 10, v) };
       filt.apply = (when, ramp) => {
-        const v = filt.on ? filt.params.pos : 0, f = filt.freqs(v), q = filt.on ? 0.7 + filt.params.res * 14 : 0.7;
+        // Q tops out near 8: more rings hard and can blow up when the cutoff moves fast
+        const v = filt.on ? filt.params.pos : 0, f = filt.freqs(v), q = filt.on ? 0.7 + filt.params.res * 7 : 0.7;
         for (const [node, fr] of [[filt.lp, f.lp], [filt.hp, f.hp]]) {
-          if (ramp) { hold(node.frequency, when); node.frequency.exponentialRampToValueAtTime(fr, when + ramp); }
-          else setAt(node.frequency, fr, when);
-          setAt(node.Q, q, when);
+          hold(node.frequency, when); node.frequency.exponentialRampToValueAtTime(fr, when + ramp);
+          hold(node.Q, when); node.Q.linearRampToValueAtTime(q, when + ramp);
         }
       };
       filt.fire = (on, when = ctx.currentTime) => { filt.on = on; filt.apply(when, 0.02); };
-      filt.cut = when => { const was = filt.on; filt.on = false; filt.apply(when, 0); filt.on = was; };
+      filt.cut = when => { const was = filt.on; filt.on = false; filt.apply(when, 0.008); filt.on = was; };
       filt.setAmount = () => {};
       S.push(filt);
 
-      // Auto-filter: low-pass swept by a tempo-synced LFO.
+      // Auto filter: a resonant filter whose cutoff follows a sine between the Low and High knobs (log frequency),
+      // one cycle every Length bars, locked to the bar grid of the deck it plays on: Low on the phrase line, High halfway.
       const af = new Fx(ctx, 'autofilter', 'Auto filter', 'replace');
-      af.bq = ctx.createBiquadFilter(); af.bq.type = 'lowpass'; af.bq.frequency.value = 1200; af.bq.Q.value = 6;
-      af.lfo = ctx.createOscillator(); af.lfo.type = 'sine'; af.depth = ctx.createGain(); af.depth.gain.value = 1000;
-      af.lfo.connect(af.depth); af.depth.connect(af.bq.frequency); af.lfo.start();
-      af.in.connect(af.bq); af.bq.connect(af.wet); af.params = { amount: 1, div: '8', shape: 'swish' };
-      af.sync = bpm => { af.lfo.frequency.value = bpm / 60 / DIVS[af.params.div]; };
-      // 'lfo' = wobbling low-pass; 'swish' = one high-pass sweep up that ends on the bar line `div` bars ahead; 'dive' = low-pass sweep down
-      const baseFire = af.fire.bind(af);
-      af.fire = (on, when = ctx.currentTime) => {
-        const shape = af.params.shape || 'lfo';
-        if (on && shape !== 'lfo') {
-          const grid = this.gridDeck && this.gridDeck(), beats = DIVS[af.params.div] || 4;
-          let end = when + beats * 60 / this.bpm;
-          if (grid && grid.playing) {                         // land the sweep on the nearest bar line
-            const target = grid.pos(when) + beats * grid.beatLen;
-            const t = grid.timeOfPos(grid.rawPos(when) + (grid.gridPos(target - grid.beatLen, 4, 'ceil') - grid.pos(when)));   // fired up to a beat late still ends on the intended bar line
-            if (t && t > when + 0.2) end = t;
-          }
-          hold(af.depth.gain, when); af.depth.gain.setValueAtTime(0, when);
-          af.bq.type = shape === 'swish' ? 'highpass' : 'lowpass'; setAt(af.bq.Q, shape === 'swish' ? 9 : 7, when);
-          const [f0, f1] = shape === 'swish' ? [40, 9000] : [16000, 180];
-          // sinusoidal in pitch: eases in and out, so a long sweep (8-64 bars) moves gently and never jumps
-          const n = 256, curve = new Float32Array(n);
-          for (let i = 0; i < n; i++) curve[i] = f0 * Math.pow(f1 / f0, (1 - Math.cos(Math.PI * i / (n - 1))) / 2);
-          setAt(af.bq.frequency, f0, when); af.bq.frequency.setValueCurveAtTime(curve, when + 0.001, Math.max(0.05, end - when - 0.001));
-          af.sweepEnd = end;
-        } else if (on) { af.bq.type = 'lowpass'; setAt(af.depth.gain, 1000, when); setAt(af.bq.frequency, 1200, when); setAt(af.bq.Q, 6, when); }
-        baseFire(on, when);
+      af.bq = ctx.createBiquadFilter(); af.bq.type = 'lowpass'; af.bq.Q.value = 3; af.bq.frequency.value = 250;
+      af.bq.connect(af.wet); af.params = { amount: 1, div: '8', lo: 250, hi: 6000, type: 'lowpass' };
+      af.phase = t => {
+        const per = DIVS[af.params.div] || 32, g = this.gridDeck && this.gridDeck();
+        let beats;
+        if (g && g.playing) beats = g.loop.on ? (g.rawPos(t) - g.firstBeat) / g.beatLen : g.beatIndex(g.pos(t));
+        else beats = (t - (af.t0 || 0)) * this.bpm / 60;
+        return ((beats / per) % 1 + 1) % 1;
       };
+      af.span = () => 1200 * Math.log2(Math.max(1.01, af.params.hi / af.params.lo));
+      af.at = t => af.span() * (1 - Math.cos(2 * Math.PI * af.phase(t))) / 2;   // detune in cents above Low
+      af.tick = () => {                     // keep the cutoff on its curve a little ahead (further when the tab is hidden)
+        const t = ctx.currentTime, p = af.bq.detune, n = document.hidden ? 30 : 5;
+        hold(p, t); for (let k = 1; k <= n; k++) p.linearRampToValueAtTime(af.at(t + k * 0.05), t + k * 0.05);
+      };
+      af.engage = () => {
+        af.t0 = ctx.currentTime; af.bq.type = af.params.type; af.bq.frequency.value = af.params.lo; af.bq.detune.value = af.at(ctx.currentTime);
+        af.in.connect(af.bq); af.timer = setInterval(af.tick, 40); af.tick();
+      };
+      af.idle = () => { clearInterval(af.timer); try { af.in.disconnect(af.bq); } catch (e) {} };
+      af.setRange = () => {
+        af.params.lo = clamp(af.params.lo, 30, 12000); af.params.hi = clamp(af.params.hi, af.params.lo * 1.05, 16000);
+        glide(af.bq.frequency, af.params.lo, ctx, 0.02); if (af.live) af.tick();
+      };
+      af.setType = ty => { af.params.type = ty; af.bq.type = ty; };
       S.push(af);
 
       // Flanger: short modulated delay with feedback.
       const fl = new Fx(ctx, 'flanger', 'Flanger', 'send');
       fl.dl = ctx.createDelay(0.05); fl.dl.delayTime.value = 0.004; fl.fb = ctx.createGain(); fl.fb.gain.value = 0.65;
-      fl.lfo = ctx.createOscillator(); fl.lfo.type = 'triangle'; fl.depth = ctx.createGain(); fl.depth.gain.value = 0.0032;
-      fl.lfo.connect(fl.depth); fl.depth.connect(fl.dl.delayTime); fl.lfo.start();
-      fl.in.connect(fl.send); fl.send.connect(fl.dl); fl.dl.connect(fl.fb); fl.fb.connect(fl.dl); fl.dl.connect(fl.wet);
-      fl.params = { amount: 0.7, div: '2' };
-      fl.sync = bpm => { fl.lfo.frequency.value = bpm / 60 / DIVS[fl.params.div] / 4; };
+      fl.depth = ctx.createGain(); fl.depth.gain.value = 0.0032;
+      fl.in.connect(fl.send); fl.dl.connect(fl.fb); fl.dl.connect(fl.wet); fl.depth.connect(fl.dl.delayTime);
+      fl.params = { amount: 0.7, div: '2' }; fl.tail = 0.6;
+      fl.sync = bpm => { if (fl.lfo) fl.lfo.frequency.value = bpm / 60 / DIVS[fl.params.div] / 4; };
+      fl.engage = () => { fl.lfo = ctx.createOscillator(); fl.lfo.type = 'triangle'; fl.lfo.connect(fl.depth); fl.sync(this.bpm); fl.lfo.start(); fl.send.connect(fl.dl); fl.fb.connect(fl.dl); };
+      fl.idle = () => { try { fl.lfo.stop(); fl.lfo.disconnect(); fl.send.disconnect(fl.dl); fl.fb.disconnect(fl.dl); } catch (e) {} fl.lfo = null; };
       fl.flush = when => { setAt(fl.fb.gain, 0, when); fl.fb.gain.setValueAtTime(0.65, when + 0.06); };
       S.push(fl);
 
@@ -373,15 +385,18 @@ window.DJ = window.DJ || {};
       const cr = new Fx(ctx, 'crush', 'Crush', 'replace');
       cr.ws = ctx.createWaveShaper(); cr.params = { amount: 1, bits: 5 };
       cr.setBits = b => { const n = 4096, c = new Float32Array(n), st = Math.pow(2, b - 1); for (let i = 0; i < n; i++) { const x = i / (n - 1) * 2 - 1; c[i] = Math.round(x * st) / st; } cr.ws.curve = c; };
-      cr.setBits(5); cr.in.connect(cr.ws); cr.ws.connect(cr.wet);
+      cr.setBits(5); cr.ws.connect(cr.wet);
+      cr.engage = () => cr.in.connect(cr.ws); cr.idle = () => { try { cr.in.disconnect(cr.ws); } catch (e) {} };
       S.push(cr);
 
       // Trans: tempo-synced volume chop.
       const tr = new Fx(ctx, 'trans', 'Trans', 'replace');
-      tr.vca = ctx.createGain(); tr.vca.gain.value = 0.5; tr.lfo = ctx.createOscillator(); tr.lfo.type = 'square';
-      tr.depth = ctx.createGain(); tr.depth.gain.value = 0.5; tr.lfo.connect(tr.depth); tr.depth.connect(tr.vca.gain); tr.lfo.start();
-      tr.in.connect(tr.vca); tr.vca.connect(tr.wet); tr.params = { amount: 1, div: '1/8' };
-      tr.sync = bpm => { tr.lfo.frequency.value = bpm / 60 / DIVS[tr.params.div]; };
+      tr.vca = ctx.createGain(); tr.vca.gain.value = 0.5;
+      tr.depth = ctx.createGain(); tr.depth.gain.value = 0.5; tr.depth.connect(tr.vca.gain);
+      tr.vca.connect(tr.wet); tr.params = { amount: 1, div: '1/8' };
+      tr.sync = bpm => { if (tr.lfo) tr.lfo.frequency.value = bpm / 60 / DIVS[tr.params.div]; };
+      tr.engage = () => { tr.lfo = ctx.createOscillator(); tr.lfo.type = 'square'; tr.lfo.connect(tr.depth); tr.sync(this.bpm); tr.lfo.start(); tr.in.connect(tr.vca); };
+      tr.idle = () => { try { tr.lfo.stop(); tr.lfo.disconnect(); tr.in.disconnect(tr.vca); } catch (e) {} tr.lfo = null; };
       S.push(tr);
 
       // Echo: tempo-synced delay with filtered feedback (dub style). Releasing it lets the tail ring out.
@@ -389,26 +404,32 @@ window.DJ = window.DJ || {};
       ec.dl = ctx.createDelay(4); ec.fb = ctx.createGain(); ec.fb.gain.value = 0.55;
       ec.hp = ctx.createBiquadFilter(); ec.hp.type = 'highpass'; ec.hp.frequency.value = 250;
       ec.lp = ctx.createBiquadFilter(); ec.lp.type = 'lowpass'; ec.lp.frequency.value = 6000;
-      ec.in.connect(ec.send); ec.send.connect(ec.dl); ec.dl.connect(ec.hp); ec.hp.connect(ec.lp); ec.lp.connect(ec.fb); ec.fb.connect(ec.dl);
+      ec.in.connect(ec.send); ec.dl.connect(ec.hp); ec.hp.connect(ec.lp); ec.lp.connect(ec.fb);
       ec.lp.connect(ec.wet); ec.params = { amount: 0.6, div: '3/4', feedback: 0.55 };
+      ec.tail = () => Math.min(14, ec.dl.delayTime.value * Math.log(0.001) / Math.log(clamp(ec.params.feedback, 0.05, 0.95)) + 0.2);
+      ec.engage = () => { ec.send.connect(ec.dl); ec.fb.connect(ec.dl); };
+      ec.idle = () => { try { ec.send.disconnect(ec.dl); ec.fb.disconnect(ec.dl); } catch (e) {} };
       ec.sync = bpm => { glide(ec.dl.delayTime, Math.min(3.9, 60 / bpm * DIVS[ec.params.div]), ctx, 0.05); };
       ec.flush = when => { setAt(ec.fb.gain, 0, when); ec.fb.gain.setValueAtTime(ec.params.feedback, when + 0.08); };
       S.push(ec);
 
-      // Reverb: generated impulse response.
+      // Reverb: generated impulse response, 2 s at most (longer only costs more and washes the mix out).
       const rv = new Fx(ctx, 'reverb', 'Reverb', 'send');
-      rv.cv = ctx.createConvolver(); rv.params = { amount: 0.5, size: 3 }; rv.cv.buffer = impulse(ctx, 3);
-      rv.in.connect(rv.send); rv.send.connect(rv.cv); rv.cv.connect(rv.wet);
-      rv.setSize = s => { rv.params.size = s; rv.cv.buffer = impulse(ctx, s); };
+      rv.cv = ctx.createConvolver(); rv.params = { amount: 0.5, size: 1.6 }; rv.cv.buffer = impulse(ctx, 1.6);
+      rv.in.connect(rv.send); rv.cv.connect(rv.wet);
+      rv.tail = () => rv.params.size + 0.1;
+      rv.engage = () => rv.send.connect(rv.cv); rv.idle = () => { try { rv.send.disconnect(rv.cv); } catch (e) {} };
+      rv.setSize = s => { s = clamp(s, 0.4, 2); rv.params.size = s; rv.cv.buffer = impulse(ctx, s); };
       S.push(rv);
 
-      // Noise riser: white noise through a sweepable high-pass, added on top.
+      // Noise riser: white noise through a sweepable high-pass, added on top. The noise only runs while it is on.
       const nz = new Fx(ctx, 'noise', 'Noise', 'send');
       const nb = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate), nd = nb.getChannelData(0);
       for (let i = 0; i < nd.length; i++) nd[i] = Math.random() * 2 - 1;
-      nz.src = ctx.createBufferSource(); nz.src.buffer = nb; nz.src.loop = true; nz.src.start();
       nz.hp = ctx.createBiquadFilter(); nz.hp.type = 'highpass'; nz.hp.frequency.value = 800; nz.hp.Q.value = 4;
-      nz.src.connect(nz.hp); nz.hp.connect(nz.send); nz.send.connect(nz.wet); nz.params = { amount: 0.25, tone: 0.3 };
+      nz.hp.connect(nz.send); nz.send.connect(nz.wet); nz.params = { amount: 0.25, tone: 0.3 };
+      nz.engage = () => { nz.src = ctx.createBufferSource(); nz.src.buffer = nb; nz.src.loop = true; nz.src.connect(nz.hp); nz.src.start(); };
+      nz.idle = () => { try { nz.src.stop(); nz.src.disconnect(); } catch (e) {} nz.src = null; };
       nz.setTone = v => { nz.params.tone = v; glide(nz.hp.frequency, 200 * Math.pow(60, v), ctx, 0.03); };
       nz.wet.gain.value = 0;
       S.push(nz);
@@ -479,20 +500,19 @@ window.DJ = window.DJ || {};
   /* ------------------------------------------------------------------ Engine */
   class Engine {
     constructor() {
-      const ctx = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: 'interactive' });
+      const NA = window.NDAudio;
+      const ctx = NA ? NA.context('play') : new (window.AudioContext || window.webkitAudioContext)({ latencyHint: 'interactive' });
       this.ctx = ctx;
       this.sum = ctx.createGain();
       this.inserts = { M: new Insert(ctx) };
-      this.master = ctx.createGain(); this.master.gain.value = 0.9;
-      this.preMeter = ctx.createAnalyser(); this.preMeter.fftSize = 512; this.pbuf = new Float32Array(512);
-      this.limiter = ctx.createDynamicsCompressor();
-      this.limiter.threshold.value = -1.5; this.limiter.knee.value = 0; this.limiter.ratio.value = 20;
-      this.limiter.attack.value = 0.002; this.limiter.release.value = 0.12;
-      this.post = ctx.createAnalyser(); this.post.fftSize = 512; this.qbuf = new Float32Array(512);
-      this.sum.connect(this.inserts.M.in); this.inserts.M.out.connect(this.master);
-      this.master.connect(this.preMeter); this.master.connect(this.limiter); this.limiter.connect(this.post); this.post.connect(ctx.destination);
+      // master: the shared core's glue, level, gentle limiter and soft clip, which also throws away bad samples
+      // (a plain gain straight out if the core is missing)
+      if (NA) this.out = NA.master(ctx, { gain: 0.9, glue: 0.15 });
+      else { const g = ctx.createGain(); g.connect(ctx.destination); this.out = { input: g, setGain: v => glide(g.gain, v, ctx), onMeter() {}, ready: Promise.resolve() }; }
+      this.sum.connect(this.inserts.M.in); this.inserts.M.out.connect(this.out.input);
       this.decks = { A: new Deck(this, 'A'), B: new Deck(this, 'B') };
       this.inserts.A = this.decks.A.insert; this.inserts.B = this.decks.B.insert;
+      if (NA) NA.keepAlive(ctx, () => this.decks.A.playing || this.decks.B.playing);
       this.fx = new FxUnit(this);
       this.sampler = new Sampler(this);
       this.xfPos = 0.5; this.xfCurve = 'smooth';
@@ -500,6 +520,7 @@ window.DJ = window.DJ || {};
       this.klReady = DJ.initKeyLock ? DJ.initKeyLock(this).catch(e => { console.warn('key lock unavailable', e); return false; }) : Promise.resolve(false);
       this.setXfader(0.5);
     }
+    setMaster(v) { this.out.setGain(v); }
     xfGains(x, curve = this.xfCurve) {
       if (curve === 'cut') { const e = 0.06; return { A: x > 1 - e ? (1 - x) / e : 1, B: x < e ? x / e : 1 }; }
       if (curve === 'linear') return { A: Math.min(1, 2 * (1 - x)), B: Math.min(1, 2 * x) };
@@ -518,8 +539,6 @@ window.DJ = window.DJ || {};
         if (i === 0) { A.setValueAtTime(g.A, t); B.setValueAtTime(g.B, t); } else { A.linearRampToValueAtTime(g.A, t); B.linearRampToValueAtTime(g.B, t); }
       }
     }
-    masterPeak() { return peakOf(this.preMeter, this.pbuf); }
-    outPeak() { return peakOf(this.post, this.qbuf); }
     resume() { if (this.ctx.state !== 'running') return this.ctx.resume(); }
   }
 

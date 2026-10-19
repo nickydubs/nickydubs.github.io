@@ -35,6 +35,7 @@ header h1 b{color:var(--accent)}
 .led.on{background:var(--red);box-shadow:0 0 10px var(--red)}
 .led.amber.on{background:var(--amber);box-shadow:0 0 10px var(--amber)}
 .led.big{width:22px;height:22px}
+.led.is-clip{background:var(--red);box-shadow:0 0 12px var(--red)}
 .led.beat.on{background:#ff6a6a;box-shadow:0 0 8px #ff3b47}
 .led.beat.down{background:var(--red);box-shadow:0 0 18px var(--red)}
 
@@ -63,7 +64,7 @@ canvas.zoom{height:96px} canvas.ovw{height:34px;cursor:pointer}
 .hot{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
 .hot button{min-height:44px;font-family:var(--mono)}
 .hot button.set{background:#3a2a6b;border-color:#7b61ff}
-.pitch{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center}
+.pitch{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center}
 input[type=range]{width:100%;accent-color:var(--accent);height:30px}
 .loop{display:grid;grid-template-columns:auto 1fr auto auto auto;gap:6px;align-items:center}
 .loop .len{text-align:center;font:700 16px var(--mono)}
@@ -103,8 +104,11 @@ input[type=range]{width:100%;accent-color:var(--accent);height:30px}
 .fx .arm.on{background:var(--amber);border-color:var(--amber);color:#111}
 .fx .fire.on{background:var(--red);border-color:var(--red);color:#fff}
 .fx .kr{display:flex;gap:6px;justify-content:space-around;align-items:flex-end}
-.cutbar{display:grid;grid-template-columns:1fr 1.6fr 1.6fr 1fr;gap:8px;margin-top:8px}
-@media (max-width:620px){.cutbar{grid-template-columns:1fr 1fr}}
+.fx.wide{grid-column:span 2}
+.morefx{grid-column:1/-1} .morefx summary{cursor:pointer;color:var(--muted);font-size:13px;min-height:28px} .morefx .fxrack{margin-top:6px}
+@media (max-width:420px){.fx.wide{grid-column:1/-1}}
+.cutbar{display:grid;grid-template-columns:1fr 1.6fr 1.6fr;gap:8px;margin-top:8px}
+@media (max-width:620px){.cutbar{grid-template-columns:1fr 1fr}.cutbar #dropNext{grid-column:1/-1}}
 #dropNext{background:#123d24;border-color:var(--green);font-size:19px}
 #dropNext.pending{background:var(--green);color:#06210f}
 .cutbar button{min-height:64px;font-size:17px;font-weight:800;letter-spacing:.04em}
@@ -170,6 +174,7 @@ body.phone #phoneBack{display:none}
 .ph-loop button{min-height:56px;font-weight:800} .ph-lp.on{background:#5c4a0f;border-color:#ffd23f} .ph-kick{background:#0f3a5c;border-color:#34d6ff}
 .ph-len{min-height:0;padding:2px 8px;margin-left:6px;font-size:12px;font-weight:700}
 .ph-cut{display:grid;grid-template-columns:1fr 1.4fr;gap:8px}
+.ph-skip{display:grid;grid-template-columns:1fr 1fr;gap:8px} .ph-skip button{min-height:48px;font-weight:700}
 .ph-cut button{min-height:72px;font-size:18px;font-weight:800}
 .ph-cutall{background:#5c0f16;border-color:var(--red)} .ph-cutall.pending{background:var(--red);animation:pulse .25s infinite alternate}
 .ph-foot{display:grid;grid-template-columns:1.3fr 1fr 1fr;gap:8px}
@@ -184,17 +189,12 @@ body.phone #phoneBack{display:none}
   <h1>DJ<b>FX</b> <span class="lbl">car deck</span></h1>
   <div class="am panel" id="automix">
     <button id="amToggle">Automix off</button>
-    <label class="lbl" for="amBeats">Mix</label>
-    <select id="amBeats"><option value="8">8 beats</option><option value="16">16 beats</option><option value="32">32 beats</option><option value="64">64 beats</option></select>
-    <select id="amTempo" aria-label="Tempo change"><option value="smooth">Smooth tempo</option><option value="snap">Snap tempo</option></select>
-    <select id="amStyle" aria-label="Transition"><option value="swell">Swell + cut on downbeat</option><option value="blend">Smooth blend</option></select>
-    <button id="amNow" title="Start the next transition at the next bar (M)">Mix now</button>
+    <button id="amNow" title="Mix into the next track from the next bar, over 8 bars (M)">Mix now</button>
     <span class="status" id="amStatus"></span>
   </div>
   <div class="row">
     <span class="lbl">Master</span><div id="masterKnob"></div>
-    <span class="led" id="masterClip" title="Master clip (before limiter)"></span>
-    <span class="led amber" id="limLed" title="Limiter working"></span>
+    <span class="led" id="clipLed" title="Clip light: lights when the limiter works hard. Turn something down."></span>
     <button id="settingsBtn" aria-label="Settings">⚙</button>
   </div>
 </header>
@@ -211,7 +211,6 @@ body.phone #phoneBack{display:none}
   <div class="fxhead">
     <span class="lbl">FX unit</span>
     <div class="bpmbig"><span class="led beat big" id="beatLed"></span><span id="fxBpm">---.-</span><small id="fxBpmSrc">auto</small></div>
-    <div class="row"><button id="tapBtn" style="flex:1">TAP</button><button id="autoBpmBtn" style="flex:1" class="on">AUTO</button></div>
     <span class="lbl">Apply to</span>
     <div class="row route" id="route"><button data-r="now">Current track</button><button data-r="next">Next track</button><button data-r="M">Master</button></div>
   </div>
@@ -220,8 +219,7 @@ body.phone #phoneBack{display:none}
     <div class="cutbar">
       <button id="fireAll" title="Turn on every armed effect (F)">FIRE ALL</button>
       <button id="dropNext" title="Start the next track from Q1 on the next downbeat, cut all FX and switch to it (N)">▶ NEXT ON THE 1</button>
-      <button id="cutAll" title="Cut all effects on the next downbeat">CUT ALL</button>
-      <button id="cutNow" title="Cut all effects right now (X)">CUT NOW</button>
+      <button id="cutAll" title="Cut all effects on the next downbeat; press twice (or X) to cut at once">CUT ALL</button>
     </div>
     <p class="hint" id="cutHint"></p>
   </div>
@@ -259,19 +257,22 @@ body.phone #phoneBack{display:none}
   <h3 style="margin-top:0">Settings</h3>
   <p><label class="lbl" for="cutKeys">CUT ALL shortcut (keys held together)</label><br><input type="text" id="cutKeys" placeholder="Space+Enter"> <span class="hint">e.g. Space+Enter, Shift+C</span></p>
   <p><label class="lbl" for="xfCurve">Crossfader curve</label><br><select id="xfCurve"><option value="smooth">Smooth (constant power)</option><option value="linear">Blend (full at centre)</option><option value="cut">Sharp cut (scratch)</option></select></p>
+  <p><label class="lbl" for="amStyle">Automix transition</label><br><select id="amStyle"><option value="blend">Blend: fade in, swap the bass halfway, fade out</option><option value="swell">Swell: build the FX, then cut to the next track on the 1</option></select>
+     <select id="amBars" aria-label="Blend length"><option value="16">over 16 bars</option><option value="32">over 32 bars</option></select></p>
   <p><label class="lbl" for="maxStretch">Automix: biggest tempo change to beat-match (%)</label><br><input type="number" id="maxStretch" min="2" max="30" step="1"> <span class="hint">bigger gaps get an echo-out cut instead</span></p>
   <p><label class="lbl" for="dropTempo">Tempo when the next track drops</label><br><select id="dropTempo"><option value="glide">Start at the current tempo, then glide to its own</option><option value="match">Stay at the current tempo</option><option value="native">Its own tempo straight away</option></select>
      <select id="glideBeats" aria-label="Glide length"><option value="8">over 2 bars</option><option value="16">over 4 bars</option><option value="32">over 8 bars</option><option value="64">over 16 bars</option></select></p>
   <p><label><input type="checkbox" id="amFx"> Automix swells FX (armed effects, or filter + echo + reverb if none are armed)</label></p>
-  <p class="hint">Keys: N next on the 1 · shortcut above = CUT ALL on the next downbeat · X cut now · F fire all armed FX · M automix mix now · 1–8 pads.</p>
+  <p class="hint">Keys: N next on the 1 · shortcut above = CUT ALL on the next downbeat · X cut now · F fire all armed FX · M automix mix now · [ and ] skip 32 bars · 1–8 pads.</p>
   <div class="row" style="justify-content:flex-end"><button id="settingsClose">Done</button></div>
 </dialog>
 
-<script src="js/analysis.js?v=20261018s"></script>
-<script src="js/keylock.js?v=20261018s"></script>
-<script src="js/engine.js?v=20261018s"></script>
-<script src="js/app.js?v=20261018s"></script>
-<script src="js/phone.js?v=20261018s"></script>
-<script src="js/defaults.js?v=20261018s"></script>
+<script src="../audio-core.js?v=20261019a"></script>
+<script src="js/analysis.js?v=20261019a"></script>
+<script src="js/keylock.js?v=20261019a"></script>
+<script src="js/engine.js?v=20261019a"></script>
+<script src="js/app.js?v=20261019a"></script>
+<script src="js/phone.js?v=20261019a"></script>
+<script src="js/defaults.js?v=20261019a"></script>
 </body>
 </html>

@@ -40,6 +40,9 @@ button:hover { border-color: rgba(255, 255, 255, 0.25); }
 .chip.on { color: var(--text); border-color: var(--blue); box-shadow: inset 0 0 10px -3px var(--blue); }
 .vol { display: flex; align-items: center; gap: 10px; margin-top: 12px; color: var(--muted); font-size: 0.8rem; }
 .vol input { flex: 1; accent-color: var(--green); }
+.clip { width: 10px; height: 10px; border-radius: 50%; background: #3a2030; flex: none; transition: background 0.1s; }
+.clip.is-clip { background: #ff3b3b; box-shadow: 0 0 10px #ff3b3b; }
+.vol .chip { margin: 0; padding: 5px 10px; }
 #history { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
 #history li { display: grid; grid-template-columns: 1fr auto; gap: 0 10px; font-size: 0.85rem; }
 #history span { color: var(--muted); grid-column: 1; }
@@ -81,7 +84,7 @@ details p { color: var(--muted); font-size: 0.85rem; margin: 8px 0 0; }
 	<section class="panel">
 		<div id="faders"></div>
 		<div class="chips" id="genres" aria-label="Genres in the set"></div>
-		<label class="vol">Volume <input id="vol" type="range" min="0" max="1" step="0.01"></label>
+		<div class="vol"><label for="vol">Volume</label><input id="vol" type="range" min="0" max="1" step="0.01"><i class="clip" id="clip" title="Clip light: red when the master is working too hard"></i><button class="chip" id="lite" type="button" title="Lighter on slower phones and laptops: shorter reverb, fewer overlapping sounds, calmer screen">Lite</button></div>
 	</section>
 	<section class="panel">
 		<span class="role">Played</span>
@@ -94,6 +97,7 @@ details p { color: var(--muted); font-size: 0.85rem; margin: 8px 0 0; }
 		<p>Melodies play as call and response between two opposite ideas, named on screen while they play: low against high, straight against triplet, harmony against dissonance, nostalgia against now, and more.</p>
 	</details>
 </main>
-<script src="selecta.js?v=1"></script>
+<script src="../audio-core.js?v=1"></script>
+<script src="selecta.js?v=2"></script>
 </body>
 </html>

@@ -33,20 +33,20 @@ function DJAnalysisCore() {
   // Per-hop energies in a kick band (<150 Hz) and the rest, their onset curves, and waveform peaks.
   function envelopes(x) {
     const n = Math.floor(x.length / HOP);
-    const eLow = new Float32Array(n), eHigh = new Float32Array(n), peak = new Float32Array(n), peakLow = new Float32Array(n);
+    const eLow = new Float32Array(n), eHigh = new Float32Array(n), eAll = new Float32Array(n), peak = new Float32Array(n), peakLow = new Float32Array(n);
     const aL = Math.exp(-2 * Math.PI * 150 / SR), aH = Math.exp(-2 * Math.PI * 1200 / SR);
     let lp = 0, lp2 = 0, mid = 0;
     for (let f = 0; f < n; f++) {
-      let sl = 0, sh = 0, pk = 0, pl = 0;
+      let sl = 0, sh = 0, sa = 0, pk = 0, pl = 0;
       for (let i = f * HOP, e = i + HOP; i < e; i++) {
         const s = x[i];
         lp = aL * lp + (1 - aL) * s; lp2 = aL * lp2 + (1 - aL) * lp;     // 2-pole lowpass: kick + bass
         mid = aH * mid + (1 - aH) * s; const hp = s - mid;                // highpass: hats, snares, claps
-        sl += lp2 * lp2; sh += hp * hp;
+        sl += lp2 * lp2; sh += hp * hp; sa += s * s;
         const a = s < 0 ? -s : s; if (a > pk) pk = a;
         const b = lp2 < 0 ? -lp2 : lp2; if (b > pl) pl = b;
       }
-      eLow[f] = sl; eHigh[f] = sh; peak[f] = pk; peakLow[f] = pl;
+      eLow[f] = sl; eHigh[f] = sh; eAll[f] = sa; peak[f] = pk; peakLow[f] = pl;
     }
     const flux = e => {
       const o = new Float32Array(n); let prev = 0;
@@ -56,7 +56,7 @@ function DJAnalysisCore() {
     };
     const oLow = flux(eLow), oHigh = flux(eHigh), env = new Float32Array(n);
     for (let f = 0; f < n; f++) env[f] = oLow[f] + 0.6 * oHigh[f];
-    return { env, oLow, peak, peakLow };
+    return { env, oLow, peak, peakLow, eLow, eAll };
   }
 
   const at = (a, p) => { const i = Math.floor(p), t = p - i; return i + 1 < a.length ? a[i] * (1 - t) + a[i + 1] * t : 0; };
@@ -155,14 +155,14 @@ function DJAnalysisCore() {
   }
 
   function analyze(x) {
-    const { env, oLow, peak, peakLow } = envelopes(x);
+    const { env, oLow, peak, peakLow, eLow, eAll } = envelopes(x);
     const bpm = tempo(env), firstBeat = grid(env, oLow, bpm);
     // Q1 = the first downbeat of the music: the first grid bar line at (or just before) the first clearly audible sound
     let mx = 0; for (let i = 0; i < peak.length; i++) if (peak[i] > mx) mx = peak[i];
     let s = 0; while (s < peak.length && peak[s] < 0.08 * mx) s++;
     const bar = 4 * 60 / bpm, ts = s / FR;
     const q1 = Math.max(firstBeat, firstBeat + Math.ceil((ts - 0.08 - firstBeat) / bar) * bar);
-    return { bpm, firstBeat, q1: Math.round(q1 * 1000) / 1000, key: key(x), peaks: peak, peaksLow: peakLow, peakRate: FR, duration: x.length / SR };
+    return { bpm, firstBeat, q1: Math.round(q1 * 1000) / 1000, key: key(x), peaks: peak, peaksLow: peakLow, lowE: eLow, allE: eAll, peakRate: FR, duration: x.length / SR };
   }
   return { analyze, SR, NAMES };
 }
@@ -176,7 +176,7 @@ window.DJ = window.DJ || {};
   const pending = new Map();
   try {
     const src = 'const core=(' + DJAnalysisCore.toString() + ')();onmessage=e=>{const r=core.analyze(e.data.x);' +
-      'postMessage({id:e.data.id,r},[r.peaks.buffer,r.peaksLow.buffer]);};';
+      'postMessage({id:e.data.id,r},[r.peaks.buffer,r.peaksLow.buffer,r.lowE.buffer,r.allE.buffer]);};';
     worker = new Worker(URL.createObjectURL(new Blob([src], { type: 'text/javascript' })));
     worker.onmessage = e => { const p = pending.get(e.data.id); pending.delete(e.data.id); p && p(e.data.r); };
   } catch (e) { worker = null; }
@@ -208,4 +208,61 @@ window.DJ = window.DJ || {};
     return d + (a.minor === b.minor ? 0 : 1);
   };
   DJ.keyLabel = k => k ? k.name + ' · ' + (k.fifth + 1) + (k.minor ? 'm' : 'M') : '—';
+
+  // Phrases and cue points, from the analysis energies and the (possibly hand-edited) grid.
+  // Dance music moves in 32-bar phrases counted from the first downbeat: the drop, the breakdown and the outro start on
+  // those lines. Per 8-bar block we measure the bass energy (kick + bass) and the full-band energy, label the block,
+  // then pick: where the next track should start (mix-in: 32 bars before its first drop, or its first downbeat),
+  // its first drop, and where to start mixing out (when the last drop is over, leaving room for a 32-bar blend).
+  DJ.CUES_V = 2;
+  DJ.cues = function (r, m, dur) {
+    if (!r || !r.lowE || !m || !m.bpm) return null;
+    const FR = r.peakRate, bar = 240 / m.bpm, q1 = m.hot && m.hot[0] != null ? m.hot[0] : (m.q1 ?? m.firstBeat);
+    const nb = Math.floor((dur - q1) / bar); if (nb < 16) return null;
+    // per bar: bass energy, sustained bass (the bar's median: a kick alone leaves it near silent, a bassline fills it) and full band
+    const lo = new Float32Array(nb), sus = new Float32Array(nb), al = new Float32Array(nb), tmp = [];
+    for (let b = 0; b < nb; b++) {
+      const i0 = Math.max(0, Math.floor((q1 + b * bar) * FR)), i1 = Math.min(r.lowE.length, Math.floor((q1 + (b + 1) * bar) * FR));
+      let sl = 0, sa = 0; tmp.length = 0;
+      for (let i = i0; i < i1; i++) { sl += r.lowE[i]; sa += r.allE[i]; tmp.push(r.lowE[i]); }
+      tmp.sort((x, y) => x - y);
+      lo[b] = Math.sqrt(sl / Math.max(1, i1 - i0)); al[b] = Math.sqrt(sa / Math.max(1, i1 - i0)); sus[b] = Math.sqrt(tmp[tmp.length >> 1] || 0);
+    }
+    const norm = a => { const s = Array.from(a).sort((x, y) => x - y), p = s[Math.floor(s.length * 0.9)] || 1; for (let i = 0; i < a.length; i++) a[i] = Math.min(1.2, a[i] / p); };
+    norm(lo); norm(sus); norm(al);
+    // the musical end: the last bar with real sound in it
+    let endBar = nb; while (endBar > 8 && al[endBar - 1] < 0.12) endBar--;
+    // which 8-bar offset puts the 32-bar lines on the biggest energy changes (most tracks: 0, counting from the first downbeat)
+    const mean = (a, b0, n) => { let s = 0, k = 0; for (let b = Math.max(0, b0); b < Math.min(nb, b0 + n); b++) { s += a[b]; k++; } return k ? s / k : 0; };
+    const change = b => Math.abs(mean(sus, b, 4) - mean(sus, b - 4, 4)) + Math.abs(mean(lo, b, 4) - mean(lo, b - 4, 4)) + 0.5 * Math.abs(mean(al, b, 4) - mean(al, b - 4, 4));
+    let off = 0, best = -1;
+    for (const o of [0, 8, 16, 24]) {
+      let s = 0, k = 0; for (let b = o || 32; b < endBar; b += 32) { s += change(b); k++; }
+      s = k ? s / k : 0; if (o === 0) s += 0.04;            // a small pull towards counting from the first downbeat
+      if (s > best) { best = s; off = o; }
+    }
+    // 8-bar blocks from the first downbeat
+    const blocks = [];
+    for (let b = 0; b < endBar; b += 8) {
+      const L = mean(lo, b, 8), U = mean(sus, b, 8), A = mean(al, b, 8);
+      blocks.push({ bar: b, type: L < 0.3 ? 'break' : U >= 0.55 && L >= 0.6 ? 'drop' : 'groove' });   // groove: drums without the full bass
+    }
+    const loud = k => blocks[k] && blocks[k].type === 'drop';
+    let first = blocks.findIndex(x => x.type === 'drop'), last = -1;
+    for (let k = blocks.length - 1; k >= 0; k--) if (loud(k)) { last = k; break; }
+    // name the quiet ends: everything before the first loud block is intro, everything after the last is outro
+    const firstLoud = blocks.findIndex((x, k) => loud(k));
+    blocks.forEach((x, k) => { if (firstLoud >= 0 && k < firstLoud) x.type = 'intro'; else if (last >= 0 && k > last) x.type = 'outro'; });
+    const at = b => q1 + b * bar;
+    const dropBar = first > 0 ? blocks[first].bar : null;
+    const mixInBar = dropBar != null ? Math.max(0, dropBar - 32) : 0;
+    const outroBar = last >= 0 ? blocks[last].bar + 8 : endBar;
+    let mixOutBar = Math.min(outroBar, endBar - 32);
+    mixOutBar = Math.max(8, Math.floor(mixOutBar / 8) * 8);
+    const phrases = []; for (let b = off; b < nb; b += 32) phrases.push(at(b));
+    return {
+      v: DJ.CUES_V, bar, off, phrases, blocks: blocks.map(x => ({ at: at(x.bar), type: x.type })),
+      mixIn: at(mixInBar), drop: dropBar != null ? at(dropBar) : null, mixOut: at(mixOutBar), end: at(endBar),
+    };
+  };
 })(window.DJ);

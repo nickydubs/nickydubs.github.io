@@ -5,7 +5,7 @@
 (() => {
   const $ = (s, el = document) => el.querySelector(s);
   const KEY = 'djfx.phone';
-  const FX = [['filter', 'Filter'], ['autofilter', 'Swish'], ['echo', 'Echo'], ['reverb', 'Reverb']];
+  const FX = [['filter', 'Filter'], ['autofilter', 'Auto filter'], ['echo', 'Echo'], ['reverb', 'Reverb']];
   let saved = null;
   try { saved = JSON.parse(localStorage.getItem(KEY)); } catch (e) {}
   let on = saved ?? matchMedia('(max-width: 720px)').matches;
@@ -16,8 +16,9 @@
     <div class="ph-track ph-now"><span class="role">NOW</span><span class="ph-t" data-p="nowT">Add tracks to start</span><span class="ph-b mono" data-p="nowB">---.-</span></div>
     <div class="ph-track ph-next"><span class="role">NEXT</span><span class="ph-t" data-p="nextT">—</span><span class="ph-b mono" data-p="nextB"></span></div>
     <div class="ph-main"><button data-go="play" class="ph-play">▶ PLAY</button><button data-go="drop" class="ph-drop">▶ NEXT ON THE 1</button></div>
+    <div class="ph-skip"><button data-go="pp" title="Back 32 bars, on the next bar line">« 32 bars</button><button data-go="pn" title="Forward 32 bars, on the next bar line">32 bars »</button></div>
     <div class="ph-loop"><button data-lp="lhalf" aria-label="Shorter loop">◀</button><button data-lp="loop" class="ph-lp">LOOP <span data-p="loopL">1 beat</span></button><button data-lp="ldouble" aria-label="Longer loop">▶</button><button data-go="kick" class="ph-kick" title="Back into the song on the next bar, with the high-pass on">OUT · HPF</button></div>
-    <div class="ph-fx">${FX.map(([id, name]) => `<div class="ph-fxc" data-fxp="${id}"><span class="name">${name}${id === 'autofilter' ? ' <button class="ph-len" data-len="1" title="Swish length: tap to change">8 bars</button>' : ''}</span><button data-arm="${id}">ARM</button><button data-fire="${id}">FIRE</button></div>`).join('')}</div>
+    <div class="ph-fx">${FX.map(([id, name]) => `<div class="ph-fxc" data-fxp="${id}"><span class="name">${name}${id === 'autofilter' ? ' <button class="ph-len" data-len="1" title="Auto filter cycle length: tap to change">8 bars</button>' : ''}</span><button data-arm="${id}">ARM</button><button data-fire="${id}">FIRE</button></div>`).join('')}</div>
     <div class="ph-cut"><button data-go="fireAll">FIRE ALL</button><button data-go="cutAll" class="ph-cutall">CUT ALL</button></div>
     <div class="ph-foot"><button data-go="am">Automix off</button><button data-go="add">+ Tracks</button><button data-go="pro">Pro ▸</button></div>`;
   document.querySelector('header').after(ph);
@@ -39,6 +40,8 @@
     add: () => press($('#openFiles')),
     pro: () => set(false),
     kick: () => window.DJFX?.kickOut(($('.deck.now') || $('#deckA')).id.slice(-1)),
+    pp: () => window.DJFX?.phraseSkip(nowDeck().id.slice(-1), -1),
+    pn: () => window.DJFX?.phraseSkip(nowDeck().id.slice(-1), 1),
   };
   ph.addEventListener('click', e => {
     const b = e.target.closest('button'); if (!b) return;
@@ -83,7 +86,7 @@
     }
     txt($('[data-p="loopL"]', ph), $('[data-f="loop"]', n)?.textContent || '');
     $('.ph-lp', ph).classList.toggle('on', !!$('[data-a="loop"]', n)?.classList.contains('on'));
-    const len = $('[data-fx="autofilter"] .kr .knob:nth-child(2) .kv')?.textContent;
+    const len = $('[data-fx="autofilter"] [data-k="div"] .kv')?.textContent;
     if (len) txt($('.ph-len', ph), len);
   }
   setInterval(sync, 150);
