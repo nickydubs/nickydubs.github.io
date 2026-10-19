@@ -10,7 +10,8 @@
 window.NDAudio = window.NDAudio || (() => {
 	'use strict';
 	const PREF_KEY = 'nd-audio';
-	const prefs = { latency: 'safe', lite: false, master: 0.85 };
+	const phone = !!(window.matchMedia && matchMedia('(pointer: coarse)').matches && !matchMedia('(pointer: fine)').matches);
+	const prefs = { latency: 'safe', lite: phone, master: 0.85, phone }; // phones start in Lite, computers do not
 	try { Object.assign(prefs, JSON.parse(localStorage.getItem(PREF_KEY) || '{}')); } catch {}
 	const savePrefs = () => { try { localStorage.setItem(PREF_KEY, JSON.stringify(prefs)); } catch {} };
 	const listeners = new Set();
