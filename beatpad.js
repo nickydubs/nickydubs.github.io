@@ -1,5 +1,5 @@
-// Nicky Dubs beat pad: 16 pads, seven kits plus one you record yourself synthesized right here in the browser (no samples to download,
-// nothing copyrighted), plus reverb + delay. Sounds are pre-rendered into buffers, so a hit is just
+// Nicky Dubs beat pad: 24 pads, twelve kits plus one you record yourself, synthesized right here in the browser (no samples to
+// download, nothing copyrighted), with a DJ filter, reverb, echo and crush. Sounds are pre-rendered into buffers, so a hit is just
 // "start this buffer now": the lowest latency the browser can do. Lives in a popup so the page can't
 // scroll under your fingers, with the Air Wiggler (bot.js) reacting above the pads.
 (() => {
@@ -7,10 +7,12 @@
 	if (!pad || !rig) return;
 	const grid = pad.querySelector('.pad__grid');
 	const fileIn = pad.querySelector('.pad__file');
-	const KEYS = ['Digit1', 'Digit2', 'Digit3', 'Digit4', 'KeyQ', 'KeyW', 'KeyE', 'KeyR',
-		'KeyA', 'KeyS', 'KeyD', 'KeyF', 'KeyZ', 'KeyX', 'KeyC', 'KeyV'];
+	// Every kit shares one layout: 12 drums (two rows), 6 chords, then 6 bass notes (bass pad j = the root of chord pad j)
+	const KEYS = ['Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5', 'Digit6', 'KeyQ', 'KeyW', 'KeyE', 'KeyR', 'KeyT', 'KeyY',
+		'KeyA', 'KeyS', 'KeyD', 'KeyF', 'KeyG', 'KeyH', 'KeyZ', 'KeyX', 'KeyC', 'KeyV', 'KeyB', 'KeyN'];
 	let mode = 'pads'; // 'pads' or 'synth': what the bottom half of the rig is showing
-	const KEY_LABELS = ['1', '2', '3', '4', 'Q', 'W', 'E', 'R', 'A', 'S', 'D', 'F', 'Z', 'X', 'C', 'V'];
+	const KEY_LABELS = KEYS.map(k => k.slice(-1));
+	const PADS = KEYS.length, CHORD = 12, BASS = 18;
 	let SR = 48000; // replaced by the sound card's own rate once audio starts, so nothing gets resampled
 	const hz = n => 440 * 2 ** ((n - 69) / 12); // MIDI note → frequency
 
@@ -215,52 +217,143 @@
 			chain(lp, envGain(c, 0, 0.002, 0.8, 0.45), out);
 			for (const t of ['sawtooth', 'triangle']) { const o = c.createOscillator(); o.type = t; o.frequency.value = hz(n); o.connect(lp); o.start(0); }
 		},
+		bell: notes => (c, out) => { // FM bell an octave up, the trap/halftime sparkle
+			const bus = c.createGain(); bus.gain.value = 0.75 / notes.length ** 0.6; chain(bus, out);
+			for (const n of notes) {
+				const f = hz(n + 12), car = c.createOscillator(), mod = c.createOscillator(), idx = c.createGain();
+				car.frequency.value = f; mod.frequency.value = f * 3.5;
+				idx.gain.setValueAtTime(f * 1.6, 0); idx.gain.exponentialRampToValueAtTime(f * 0.05, 0.7);
+				chain(mod, idx, car.frequency); chain(car, envGain(c, 0, 0.002, 0.5, 1.4), bus);
+				car.start(0); mod.start(0);
+			}
+		},
+		skank: notes => (c, out) => { // reggae skank: the chord without its root, short, bright and boxy
+			const bus = c.createGain(); bus.gain.value = 0.55 / notes.length ** 0.5;
+			chain(bus, filt(c, 'highpass', 350), filt(c, 'lowpass', 3800), envGain(c, 0, 0.002, 1, 0.16), out);
+			for (const n of notes.slice(1)) for (const t of ['sawtooth', 'triangle']) { const o = c.createOscillator(); o.type = t; o.frequency.value = hz(n); o.connect(bus); o.start(0); }
+		},
+		siren: (c, out) => { // dub siren: a square wailing up and down
+			const o = c.createOscillator(), lfo = c.createOscillator(), depth = c.createGain(); o.type = 'square';
+			o.frequency.setValueAtTime(520, 0); o.frequency.linearRampToValueAtTime(880, 1.1);
+			lfo.frequency.value = 6; depth.gain.value = 140; chain(lfo, depth, o.frequency);
+			chain(o, filt(c, 'lowpass', 2600), envGain(c, 0, 0.02, 0.28, 1.2), out); o.start(0); lfo.start(0);
+		},
+		vox: n => (c, out) => { // a sung "ah": a saw through two vowel formants
+			const o = c.createOscillator(), bus = c.createGain(); o.type = 'sawtooth'; o.frequency.value = hz(n);
+			o.frequency.setValueAtTime(hz(n) * 0.97, 0); o.frequency.linearRampToValueAtTime(hz(n), 0.05);
+			chain(bus, envGain(c, 0, 0.02, 0.9, 0.38), out);
+			for (const [f, q, a] of [[800, 9, 1], [1150, 10, 0.7], [2800, 12, 0.25]]) { const g = c.createGain(); g.gain.value = a; chain(o, filt(c, 'bandpass', f, q), g, bus); }
+			o.start(0);
+		},
+		pluck: n => (c, out) => { // tech house rolling bass: a saw + square that snaps shut
+			const lp = c.createBiquadFilter(); lp.type = 'lowpass'; lp.Q.value = 5;
+			lp.frequency.setValueAtTime(2200, 0); lp.frequency.exponentialRampToValueAtTime(180, 0.16);
+			chain(lp, envGain(c, 0, 0.002, 0.7, 0.3), out);
+			for (const t of ['sawtooth', 'square']) { const o = c.createOscillator(); o.type = t; o.frequency.value = hz(n); o.connect(lp); o.start(0); }
+		},
+		warp: n => (c, out) => { // garage bass: a square that drops into the note, warm and round
+			const o = c.createOscillator(); o.type = 'square';
+			o.frequency.setValueAtTime(hz(n + 2), 0); o.frequency.exponentialRampToValueAtTime(hz(n), 0.07);
+			chain(o, filt(c, 'lowpass', 750, 2), envGain(c, 0, 0.004, 0.55, 0.6), out); o.start(0);
+		},
+		dub: n => (c, out) => { // dub bass: round and deep, a whisper of triangle on top
+			const o = c.createOscillator(), h = c.createOscillator(), hg = c.createGain(); h.type = 'triangle'; hg.gain.value = 0.3;
+			o.frequency.value = hz(n); h.frequency.value = hz(n);
+			const env = envGain(c, 0, 0.012, 0.95, 0.9); chain(o, env, out); chain(h, hg, filt(c, 'lowpass', 500), env); o.start(0); h.start(0);
+		},
+		growl: n => (c, out) => { // neuro bass: FM saws through a band-pass that sweeps open and shut
+			const car = c.createOscillator(), mod = c.createOscillator(), idx = c.createGain(), bp = filt(c, 'bandpass', 300, 4);
+			car.type = 'sawtooth'; car.frequency.value = hz(n); mod.frequency.value = hz(n) * 1.5; idx.gain.value = hz(n) * 2.5;
+			bp.frequency.setValueAtTime(250, 0); bp.frequency.exponentialRampToValueAtTime(2200, 0.12); bp.frequency.exponentialRampToValueAtTime(350, 0.42);
+			chain(mod, idx, car.frequency); chain(car, bp, shaper(c, 3), filt(c, 'lowpass', 3200), envGain(c, 0, 0.004, 0.6, 0.5), out);
+			car.start(0); mod.start(0);
+		},
+	};
+	// The sub bass layer under every bass pad: a clean sine at the root (an octave down when the note sits high)
+	const withSub = (build, n, len) => (c, out) => {
+		build(c, out);
+		const o = c.createOscillator(), g = c.createGain(), end = Math.max(0.1, len - 0.02);
+		o.frequency.value = hz(n >= 40 ? n - 12 : n);
+		g.gain.setValueAtTime(0.0001, 0); g.gain.linearRampToValueAtTime(0.5, 0.006);
+		g.gain.setValueAtTime(0.5, end * 0.45); g.gain.exponentialRampToValueAtTime(0.0001, end);
+		chain(o, g, out); o.start(0);
 	};
 
-	// The kits. Each pad: [name, sound, render length (s), colour, mute group (MPC-style choke)].
-	// The newer kits share one layout: 8 drums on top, then 4 chords, then 4 bass notes.
+	// ── The kits ──
+	// Each pad: [name, sound, render length (s), colour, mute group (MPC-style choke)]. A kit is its 12 drums plus a key:
+	// six diatonic 7th/9th chords are built in that key (mid register, upper voices kept close so they glide into each
+	// other), and the six bass pads are those chords' roots, each with the sub layer underneath.
+	const NN = ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'];
+	const SCALES = { major: [0, 2, 4, 5, 7, 9, 11], minor: [0, 2, 3, 5, 7, 8, 10], dorian: [0, 2, 3, 5, 7, 9, 10], phrygian: [0, 1, 3, 5, 7, 8, 10] };
+	const wrap = (n, lo) => lo + ((n - lo) % 12 + 12) % 12; // the pitch class n, placed in [lo, lo + 12)
+	function harmony(tonic, scale, degs, nine) {
+		const sc = SCALES[scale], pc = k => tonic + sc[k % 7] + 12 * Math.floor(k / 7);
+		return degs.map(d => {
+			const iv = [0, 2, 4, 6, 8].map(s => pc(d + s) - pc(d)), r = pc(d) % 12;
+			const q = iv[1] === 3 ? (iv[2] === 6 ? 'm7b5' : 'm7') : iv[3] === 11 ? 'maj7' : '7';
+			const add9 = nine && iv[4] === 14 && q !== 'm7b5'; // never a flat 9
+			const root = wrap(r, 45); // A2..G#3
+			const upper = iv.slice(1, add9 ? 5 : 4).map(i => wrap(root + i, 55)).sort((a, b) => a - b);
+			return { name: NN[r] + (add9 ? { m7: 'm9', maj7: 'maj9', 7: '9' }[q] : q), notes: [root, ...upper], bass: wrap(r, 28) };
+		});
+	}
+	const D = (name, build, len, col = 'd', group) => [name, build, len, col, group];
+	function kitOf(name, dusty, drums, [tonic, scale, degs, nine], chord, chordLen, bass, bassLen, bassName, pure = false) {
+		const harm = harmony(tonic, scale, degs, nine);
+		return { name, dusty, harm, pads: [...drums,
+			...harm.map(h => [h.name, chord(h.notes), chordLen, 'k']),
+			...harm.map(h => [`${bassName} ${NN[h.bass % 12]}`, pure ? bass(h.bass) : withSub(bass(h.bass), h.bass, bassLen), bassLen, 'b', 'bass'])] };
+	}
+	const hats = (dec = 0.05, open = 0.4, peak = 0.5) => [D('Hat', S.hat(dec, peak), 0.12, 'd', 'hat'), D('Open hat', S.hat(open, peak), open + 0.1, 'd', 'hat')];
 	const KITS = {
-		soul: { name: 'Soul MPC', dusty: true, pads: [
-			['Kick', S.kick(160, 48, 0.42), 0.6, 'd'], ['Snare', S.snare(190, 0.2), 0.35, 'd'], ['Hat', S.hat(0.05), 0.12, 'd', 'hat'], ['Open hat', S.hat(0.4), 0.5, 'd', 'hat'],
-			['Rim', S.rim, 0.1, 'd'], ['Clap', S.clap, 0.4, 'd'], ['Shaker', S.shaker, 0.2, 'd'], ['Tom', S.tom(110), 0.6, 'd'],
-			['Dm9', S.keys([50, 53, 57, 60, 64]), 2, 'k'], ['G13', S.keys([43, 53, 59, 64]), 2, 'k'], ['Cmaj9', S.keys([48, 55, 59, 62, 64]), 2, 'k'], ['Am11', S.keys([45, 55, 60, 62, 64]), 2, 'k'],
-			['Horns', S.horns([65, 69, 72]), 0.5, 'h'], ['Vibes', S.vibes([69, 76]), 1.9, 'h'], ['Bass D', S.upright(38), 0.85, 'b', 'bass'], ['Bass G', S.upright(43), 0.85, 'b', 'bass'],
-		] },
-		808: { name: '808 Trap', dusty: false, pads: [
-			['Kick', S.kick(120, 42, 0.55), 0.7, 'd'], ['Snare', S.snare(220, 0.16, 2400), 0.3, 'd'], ['Clap', S.clap, 0.4, 'd'], ['Hat', S.hat(0.04, 0.4), 0.1, 'd', 'hat'],
-			['Open hat', S.hat(0.32, 0.4), 0.4, 'd', 'hat'], ['Hat roll', S.roll, 0.35, 'd', 'hat'], ['Rim', S.rim, 0.1, 'd'], ['Cowbell', S.cowbell, 0.4, 'd'],
-			...[36, 39, 41, 43, 44, 46, 48, 51].map(n => [`808 ${['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'][n % 12]}`, S.bass808(n), 1.6, 'b', 'bass']),
-		] },
-		jungle: { name: 'Jungle', dusty: true, pads: [
-			['Kick', S.kick(150, 50, 0.32), 0.5, 'd'], ['Snare', S.snare(210, 0.22, 1500), 0.4, 'd'], ['Hat', S.hat(0.045), 0.12, 'd', 'hat'], ['Ride', S.ride, 1.2, 'd'],
-			['Ghost', S.snare(240, 0.07, 2600), 0.15, 'd'], ['Rim', S.rim, 0.1, 'd'], ['Crash', S.crash, 1.8, 'h'], ['Tom', S.tom(95), 0.6, 'd'],
-			['Am9', S.pad([57, 60, 64, 67, 71]), 2.7, 'k'], ['Fmaj7', S.pad([53, 57, 60, 64]), 2.7, 'k'], ['Dm9', S.pad([50, 57, 60, 64, 65]), 2.7, 'k'], ['Em7', S.pad([52, 55, 59, 62]), 2.7, 'k'],
-			['Reese A', S.reese(33), 1.2, 'b', 'bass'], ['Reese C', S.reese(36), 1.2, 'b', 'bass'], ['Reese D', S.reese(38), 1.2, 'b', 'bass'], ['Reese E', S.reese(40), 1.2, 'b', 'bass'],
-		] },
-		liquid: { name: 'Liquid DnB', dusty: false, pads: [
-			['Kick', S.kick(140, 46, 0.3), 0.45, 'd'], ['Snare', S.snare(200, 0.18, 2000), 0.35, 'd'], ['Hat', S.hat(0.04, 0.4), 0.1, 'd', 'hat'], ['Open hat', S.hat(0.3, 0.4), 0.4, 'd', 'hat'],
-			['Ghost', S.snare(230, 0.06, 2600), 0.15, 'd'], ['Shaker', S.shaker, 0.2, 'd'], ['Rim', S.rim, 0.1, 'd'], ['Ride', S.ride, 1.2, 'd'],
-			['Fmaj9', S.keys([53, 57, 60, 64, 67]), 2, 'k'], ['Em9', S.keys([52, 55, 59, 62, 66]), 2, 'k'], ['Dm9', S.keys([50, 53, 57, 60, 64]), 2, 'k'], ['Cmaj9', S.keys([48, 55, 59, 62, 64]), 2, 'k'],
-			['Sub F', S.sub(41), 0.9, 'b', 'bass'], ['Sub E', S.sub(40), 0.9, 'b', 'bass'], ['Sub D', S.sub(38), 0.9, 'b', 'bass'], ['Sub C', S.sub(36), 0.9, 'b', 'bass'],
-		] },
-		dubstep: { name: 'Dubstep', dusty: false, pads: [
-			['Kick', S.kick(130, 40, 0.5), 0.7, 'd'], ['Snare', S.big, 0.5, 'd'], ['Hat', S.hat(0.05), 0.12, 'd', 'hat'], ['Open hat', S.hat(0.35), 0.45, 'd', 'hat'],
-			['Crash', S.crash, 1.8, 'h'], ['Rim', S.rim, 0.1, 'd'], ['Laser', S.laser, 0.4, 'h'], ['Clap', S.clap, 0.4, 'd'],
-			['Fm', S.stab([53, 56, 60]), 0.35, 'k'], ['Db', S.stab([49, 53, 56]), 0.35, 'k'], ['Ab', S.stab([56, 60, 63]), 0.35, 'k'], ['Eb', S.stab([51, 55, 58]), 0.35, 'k'],
-			['Wob F', S.wobble(41), 0.9, 'b', 'bass'], ['Wob G#', S.wobble(44), 0.9, 'b', 'bass'], ['Wob A#', S.wobble(46), 0.9, 'b', 'bass'], ['Wob D#', S.wobble(39), 0.9, 'b', 'bass'],
-		] },
-		house: { name: 'House', dusty: false, pads: [
-			['Kick', S.kick(140, 50, 0.5), 0.6, 'd'], ['Clap', S.clap, 0.4, 'd'], ['Hat', S.hat(0.04), 0.1, 'd', 'hat'], ['Open hat', S.hat(0.28), 0.4, 'd', 'hat'],
-			['Shaker', S.shaker, 0.2, 'd'], ['Rim', S.rim, 0.1, 'd'], ['Conga', S.conga(330), 0.3, 'd'], ['Cowbell', S.cowbell, 0.4, 'd'],
-			['Am7', S.organ([57, 60, 64, 67]), 0.7, 'k'], ['Dm7', S.organ([50, 57, 60, 65]), 0.7, 'k'], ['Em7', S.organ([52, 55, 59, 62]), 0.7, 'k'], ['Fmaj7', S.organ([53, 57, 60, 64]), 0.7, 'k'],
-			['Bass A', S.slap(33), 0.5, 'b', 'bass'], ['Bass D', S.slap(38), 0.5, 'b', 'bass'], ['Bass E', S.slap(40), 0.5, 'b', 'bass'], ['Bass F', S.slap(41), 0.5, 'b', 'bass'],
-		] },
-		disco: { name: 'Roller Disco', dusty: true, pads: [
-			['Kick', S.kick(130, 48, 0.4), 0.55, 'd'], ['Snare', S.snare(220, 0.15, 2600), 0.3, 'd'], ['Hat', S.hat(0.04), 0.1, 'd', 'hat'], ['Open hat', S.hat(0.35), 0.45, 'd', 'hat'],
-			['Tamb', S.tamb, 0.25, 'd'], ['Clap', S.clap, 0.4, 'd'], ['Conga', S.conga(260), 0.3, 'd'], ['Cowbell', S.cowbell, 0.4, 'd'],
-			['Em7', S.strings([52, 59, 62, 67]), 2.7, 'k'], ['Am7', S.strings([57, 60, 64, 67]), 2.7, 'k'], ['D', S.strings([50, 57, 62, 66]), 2.7, 'k'], ['Cmaj7', S.strings([48, 55, 59, 64]), 2.7, 'k'],
-			['Slap E', S.slap(40), 0.5, 'b', 'bass'], ['Slap A', S.slap(45), 0.5, 'b', 'bass'], ['Slap D', S.slap(38), 0.5, 'b', 'bass'], ['Slap C', S.slap(36), 0.5, 'b', 'bass'],
-		] },
+		soul: kitOf('Soul MPC', true, [D('Kick', S.kick(160, 48, 0.42), 0.6), D('Snare', S.snare(190, 0.2), 0.35), D('Clap', S.clap, 0.4), ...hats(),
+			D('Ride', S.ride, 1.2), D('Ghost', S.snare(240, 0.07, 2600), 0.15), D('Rim', S.rim, 0.1), D('Shaker', S.shaker, 0.2),
+			D('Tom', S.tom(110), 0.6), D('Crash', S.crash, 1.8, 'h'), D('Horns', S.horns([65, 69, 72]), 0.5, 'h')],
+			[0, 'major', [1, 4, 0, 5, 3, 2], true], S.keys, 2, S.upright, 0.85, 'Bass'),
+		808: kitOf('808 Trap', false, [D('Kick', S.kick(120, 42, 0.55), 0.7), D('Snare', S.snare(220, 0.16, 2400), 0.3), D('Clap', S.clap, 0.4), ...hats(0.04, 0.32, 0.4),
+			D('Hat roll', S.roll, 0.35, 'd', 'hat'), D('Ghost', S.snare(260, 0.05, 3000), 0.12), D('Rim', S.rim, 0.1), D('Shaker', S.shaker, 0.2),
+			D('Cowbell', S.cowbell, 0.4), D('Crash', S.crash, 1.8, 'h'), D('Laser', S.laser, 0.4, 'h')],
+			[0, 'minor', [0, 5, 3, 6, 4, 2], true], S.bell, 1.6, S.bass808, 1.6, '808', true),
+		jungle: kitOf('Jungle', true, [D('Kick', S.kick(150, 50, 0.32), 0.5), D('Snare', S.snare(210, 0.22, 1500), 0.4), D('Clap', S.clap, 0.4), ...hats(0.045),
+			D('Ride', S.ride, 1.2), D('Ghost', S.snare(240, 0.07, 2600), 0.15), D('Rim', S.rim, 0.1), D('Shaker', S.shaker, 0.2),
+			D('Tom', S.tom(95), 0.6), D('Crash', S.crash, 1.8, 'h'), D('Siren', S.siren, 1.3, 'h')],
+			[9, 'minor', [0, 5, 3, 6, 4, 2], true], S.pad, 2.7, S.reese, 1.2, 'Reese'),
+		liquid: kitOf('Liquid DnB', false, [D('Kick', S.kick(140, 46, 0.3), 0.45), D('Snare', S.snare(200, 0.18, 2000), 0.35), D('Clap', S.clap, 0.4), ...hats(0.04, 0.3, 0.4),
+			D('Ride', S.ride, 1.2), D('Ghost', S.snare(230, 0.06, 2600), 0.15), D('Rim', S.rim, 0.1), D('Shaker', S.shaker, 0.2),
+			D('Conga', S.conga(300), 0.3), D('Crash', S.crash, 1.8, 'h'), D('Vox', S.vox(69), 0.45, 'h')],
+			[5, 'major', [0, 5, 3, 4, 2, 1], true], S.keys, 2, S.sub, 0.9, 'Sub', true),
+		dubstep: kitOf('Dubstep', false, [D('Kick', S.kick(130, 40, 0.5), 0.7), D('Snare', S.big, 0.5), D('Clap', S.clap, 0.4), ...hats(0.05, 0.35),
+			D('Ride', S.ride, 1.2), D('Ghost', S.snare(240, 0.06, 2600), 0.15), D('Rim', S.rim, 0.1), D('Shaker', S.shaker, 0.2),
+			D('Tom', S.tom(80), 0.6), D('Crash', S.crash, 1.8, 'h'), D('Laser', S.laser, 0.4, 'h')],
+			[5, 'minor', [0, 5, 2, 6, 3, 4], false], S.stab, 0.35, n => S.wobble(n + 12), 0.9, 'Wob'),
+		house: kitOf('House', false, [D('Kick', S.kick(140, 50, 0.5), 0.6), D('Snare', S.snare(230, 0.14, 2600), 0.3), D('Clap', S.clap, 0.4), ...hats(0.04, 0.28),
+			D('Ride', S.ride, 1.2), D('Ghost', S.snare(250, 0.05, 3000), 0.12), D('Rim', S.rim, 0.1), D('Shaker', S.shaker, 0.2),
+			D('Conga', S.conga(330), 0.3), D('Crash', S.crash, 1.8, 'h'), D('Cowbell', S.cowbell, 0.4, 'h')],
+			[9, 'minor', [0, 3, 4, 5, 6, 2], false], S.organ, 0.7, n => S.slap(n + 12), 0.5, 'Bass'),
+		disco: kitOf('Roller Disco', true, [D('Kick', S.kick(130, 48, 0.4), 0.55), D('Snare', S.snare(220, 0.15, 2600), 0.3), D('Clap', S.clap, 0.4), ...hats(0.04, 0.35),
+			D('Ride', S.ride, 1.2), D('Ghost', S.snare(250, 0.05, 3000), 0.12), D('Rim', S.rim, 0.1), D('Tamb', S.tamb, 0.25),
+			D('Conga', S.conga(260), 0.3), D('Crash', S.crash, 1.8, 'h'), D('Cowbell', S.cowbell, 0.4, 'h')],
+			[4, 'minor', [0, 3, 6, 5, 2, 4], true], S.strings, 2.7, n => S.slap(n + 12), 0.5, 'Slap'),
+		ukg: kitOf('UK Garage', false, [D('Kick', S.kick(135, 46, 0.4), 0.55), D('Snare', S.snare(240, 0.12, 2800), 0.25), D('Clap', S.clap, 0.4), ...hats(0.035, 0.25, 0.42),
+			D('Ride', S.ride, 1.2), D('Ghost', S.snare(260, 0.05, 3200), 0.12), D('Rim', S.rim, 0.1), D('Shaker', S.shaker, 0.2),
+			D('Conga', S.conga(360), 0.3), D('Crash', S.crash, 1.8, 'h'), D('Vox', S.vox(67), 0.45, 'h')],
+			[7, 'minor', [0, 5, 3, 6, 2, 4], true], S.organ, 0.7, S.warp, 0.7, 'Bass'),
+		tech: kitOf('Tech House', false, [D('Kick', S.kick(150, 45, 0.55), 0.65), D('Snare', S.snare(210, 0.12, 2400), 0.25), D('Clap', S.clap, 0.4), ...hats(0.03, 0.22, 0.45),
+			D('Ride', S.ride, 1.2), D('Ghost', S.snare(260, 0.05, 3000), 0.12), D('Rim', S.rim, 0.1), D('Shaker', S.shaker, 0.2),
+			D('Perc', S.conga(520), 0.25), D('Crash', S.crash, 1.8, 'h'), D('Zap', S.laser, 0.4, 'h')],
+			[2, 'minor', [0, 5, 3, 6, 4, 2], false], S.stab, 0.35, S.pluck, 0.4, 'Bass'),
+		dub: kitOf('Dub Reggae', true, [D('Kick', S.kick(110, 44, 0.5), 0.6), D('Snare', S.snare(260, 0.1, 1800), 0.25), D('Clap', S.clap, 0.4), ...hats(0.05, 0.3),
+			D('Ride', S.ride, 1.2), D('Ghost', S.snare(280, 0.05, 2600), 0.12), D('Rim', S.rim, 0.1), D('Shaker', S.shaker, 0.2),
+			D('Tom', S.tom(120), 0.6), D('Crash', S.crash, 1.8, 'h'), D('Siren', S.siren, 1.3, 'h')],
+			[11, 'minor', [0, 3, 4, 5, 6, 2], false], S.skank, 0.25, S.dub, 1, 'Dub', true),
+		half: kitOf('Halftime', true, [D('Kick', S.kick(125, 42, 0.6), 0.75), D('Snare', S.snare(180, 0.26, 1600), 0.45), D('Clap', S.clap, 0.4), ...hats(0.045, 0.3),
+			D('Ride', S.ride, 1.2), D('Ghost', S.snare(240, 0.06, 2600), 0.15), D('Rim', S.rim, 0.1), D('Tamb', S.tamb, 0.25),
+			D('Conga', S.conga(240), 0.3), D('Crash', S.crash, 1.8, 'h'), D('Vox', S.vox(65), 0.45, 'h')],
+			[10, 'minor', [0, 5, 3, 6, 2, 4], true], S.keys, 2, S.bass808, 1.6, '808', true),
+		neuro: kitOf('Neuro DnB', false, [D('Kick', S.kick(170, 50, 0.28), 0.4), D('Snare', S.big, 0.5), D('Clap', S.clap, 0.4), ...hats(0.035, 0.25, 0.45),
+			D('Ride', S.ride, 1.2), D('Ghost', S.snare(260, 0.05, 3000), 0.12), D('Rim', S.rim, 0.1), D('Shaker', S.shaker, 0.2),
+			D('Tom', S.tom(140), 0.5), D('Crash', S.crash, 1.8, 'h'), D('Laser', S.laser, 0.4, 'h')],
+			[6, 'phrygian', [0, 1, 5, 3, 6, 4], false], S.stab, 0.35, n => S.growl(n + 12), 0.55, 'Growl'),
 	};
 
 	async function renderPad(def, dusty) {
@@ -280,14 +373,17 @@
 		if (peak > 0.9) for (let i = 0; i < d.length; i++) d[i] *= 0.9 / peak; // never clip, keep the kit's balance otherwise
 		return buf;
 	}
-	const KIT_ORDER = ['soul', '808', 'jungle', 'liquid', 'dubstep', 'house', 'disco']; // '808' would sort first on its own
+	const KIT_ORDER = ['soul', '808', 'jungle', 'liquid', 'neuro', 'dubstep', 'half', 'ukg', 'house', 'tech', 'disco', 'dub']; // '808' would sort first on its own
 	const buffers = {}, custom = Object.fromEntries(Object.keys(KITS).map(k => [k, []])), renders = {};
 	let rendering = null;
 	function renderKit(id) { // one kit's pads, rendered once
 		return renders[id] ||= Promise.all(KITS[id].pads.map(p => renderPad(p, KITS[id].dusty))).then(b => { buffers[id] = b; });
 	}
-	function renderAll() { // the kit on screen first, then the rest one by one so opening stays quick
-		return rendering ||= (async () => { await renderKit(kit); for (const id of KIT_ORDER) await renderKit(id); })();
+	function renderAll() { // the kit on screen first, then the rest one at a time with a breather, so playing never stutters
+		return rendering ||= (async () => {
+			await renderKit(kit);
+			for (const id of KIT_ORDER) { if (!renders[id]) { await renderKit(id); await new Promise(r => setTimeout(r, 250)); } }
+		})();
 	}
 
 	// ── Memory: what you tweak is saved in this browser (IndexedDB), and every change can be undone ──
@@ -367,35 +463,33 @@
 	addEventListener('pagehide', () => { commit(); saveAll(); });
 
 	// ── Live audio graph ──
-	// pads → bus ──┬─────────────────────────────→ compIn → [bus compressor] → master → soft clipper → speakers
-	//              └→ sends → reverb / delay / crush / shift → returns ─┘
-	// A pad picked as the sidechain key goes to keyBus instead: it skips the compressor and drives its detector.
-	// No DynamicsCompressorNode anywhere: Chrome's has a fixed ~6 ms look-ahead you can feel. The compressor and
+	// pads → bus ──┬──────────────────────────→ mix → DJ filter (HP → LP) → [glue compressor] → master → soft clipper → speakers
+	//              └→ send → reverb / echo / crush → returns ─┘   loops ─┘
+	// No DynamicsCompressorNode anywhere: Chrome's has a fixed ~6 ms look-ahead you can feel. The glue compressor and
 	// bitcrusher below are tiny AudioWorklets with zero look-ahead, and a tanh waveshaper catches the final peaks.
-	let ac, bus, keyBus, keySum, clickBus, sendBus, compIn, postComp, master, compNode = null, crushNode = null;
+	let ac, bus, seqBus, clickBus, sendBus, mix, hpF, lpF, postComp, master, compNode = null, crushNode = null;
 	let recTap, loopIn, recNode = null, workletReady = null; // loop bank: what gets recorded, where loops play
 	let tempo = 120;
 	const hooks = []; // run when the tempo changes
 	const WORKLET = `
 	class Comp extends AudioWorkletProcessor {
-		static get parameterDescriptors() { return ['thr', 'ratio', 'att', 'rel', 'makeup', 'key'].map(name => ({ name, defaultValue: 0 })); }
-		constructor() { super(); this.env = 0; this.n = 0; }
+		static get parameterDescriptors() { return ['thr', 'ratio', 'att', 'rel', 'makeup'].map(name => ({ name, defaultValue: 0 })); }
+		constructor() { super(); this.env = 0; }
 		process(I, O, p) {
-			const inp = I[0], key = I[1], out = O[0], len = out[0].length, knee = 6;
-			const det = p.key[0] > 0.5 ? key : inp;
+			const inp = I[0], out = O[0], len = out[0].length, knee = 6;
+			if (!inp.length) return true;
 			const thr = p.thr[0], slope = 1 / Math.max(1, p.ratio[0]) - 1, mk = 10 ** (p.makeup[0] / 20);
 			const aA = Math.exp(-1 / (Math.max(0.0001, p.att[0]) * sampleRate)), aR = Math.exp(-1 / (Math.max(0.001, p.rel[0]) * sampleRate));
 			for (let i = 0; i < len; i++) {
 				let x = 0;
-				for (let c = 0; c < det.length; c++) x = Math.max(x, Math.abs(det[c][i]));
+				for (let c = 0; c < inp.length; c++) x = Math.max(x, Math.abs(inp[c][i]));
 				const over = 20 * Math.log10(x + 1e-9) - thr;
 				const g = 2 * over < -knee ? 0 : 2 * Math.abs(over) <= knee ? slope * (over + knee / 2) ** 2 / (2 * knee) : slope * over;
 				const t = -g;
 				this.env = t > this.env ? aA * this.env + (1 - aA) * t : aR * this.env + (1 - aR) * t;
 				const gl = 10 ** (-this.env / 20) * mk;
-				for (let c = 0; c < out.length; c++) { const s = inp[c] || inp[0]; out[c][i] = s ? s[i] * gl : 0; }
+				for (let c = 0; c < out.length; c++) out[c][i] = (inp[c] || inp[0])[i] * gl;
 			}
-			if ((this.n += len) > 2048) { this.n = 0; this.port.postMessage(this.env); }
 			return true;
 		}
 	}
@@ -418,14 +512,20 @@
 			return true;
 		}
 	}
-	class Rec extends AudioWorkletProcessor { // records between two audio-clock times, sample-accurate
+	// Records between two audio-clock times, sample-accurate. The audio goes out in small batches as it comes in,
+	// so the audio thread never has to glue a long loop together in one go (that was a dropout on every loop stop).
+	class Rec extends AudioWorkletProcessor {
 		constructor() {
-			super(); this.on = Infinity; this.off = Infinity; this.L = []; this.R = []; this.n = 0;
+			super(); this.on = Infinity; this.off = Infinity; this.L = []; this.R = []; this.n = 0; this.total = 0;
 			this.port.onmessage = ({ data: m }) => {
-				if (m.start !== undefined) { this.on = m.start; this.off = Infinity; this.L = []; this.R = []; this.n = 0; }
+				if (m.start !== undefined) { this.on = m.start; this.off = Infinity; this.L = []; this.R = []; this.n = 0; this.total = 0; }
 				if (m.stop !== undefined) this.off = m.stop;
 				if (m.cancel) { this.on = this.off = Infinity; this.L = []; this.R = []; this.n = 0; }
 			};
+		}
+		flush(done) {
+			this.port.postMessage({ L: this.L, R: this.R, done }, [...this.L, ...this.R].map(a => a.buffer));
+			this.L = []; this.R = []; this.n = 0;
 		}
 		process(I) {
 			const inp = I[0], n = inp[0] ? inp[0].length : 128, t0 = currentTime, t1 = t0 + n / sampleRate;
@@ -434,14 +534,10 @@
 			if (b > a) {
 				const l = inp[0], r = inp[1] || inp[0];
 				this.L.push(l ? l.slice(a, b) : new Float32Array(b - a)); this.R.push(r ? r.slice(a, b) : new Float32Array(b - a));
-				this.n += b - a;
+				this.n += b - a; this.total += b - a;
 			}
-			if (t1 >= this.off || this.n > sampleRate * 90) {
-				const L = new Float32Array(this.n), R = new Float32Array(this.n);
-				for (let k = 0, o = 0; k < this.L.length; o += this.L[k].length, k++) { L.set(this.L[k], o); R.set(this.R[k], o); }
-				this.port.postMessage({ L, R }, [L.buffer, R.buffer]);
-				this.on = this.off = Infinity; this.L = []; this.R = []; this.n = 0;
-			}
+			if (t1 >= this.off || this.total > sampleRate * 90) { this.flush(true); this.on = this.off = Infinity; }
+			else if (this.n >= 16384) this.flush(false);
 			return true;
 		}
 	}
@@ -449,35 +545,11 @@
 	registerProcessor('nd-comp', Comp);
 	registerProcessor('nd-crush', Crush);`;
 
-	// ── The rack: every knob is [key, label, min, max, default, curve, format]. Curves: lin, exp, or a list. ──
-	const DIVS = [['1/64T', 1 / 24], ['1/64', 1 / 16], ['1/32T', 1 / 12], ['1/32', 1 / 8], ['1/16T', 1 / 6], ['1/16', 1 / 4], ['1/16D', 3 / 8],
-		['1/8T', 1 / 3], ['1/8', 1 / 2], ['1/8D', 3 / 4], ['1/4T', 2 / 3], ['1/4', 1], ['1/4D', 1.5], ['1/2', 2], ['1 bar', 4]]; // in beats
-	const SHIFTS = [['1/32T', 1 / 12], ['1/32', 1 / 8], ['1/16T', 1 / 6], ['1/16', 1 / 4], ['1/8T', 1 / 3], ['1/8', 1 / 2], ['1/4T', 2 / 3],
-		['1/4', 1], ['1/2', 2], ['1 bar', 4], ['2 bars', 8], ['4 bars', 16]];
-	const KEYS_SC = [['off', 'Off'], ['kick', 'Kick'], ['drums', 'Drums'], ['bass', 'Bass'], ['keys', 'Keys'], ['click', 'Click']];
-	const pct = v => Math.round(v * 100) + '%', ms = v => (v < 10 ? v.toFixed(1) : Math.round(v)) + ' ms', khz = v => v < 1000 ? Math.round(v) + ' Hz' : (v / 1000).toFixed(1) + ' kHz';
-	const RACK = [
-		{ id: 'rev', name: 'Reverb', on: true, nod: 'Plate after the EMT 140 (1957), returned through the Abbey Road EQ trick', knobs: [
-			['pre', 'Pre-delay', 0, 250, 20, 'lin', ms], ['len', 'Length', 0.3, 8, 2.2, 'exp', v => v.toFixed(1) + ' s'],
-			['dens', 'Density', 0, 1, 0.85, 'lin', pct], ['spread', 'Spread', 0, 1, 0.7, 'lin', pct], ['lvl', 'Level', 0, 1, 0.3, 'lin', pct]] },
-		{ id: 'dly', name: 'Delay', on: false, sync: true, nod: 'Tape echo after the Roland RE-201 Space Echo (1974): darker and dirtier every repeat', knobs: [
-			['time', 'Time', 0, 1, 9 / 14, 'lin', null], ['fb', 'Feedback', 0, 0.95, 0.4, 'lin', pct], ['tone', 'Tone', 400, 12000, 3200, 'exp', khz],
-			['wow', 'Wow', 0, 1, 0.15, 'lin', pct], ['lvl', 'Level', 0, 1, 0.5, 'lin', pct]] },
-		{ id: 'crush', name: 'Crush', on: false, nod: 'Grit after the E-mu SP-1200 (1987): defaults to its 12-bit, 26.04 kHz', knobs: [
-			['lo', 'Lo-cut', 20, 2000, 100, 'exp', khz], ['crush', 'Crush', 0, 1, 0.31, 'lin', v => `${Math.round(16 - 13 * v)}-bit`],
-			['drive', 'Drive', 0, 1, 0.3, 'lin', pct], ['hi', 'Hi-cut', 1000, 20000, 12000, 'exp', khz], ['lvl', 'Level', 0, 1, 0.5, 'lin', pct]] },
-		{ id: 'shift', name: 'Shift', on: false, nod: 'Beat shifter, a nod to the Eventide H910 Harmonizer (1975): throws the beat back in time', knobs: [
-			['amt', 'Shift', 0, SHIFTS.length - 1, 5, SHIFTS, null], ['rep', 'Repeats', 0, 0.95, 0.3, 'lin', pct],
-			['warp', 'Warp', 0, 1, 0, 'lin', pct], ['chaos', 'Chaos', 0, 1, 0, 'lin', pct], ['lvl', 'Level', 0, 1, 0.5, 'lin', pct]] },
-		{ id: 'comp', name: 'Comp', on: true, key: 'off', nod: 'Final bus compressor in the spirit of the SSL G-series (1977), with zero look-ahead', knobs: [
-			['thr', 'Threshold', -40, 0, -14, 'lin', v => v.toFixed(1) + ' dB'], ['ratio', 'Ratio', 1, 20, 3, 'exp', v => v.toFixed(1) + ':1'],
-			['att', 'Attack', 0.1, 100, 10, 'exp', ms], ['rel', 'Release', 20, 1500, 200, 'exp', ms], ['makeup', 'Makeup', 0, 18, 3, 'lin', v => '+' + v.toFixed(1) + ' dB']] },
-	];
-	const P = {}; // live settings, real units
-	for (const m of RACK) { P[m.id] = { on: m.on, sync: m.sync, key: m.key }; for (const k of m.knobs) P[m.id][k[0]] = k[4]; }
-	const delaySec = () => Math.min(8, P.dly.sync ? DIVS[Math.round(P.dly.time * (DIVS.length - 1))][1] * 60 / tempo : 0.01 * 200 ** P.dly.time);
-	const shiftSec = () => Math.min(32, SHIFTS[P.shift.amt][1] * 60 / tempo);
-
+	// ── Effects: four knobs. Filter is a DJ filter (left of centre = low-pass, right = high-pass); the rest are sends ──
+	const ECHO_DIVS = [['1/8', 0.5], ['1/8D', 0.75], ['1/4', 1]]; // echo time, in beats, locked to the tempo
+	const FXP = { filter: 0, rev: 0.25, echo: 0, crush: 0, div: 1 };
+	const lpHz = a => 20000 * (90 / 20000) ** a, hpHz = a => 20 * (6000 / 20) ** a; // knob distance from centre → cutoff
+	const pct = v => Math.round(v * 100) + '%', khz = v => v < 1000 ? Math.round(v) + ' Hz' : (v / 1000).toFixed(1) + 'k';
 	// Each effect is built as a fresh little graph between its send and return, so "Cut FX" can throw the
 	// whole thing away (tails and all) and build a clean one.
 	const FX = {}, nodes = {};
@@ -485,31 +557,26 @@
 	const BUILD = {
 		rev() {
 			const pre = ac.createDelay(0.3), conv = ac.createConvolver(), hp = filt(ac, 'highpass', 400), lp = filt(ac, 'lowpass', 9000);
+			pre.delayTime.value = 0.02;
 			chain(pre, conv, hp, lp);
-			return { input: pre, output: lp, pre, conv };
+			return { input: pre, output: lp, conv };
 		},
-		dly() {
-			const dl = ac.createDelay(8), sat = shaper(ac, 1.3), tone = filt(ac, 'lowpass', 3200), fb = ac.createGain();
+		dly() { // tape echo: a little darker and dirtier every repeat
+			const dl = ac.createDelay(4), sat = shaper(ac, 1.3), tone = filt(ac, 'lowpass', 3200), fb = ac.createGain();
 			const lfo = ac.createOscillator(), depth = ac.createGain();
-			lfo.frequency.value = 0.55; chain(lfo, depth, dl.delayTime); lfo.start();
+			lfo.frequency.value = 0.55; depth.gain.value = 0.0005; chain(lfo, depth, dl.delayTime); lfo.start();
 			chain(dl, sat, tone, fb, dl);
-			return { input: dl, output: tone, dl, tone, fb, depth, lfo };
+			return { input: dl, output: tone, dl, fb, lfo };
 		},
-		crush() {
+		crush() { // grit after the SP-1200
 			const lo = filt(ac, 'highpass', 100), drive = ac.createGain(), sat = shaper(ac, 2.5), hi = filt(ac, 'lowpass', 12000), trim = ac.createGain();
 			chain(lo, drive, sat);
 			if (crushNode) { crushNode.disconnect(); chain(sat, crushNode, hi); } else chain(sat, hi);
 			chain(hi, trim);
-			return { input: lo, output: trim, lo, drive, sat, hi, trim };
-		},
-		shift() {
-			const dl = ac.createDelay(32), rep = ac.createGain(), lfo = ac.createOscillator(), depth = ac.createGain();
-			lfo.frequency.value = 0.25; chain(lfo, depth, dl.delayTime); lfo.start();
-			chain(dl, rep, dl);
-			return { input: dl, output: dl, dl, rep, depth, lfo };
+			return { input: lo, output: trim, drive, trim };
 		},
 	};
-	function irFor({ len, dens, spread }) { // decaying noise; low density = sparse grainy reflections, spread = stereo width
+	function irFor(len = 2.4, dens = 0.85, spread = 0.7) { // decaying noise; spread = stereo width
 		const n = Math.ceil(ac.sampleRate * len), ir = ac.createBuffer(2, n, ac.sampleRate);
 		const L = ir.getChannelData(0), R = ir.getChannelData(1), p = 0.004 + dens * dens * 0.996, amp = 1 / Math.sqrt(p);
 		let e = 0;
@@ -518,49 +585,32 @@
 			L[i] = a * env; R[i] = (spread * b + (1 - spread) * a) * env;
 			e += L[i] * L[i];
 		}
-		const k = 1 / Math.sqrt(e || 1); // same loudness at any length/density; Level does the rest
+		const k = 1 / Math.sqrt(e || 1);
 		for (let i = 0; i < n; i++) { L[i] *= k; R[i] *= k; }
 		return ir;
 	}
-	let irTimer = 0;
 	function apply(id) {
 		if (!ac) return;
-		if (id === 'comp') return applyComp();
-		const s = P[id], f = FX[id];
-		set(nodes[id].send.gain, s.on ? 1 : 0);
+		if (id === 'filter') {
+			const v = FXP.filter, a = Math.abs(v), q = 0.7 + 3.3 * a * a; // the resonance comes up as you turn
+			set(lpF.frequency, v < 0 ? lpHz(a) : Math.min(22000, ac.sampleRate / 2), 0.03); set(lpF.Q, v < 0 ? q : 0.5, 0.03);
+			set(hpF.frequency, v > 0 ? hpHz(a) : 10, 0.03); set(hpF.Q, v > 0 ? q : 0.5, 0.03);
+			return;
+		}
+		const f = FX[id];
 		if (id === 'rev') {
-			set(f.pre.delayTime, s.pre / 1000);
-			set(nodes.rev.ret.gain, s.lvl * 40);
-			clearTimeout(irTimer);
-			if (!f.conv.buffer) f.conv.buffer = irFor(s);
-			else irTimer = setTimeout(() => { FX.rev.conv.buffer = irFor(s); }, 120);
+			set(nodes.rev.send.gain, FXP.rev > 0 ? 1 : 0); set(nodes.rev.ret.gain, FXP.rev * 32);
+			if (!f.conv.buffer) f.conv.buffer = irFor();
 		} else if (id === 'dly') {
-			set(f.dl.delayTime, delaySec(), 0.05);
-			set(f.fb.gain, s.fb); set(f.tone.frequency, s.tone); set(f.depth.gain, s.wow * 0.0035); set(nodes.dly.ret.gain, s.lvl);
+			const e = FXP.echo;
+			set(nodes.dly.send.gain, e > 0 ? 1 : 0); set(f.dl.delayTime, ECHO_DIVS[FXP.div][1] * 60 / tempo, 0.05);
+			set(f.fb.gain, 0.25 + e * 0.5); set(nodes.dly.ret.gain, e * 0.9);
 		} else if (id === 'crush') {
-			set(f.lo.frequency, s.lo); set(f.drive.gain, 30 ** s.drive); set(f.hi.frequency, s.hi);
-			set(f.trim.gain, 1 / (1 + s.drive * 1.5)); set(nodes.crush.ret.gain, s.lvl);
-			if (crushNode) { set(crushNode.parameters.get('bits'), 16 - 13 * s.crush, 0.005); set(crushNode.parameters.get('rate'), Math.max(800, ac.sampleRate * (1 - s.crush) ** 1.7), 0.005); }
-		} else if (id === 'shift') {
-			set(f.dl.delayTime, shiftSec(), 0.03); // the glide between shift lengths is the "rip": a tape-speed swoop
-			set(f.rep.gain, s.rep); set(f.depth.gain, s.warp * 0.03); set(f.lfo.frequency, tempo / 60 / 4); set(nodes.shift.ret.gain, s.lvl);
+			const k = FXP.crush;
+			set(nodes.crush.send.gain, k > 0 ? 1 : 0); set(f.drive.gain, 30 ** (k * 0.6)); set(f.trim.gain, 1 / (1 + k * 0.9));
+			set(nodes.crush.ret.gain, k > 0 ? 0.35 + k * 0.5 : 0);
+			if (crushNode) { set(crushNode.parameters.get('bits'), 16 - 12 * k, 0.005); set(crushNode.parameters.get('rate'), Math.max(1500, ac.sampleRate * (1 - k * 0.9) ** 1.7), 0.005); }
 		}
-	}
-	function applyComp() {
-		if (!ac) return;
-		const s = P.comp;
-		compIn.disconnect();
-		if (s.on && compNode) {
-			compIn.connect(compNode);
-			const prm = n => compNode.parameters.get(n);
-			set(prm('thr'), s.thr); set(prm('ratio'), s.ratio); set(prm('att'), s.att / 1000); set(prm('rel'), s.rel / 1000); set(prm('makeup'), s.makeup);
-			set(prm('key'), s.key === 'off' ? 0 : 1, 0.001);
-		} else {
-			compIn.connect(postComp);
-			meter(0);
-		}
-		try { clickBus.disconnect(keySum); } catch {}
-		if (s.key === 'click') clickBus.connect(keySum);
 	}
 	function build(id) {
 		if (FX[id]) { nodes[id].send.disconnect(); FX[id].output.disconnect(); FX[id].lfo?.stop(); }
@@ -569,41 +619,38 @@
 		FX[id].output.connect(nodes[id].ret);
 		apply(id);
 	}
-	// Which pads count as the sidechain key
-	function isKey(def) {
-		const k = P.comp.key;
-		if (!def || k === 'off' || k === 'click' || !P.comp.on || !compNode) return false;
-		return k === 'kick' ? /kick/i.test(def[0]) : k === 'drums' ? def[3] === 'd' : k === 'bass' ? def[3] === 'b' : def[3] === 'k' || def[3] === 'h';
-	}
 
 	function audio() {
 		if (ac) return ac;
-		ac = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: 'interactive' });
+		const AC = window.AudioContext || window.webkitAudioContext;
+		try { ac = new AC({ latencyHint: 0 }); } catch { ac = new AC({ latencyHint: 'interactive' }); } // 0 = the smallest buffer the device allows
 		SR = ac.sampleRate;
 		master = ac.createGain(); master.gain.value = 0.6; // the clipper adds ~4 dB on quiet signals; this evens it out
 		chain(master, shaper(ac, 1.4), ac.destination);
 		postComp = ac.createGain(); postComp.connect(master);
-		compIn = ac.createGain(); compIn.connect(postComp);
-		bus = ac.createGain(); keyBus = ac.createGain(); keySum = ac.createGain(); clickBus = ac.createGain(); sendBus = ac.createGain();
-		bus.connect(compIn); keyBus.connect(postComp); keyBus.connect(keySum); clickBus.connect(master);
-		bus.connect(sendBus); keyBus.connect(sendBus);
-		recTap = ac.createGain(); bus.connect(recTap); keyBus.connect(recTap); // "Pads" source: pads + their FX, never the loops or click
-		loopIn = ac.createGain(); loopIn.connect(compIn);
-		for (const id of ['rev', 'dly', 'crush', 'shift']) {
+		mix = ac.createGain(); hpF = filt(ac, 'highpass', 10, 0.5); lpF = filt(ac, 'lowpass', Math.min(22000, ac.sampleRate / 2), 0.5);
+		chain(mix, hpF, lpF, postComp);
+		bus = ac.createGain(); clickBus = ac.createGain(); sendBus = ac.createGain();
+		seqBus = ac.createGain(); // patterns and the piano roll: heard, but kept out of loop recordings (they are on the grid already)
+		bus.connect(mix); bus.connect(sendBus); seqBus.connect(mix); seqBus.connect(sendBus); clickBus.connect(master);
+		recTap = ac.createGain(); bus.connect(recTap); // "Pads" source: pads + their FX, never the loops or click
+		loopIn = ac.createGain(); loopIn.connect(mix);
+		for (const id of ['rev', 'dly', 'crush']) {
 			nodes[id] = { send: ac.createGain(), ret: ac.createGain() };
-			sendBus.connect(nodes[id].send); nodes[id].ret.connect(compIn); nodes[id].ret.connect(recTap);
+			sendBus.connect(nodes[id].send); nodes[id].ret.connect(mix); nodes[id].ret.connect(recTap);
 			build(id);
 		}
+		apply('filter');
 		workletReady = (ac.audioWorklet ? ac.audioWorklet.addModule(URL.createObjectURL(new Blob([WORKLET], { type: 'text/javascript' }))) : Promise.reject()).then(() => {
 			recNode = new AudioWorkletNode(ac, 'nd-rec', { outputChannelCount: [1] });
 			const sink = ac.createGain(); sink.gain.value = 0; // keeps the recorder running without making sound
 			chain(recTap, recNode, sink, ac.destination);
-			compNode = new AudioWorkletNode(ac, 'nd-comp', { numberOfInputs: 2, outputChannelCount: [2] });
-			compNode.connect(postComp); keySum.connect(compNode, 0, 1);
-			compNode.port.onmessage = e => meter(e.data);
+			// gentle glue on the whole mix, in the spirit of an SSL bus compressor
+			compNode = new AudioWorkletNode(ac, 'nd-comp', { outputChannelCount: [2], parameterData: { thr: -14, ratio: 3, att: 0.01, rel: 0.2, makeup: 3 } });
+			lpF.disconnect(); chain(lpF, compNode, postComp);
 			crushNode = new AudioWorkletNode(ac, 'nd-crush', { outputChannelCount: [2] });
-			build('crush'); applyComp();
-		}).catch(() => {}); // no worklets (very old browsers): everything still plays, just without comp + crusher
+			build('crush');
+		}).catch(() => {}); // no worklets (very old browsers): everything still plays, just without glue + crusher
 		showLatency();
 		return ac;
 	}
@@ -616,91 +663,39 @@
 		latOut.title = `Browser buffer ${((ac.baseLatency || 0) * 1000).toFixed(1)} ms + output ${((ac.outputLatency || 0) * 1000).toFixed(1)} ms at ${ac.sampleRate} Hz`;
 	}
 	// Cut FX: throw away every effect's tail (rebuild them clean); your settings stay.
-	pad.querySelector('.pad__cut').addEventListener('click', () => { if (ac) for (const id of ['rev', 'dly', 'crush', 'shift']) build(id); });
+	pad.querySelector('.pad__cut').addEventListener('click', () => { if (ac) for (const id of ['rev', 'dly', 'crush']) build(id); });
+	hooks.push(() => { if (ac) apply('dly'); });
 
-	// Beat clock for the shifter's Chaos knob: a logistic map (the classic road to chaos) picks the next shift
-	let chaosX = 0.4;
-	function chaosTick() {
-		setTimeout(chaosTick, 60000 / tempo);
-		const s = P.shift;
-		if (!ac || !s.on || s.chaos <= 0 || !rig.open) return;
-		chaosX = (3.57 + 0.43 * s.chaos) * chaosX * (1 - chaosX);
-		if (Math.random() < s.chaos) FX.shift.dl.delayTime.setTargetAtTime(Math.min(32, SHIFTS[Math.floor(chaosX * SHIFTS.length)][1] * 60 / tempo), ac.currentTime, 0.03);
-		else apply('shift');
-	}
-	chaosTick();
-	hooks.push(() => { if (ac) { apply('dly'); apply('shift'); } });
-
-	// ── Rack UI: a tab per effect (with its on/off LED), one row of knobs for the selected one ──
+	// ── The effects row: Filter, Reverb, Echo (with its time chip) and Crush ──
 	const rackEl = pad.querySelector('.rack');
-	let grEl = null;
-	function meter(db) { grEl?.style.setProperty('--gr', Math.min(1, db / 12).toFixed(3)); }
 	if (rackEl) {
-		const tabs = document.createElement('div'), panel = document.createElement('div');
-		tabs.className = 'rack__tabs'; tabs.setAttribute('role', 'tablist'); panel.className = 'rack__panel';
-		rackEl.append(tabs, panel);
-		const panels = {};
-		const select = id => {
-			tabs.querySelectorAll('.rack__name').forEach(b => b.setAttribute('aria-selected', b.dataset.m === id));
-			for (const [k, el] of Object.entries(panels)) el.hidden = k !== id;
-		};
-		for (const m of RACK) {
-			const tab = document.createElement('div');
-			tab.className = 'rack__tab';
-			tab.innerHTML = `<button type="button" class="rack__led" aria-pressed="${m.on}" aria-label="${m.name} on/off" title="${m.name} on/off"></button>`
-				+ `<button type="button" class="rack__name" data-m="${m.id}" role="tab">${m.name}${m.id === 'comp' ? '<i class="rack__gr" title="Gain reduction"></i>' : ''}</button>`;
-			tabs.append(tab);
-			if (m.id === 'comp') grEl = tab.querySelector('.rack__gr');
-			const led = tab.querySelector('.rack__led');
-			led.addEventListener('click', () => { audio(); P[m.id].on = !P[m.id].on; led.setAttribute('aria-pressed', P[m.id].on); apply(m.id); touch(`rack.${m.id}.on`, !P[m.id].on); });
-			ctl[`rack.${m.id}.on`] = { get: () => P[m.id].on, set: v => { P[m.id].on = v; led.setAttribute('aria-pressed', v); apply(m.id); } };
-			tab.querySelector('.rack__name').addEventListener('click', () => select(m.id));
-			const pn = document.createElement('div');
-			pn.className = 'rack__mod'; pn.hidden = true; pn.setAttribute('role', 'tabpanel');
-			pn.innerHTML = `<div class="rack__head"><p class="rack__nod" title="${m.nod}">${m.nod}</p></div><div class="rack__knobs"></div>`;
-			panels[m.id] = pn; panel.append(pn);
-			const row = pn.querySelector('.rack__knobs'), head = pn.querySelector('.rack__head');
-			for (const [key, lab, min, max, def, curve, fmt] of m.knobs) {
-				const wrap = document.createElement('div');
-				wrap.className = 'kn';
-				wrap.innerHTML = `<span class="knob" aria-label="${m.name} ${lab}"></span><b class="kn__v"></b><small>${lab}</small>`;
-				row.append(wrap);
-				const out = wrap.querySelector('.kn__v'), list = Array.isArray(curve);
-				const toReal = v => list ? Math.round(v) : curve === 'exp' ? min * (max / min) ** v : min + (max - min) * v;
-				const toKnob = r => list ? r : curve === 'exp' ? Math.log(r / min) / Math.log(max / min) : (r - min) / (max - min);
-				const show = () => {
-					const r = P[m.id][key];
-					out.textContent = list ? curve[r][0]
-						: key === 'time' ? (P.dly.sync ? DIVS[Math.round(r * (DIVS.length - 1))][0] : ms(delaySec() * 1000)) : fmt(r);
-				};
-				if (key === 'time') hooks.push(show);
-				const path = `rack.${m.id}.${key}`;
-				const kn = knob(wrap.querySelector('.knob'), {
-					min: 0, max: list ? curve.length - 1 : 1, step: list ? 1 : 0.005, value: toKnob(def),
-					onInput: v => { const before = P[m.id][key]; P[m.id][key] = toReal(v); show(); apply(m.id); touch(path, before); },
-				});
-				ctl[path] = { get: () => P[m.id][key], set: r => { P[m.id][key] = r; kn.set(toKnob(r), false); show(); apply(m.id); } };
-				show();
-			}
-			// extras: tempo sync for the delay, sidechain source for the compressor
-			if (m.sync !== undefined) {
+		rackEl.innerHTML = '<div class="rack__knobs fxrow"></div>';
+		const row = rackEl.firstChild;
+		const KN = [['filter', 'Filter', -1, v => Math.abs(v) < 0.02 ? 'Off' : v < 0 ? 'LP ' + khz(lpHz(-v)) : 'HP ' + khz(hpHz(v))],
+			['rev', 'Reverb', 0, pct], ['echo', 'Echo', 0, pct], ['crush', 'Crush', 0, pct]];
+		for (const [key, lab, min, fmt] of KN) {
+			const target = key === 'echo' ? 'dly' : key;
+			const el = document.createElement('div');
+			el.className = 'kn';
+			el.innerHTML = `<span class="knob" aria-label="${lab}"></span><b class="kn__v"></b><small>${lab}</small>`;
+			row.append(el);
+			const out = el.querySelector('.kn__v'), show = () => { out.textContent = fmt(FXP[key]); };
+			const kn = knob(el.querySelector('.knob'), {
+				min, max: 1, step: 0.01, value: FXP[key],
+				onInput: v => { const before = FXP[key]; FXP[key] = key === 'filter' && Math.abs(v) < 0.02 ? 0 : v; show(); apply(target); touch('fx.' + key, before); },
+			});
+			ctl['fx.' + key] = { get: () => FXP[key], set: v => { FXP[key] = v; kn.set(v, false); show(); apply(target); } };
+			show();
+			if (key === 'filter') el.title = 'Turn left for low-pass, right for high-pass. Double-click to reset.';
+			if (key === 'echo') {
 				const b = document.createElement('button');
-				b.type = 'button'; b.className = 'rack__opt'; b.setAttribute('aria-pressed', 'true'); b.textContent = 'Sync';
-				b.title = 'Snap the delay time to the metronome tempo';
-				b.addEventListener('click', () => { P.dly.sync = !P.dly.sync; b.setAttribute('aria-pressed', P.dly.sync); hooks.forEach(f => f()); touch('rack.dly.sync', !P.dly.sync); });
-				ctl['rack.dly.sync'] = { get: () => P.dly.sync, set: v => { P.dly.sync = v; b.setAttribute('aria-pressed', v); hooks.forEach(f => f()); } };
-				head.append(b);
-			}
-			if (m.key !== undefined) {
-				const b = document.createElement('button');
-				b.type = 'button'; b.className = 'rack__opt'; b.title = 'Sidechain: which sound pumps the compressor (tap to cycle)';
-				const lbl = () => { b.textContent = 'SC: ' + KEYS_SC.find(k => k[0] === P.comp.key)[1]; b.setAttribute('aria-pressed', P.comp.key !== 'off'); };
-				b.addEventListener('click', () => { const before = P.comp.key, i = KEYS_SC.findIndex(k => k[0] === P.comp.key); P.comp.key = KEYS_SC[(i + 1) % KEYS_SC.length][0]; lbl(); applyComp(); touch('rack.comp.key', before); });
-				ctl['rack.comp.key'] = { get: () => P.comp.key, set: v => { P.comp.key = v; lbl(); applyComp(); } };
-				lbl(); head.append(b);
+				b.type = 'button'; b.className = 'rack__opt fxrow__time'; b.title = 'Echo time, locked to the tempo';
+				const lbl = () => { b.textContent = ECHO_DIVS[FXP.div][0]; };
+				b.addEventListener('click', () => { const before = FXP.div; FXP.div = (FXP.div + 1) % ECHO_DIVS.length; lbl(); apply('dly'); touch('fx.div', before); });
+				ctl['fx.div'] = { get: () => FXP.div, set: v => { FXP.div = v; lbl(); apply('dly'); } };
+				lbl(); el.append(b);
 			}
 		}
-		select('rev');
 	}
 
 	// ── Pads ──
@@ -709,7 +704,7 @@
 	const els = KEY_LABELS.map((k, i) => {
 		const b = document.createElement('button');
 		b.type = 'button'; b.className = 'pad__btn';
-		b.innerHTML = `<span class="pad__key">${k}</span><span class="pad__name"></span>`;
+		b.innerHTML = `<i class="pad__glow"></i><span class="pad__key">${k}</span><span class="pad__name"></span>`;
 		grid.append(b);
 		b.addEventListener('pointerdown', e => { if (e.button === 0) { e.preventDefault(); hit(i); } });
 		b.addEventListener('click', e => { if (e.detail === 0) hit(i); }); // Enter/Space when tabbed to
@@ -741,6 +736,13 @@
 	}
 	pad.querySelector('[data-mode="synth"]')?.addEventListener('click', () => setMode('synth'));
 	label();
+	// Pad lights: only the overlay's opacity animates (the compositor does it, the page never repaints), and a new
+	// flash replaces the last one on that pad instead of piling up.
+	const glows = els.map(b => b.querySelector('.pad__glow')), glowing = [], pressing = [];
+	function flash(i, ms = 200) {
+		glowing[i]?.cancel();
+		glowing[i] = glows[i].animate([{ opacity: 0.9 }, { opacity: 0 }], { duration: ms, easing: 'ease-out' });
+	}
 
 	async function hit(i) {
 		const c = audio();
@@ -748,14 +750,15 @@
 		const own = custom[kit][i];
 		if (!own && !buffers[kit]) await renderKit(kit);
 		playPad(kit, i, c.currentTime);            // sound first; every visual waits until it's scheduled
-		els[i].animate([{ transform: 'scale(0.93)', filter: 'brightness(1.9)' }, { transform: 'scale(1)', filter: 'brightness(1)' }],
-			{ duration: 260, easing: 'cubic-bezier(0.2, 0.9, 0.3, 1.2)' });
+		flash(i, 260);
+		pressing[i]?.cancel();
+		pressing[i] = els[i].animate([{ transform: 'scale(0.93)' }, { transform: 'scale(1)' }], { duration: 220, easing: 'cubic-bezier(0.2, 0.9, 0.3, 1.2)' });
 		window.wiggler?.hit(own ? 'u' : KITS[kit].pads[i][3], i === 0 || /kick/i.test(KITS[kit].pads[i][0]) ? 1.2 : 0.8);
 		roll?.capture(kit, i, 1);
 		league?.score('p' + i);
 	}
 	// The sound itself, now or at a scheduled time (the piano roll books hits slightly ahead)
-	function playPad(k, i, at, vel = 1) {
+	function playPad(k, i, at, vel = 1, out = bus) {
 		const own = custom[k]?.[i], def = KITS[k]?.pads[i];
 		const buf = own ? own.buffer : buffers[k]?.[i];
 		if (!buf || !def) return;
@@ -767,91 +770,199 @@
 		}
 		const src = ac.createBufferSource(), g = ac.createGain();
 		src.buffer = buf; g.gain.value = vel;
-		chain(src, g, !own && isKey(def) ? keyBus : bus);
+		chain(src, g, out);
 		src.start(t);
 		if (group) { voices[group] = { src, g }; src.onended = () => { if (voices[group]?.src === src) delete voices[group]; }; }
 	}
 
-	// ── Beats: loops picked for Nicky, played on the kits, to jam over with the pads or the synth ──
-	// Each lane is [pad, pattern], one character per 16th note: x = hit, o = soft hit, 1-8 = the pad that many
-	// steps on from `pad` (chords and bass notes), anything else = rest. Lanes loop at their own length.
-	const D16 = (...bars) => bars.join('');
-	const BEATS = [
-		{ name: 'Amen jungle', kit: 'jungle', bpm: 168, swing: 0, lanes: [
-			[0, D16('x.x.......xx....', '..xx......x.....')], [1, D16('....x..o.o..x..o', '.o..x..o.o....x.')],
-			[3, 'x.x.x.x.x.x.x.x.'], [8, D16('1...............', '2...............')], [12, D16('1...........1...', '3.........3.....')]] },
-		{ name: 'Liquid roller', kit: 'liquid', bpm: 174, swing: 0, lanes: [
-			[0, 'x.........x.....'], [1, '....x.......x...'], [4, '.......o......o.'], [2, '..x...x...x...x.'], [5, 'o.o.o.o.o.o.o.o.'],
-			[8, D16('1...............', '2...............')], [12, D16('1.........1.....', '2.........2.....')]] },
-		{ name: 'Halftime dubstep', kit: 'dubstep', bpm: 140, swing: 0, lanes: [
-			[0, D16('x.........x.....', 'x......x..x.....')], [1, '........x.......'], [2, 'x.o.x.o.x.o.x.o.'],
-			[4, D16('x...............', '................')], [6, D16('................', '...............x')],
-			[12, D16('1.1.....1...1.1.', '2.2.....2...2...')]] },
-		{ name: 'UK garage 2-step', kit: 'house', bpm: 132, swing: 0.2, lanes: [
-			[0, D16('x.........x.....', 'x......x..x.....')], [1, '....x.......x...'], [2, '..x...x...x...x.'], [5, '.......o.o.....o'],
-			[8, D16('1..1..1.........', '2..2..2.........')], [12, D16('1.........1.....', '2.........2.....')]] },
-		{ name: 'Deep house', kit: 'house', bpm: 124, swing: 0.1, lanes: [
-			[0, 'x...x...x...x...'], [1, '....x.......x...'], [3, '..x...x...x...x.'], [4, '.o.o.o.o.o.o.o.o'],
-			[8, D16('...1..1....1....', '...2..2....2....')], [12, D16('..1...1...1...1.', '..2...2...2...2.')]] },
-		{ name: 'Roller disco', kit: 'disco', bpm: 118, swing: 0, lanes: [
-			[0, 'x...x...x...x...'], [1, '....x.......x...'], [3, '..x...x...x...x.'], [4, 'o.o.o.o.o.o.o.o.'], [6, '......o..o....o.'],
-			[8, D16('1...............', '2...............', '3...............', '4...............')],
-			[12, D16('1.1.....1.1...1.', '2.2.....2.2...2.', '3.3.....3.3...3.', '4.4.....4.4...4.')]] },
-		{ name: 'Boom bap soul', kit: 'soul', bpm: 90, swing: 0.25, lanes: [
-			[0, 'x......x..x.....'], [1, '....x.......x...'], [2, 'x.x.x.x.x.x.x.x.'],
-			[8, D16('1...............', '2...............')], [14, D16('1......1..1.....', '2......2..2.....')]] },
-		{ name: 'Trap 808', kit: '808', bpm: 140, swing: 0, lanes: [
-			[0, D16('x.........x.....', 'x......x..x.....')], [2, '........x.......'], [3, 'x.x.x.x.x.x.xxxx'],
-			[8, D16('1.........1.....', '3......3..2.....')]] },
+	// ── Patterns: MIDI patterns for the kits, each with a Part A and a Part B of 32 bars ──
+	// A part is a few short lanes (one character per 16th: x = hit, o = soft, . = rest; 16 chars = 1 bar, longer lanes
+	// span several bars), a chord progression (one chord pad index per bar), a chord rhythm and a bass rhythm
+	// (x/o = the bar's chord root, n = lead into the next bar's root). compile() grows that into 32 bars the way a
+	// drummer would play it: crash on bars 1 and 17, a small variation every 4 bars, fills ending every 8, and a
+	// bigger fill back into bar 1. Drum slots: K kick, S snare, C clap, H hat, O open hat, R ride/perc, G ghost,
+	// M rim, T shaker, P perc/tom, X crash, F fx.
+	const SLOT = { K: 0, S: 1, C: 2, H: 3, O: 4, R: 5, G: 6, M: 7, T: 8, P: 9, X: 10, F: 11 };
+	const Z = n => '.'.repeat(n);
+	const PATTERNS = [
+		{ name: 'Boom bap soul', kit: 'soul', bpm: 90, swing: 0.25,
+			A: { d: { K: 'x......x..x.....', S: '....x.......x...', H: 'x.x.x.x.x.x.x.x.' }, prog: [0, 1, 2, 2], ch: 'x...............', bs: 'x......x..x.....' },
+			B: { d: { K: 'x......x.xx...x.', S: '....x..o....x...', H: 'x.xxx.x.x.xxx.x.', M: '.......o......o.' }, prog: [3, 1, 2, 5], ch: 'x.....x.........', bs: 'x......x..x...n.' } },
+		{ name: 'Trap 808', kit: '808', bpm: 140, swing: 0,
+			A: { d: { K: 'x.........x.....x......x..x.....', S: '........x.......', C: '........x.......', H: 'x.x.x.x.x.x.x.x.' }, prog: [0, 1, 2, 3], ch: 'x...............', bs: 'x.........x.....x......x..x.....' },
+			B: { d: { K: 'x..x......x.....x......x..x..x..', S: '........x.......', C: '........x.......', H: 'x.x.x.xxx.x.xxxx', R: Z(48) + '......x.........', F: Z(112) + '........x.......' }, prog: [0, 3, 1, 4], ch: 'x.......x.......', bs: 'x..x......x.....x......x..x..n..' } },
+		{ name: 'Amen roller', kit: 'jungle', bpm: 168, swing: 0,
+			A: { d: { K: 'x.x.......xx......xx......x.....', S: '....x..o.o..x..o.o..x..o.o....x.', H: 'x.x.x.x.x.x.x.x.', R: '..x...x...x...x.' }, prog: [0, 0, 1, 1], ch: 'x...............', bs: 'x.........x...............x.....' },
+			B: { d: { K: 'x.x.......xx......xx......x.....', S: '....x..o.o.ox..o.o..x..oxo..x.ox', H: 'x.x.x.x.x.x.x.x.', R: 'x.x.x.x.x.x.x.x.', F: 'x' + Z(127) }, prog: [0, 2, 3, 4], ch: 'x.......x.......', bs: 'x.....x...x...x.x.....x...x..n..' } },
+		{ name: 'Liquid roller', kit: 'liquid', bpm: 174, swing: 0,
+			A: { d: { K: 'x.........x.....', S: '....x.......x...', G: '.......o......o.', H: '..x...x...x...x.', T: 'o.o.o.o.o.o.o.o.' }, prog: [0, 1, 2, 3], ch: 'x...............', bs: 'x.........x.....' },
+			B: { d: { K: 'x.........x.....x.........x..x..', S: '....x.......x...', G: '.......o......o.', H: '..x...x...x...x.', R: 'x.x.x.x.x.x.x.x.', F: Z(30) + 'x.' }, prog: [0, 1, 4, 5], ch: 'x.......x.......', bs: 'x.....x...x.....x.....x...x...n.' } },
+		{ name: 'Neuro roller', kit: 'neuro', bpm: 174, swing: 0,
+			A: { d: { K: 'x.........x.....', S: '....x.......x...', H: '..x...x...x...x.', G: '.......o...o....' }, prog: [0, 0, 1, 1], ch: '.......x......x.', bs: 'x..x..x...x..x..x..x..x...x.....' },
+			B: { d: { K: 'x.........x..x..x.x.......x.....', S: '....x.......x...', H: '..x...x...x...x.', T: 'o.o.o.o.o.o.o.o.', F: Z(14) + 'x.' + Z(16) }, prog: [0, 1, 2, 3], ch: '.......x......x.', bs: 'x.xx.xx.x.xx.x.x' } },
+		{ name: 'Halftime wobble', kit: 'dubstep', bpm: 140, swing: 0,
+			A: { d: { K: 'x.........x.....x......x..x.....', S: '........x.......', H: 'x.o.x.o.x.o.x.o.', O: Z(30) + 'x.' }, prog: [0, 0, 1, 2], ch: 'x...............' + '......x.........', bs: 'x.x.....x...x.x.x.x.....x...x...' },
+			B: { d: { K: 'x.........x.....x......x..x.....', S: '........x.......', C: '........x.......', H: 'x.o.x.o.x.o.x.o.', F: Z(31) + 'x' }, prog: [0, 1, 2, 3], ch: 'x.......x.......', bs: 'x.x.x.x.x.x.x.x.xxx.x.x.x.xxx.n.' } },
+		{ name: 'Halftime soul', kit: 'half', bpm: 80, swing: 0.15,
+			A: { d: { K: 'x.....x...x.....x.....x.x.......', S: '........x.......', H: 'x.x.x.x.x.x.x.x.', T: '....x.......x...' }, prog: [0, 1, 2, 3], ch: 'x.......x.......', bs: 'x.....x...x.....x.....x.x.......' },
+			B: { d: { K: 'x.....x...x..x..x.....x.x.....x.', S: '........x.......', H: 'x.x.xxx.x.x.x.xx', F: Z(22) + 'x.' + Z(8) }, prog: [0, 3, 1, 4], ch: 'x.....x.........', bs: 'x.....x...x..x..x.....x.x....n..' } },
+		{ name: '2-step garage', kit: 'ukg', bpm: 132, swing: 0.22,
+			A: { d: { K: 'x.........x.....x......x..x.....', S: '....x.......x...', H: '..x...x...x...x.', T: 'o.o.o.o.o.o.o.o.', G: '.......o.o.....o' }, prog: [0, 1, 2, 3], ch: '...x..x.........' + '...x..x....x....', bs: 'x.........x.....x......x..x..x..' },
+			B: { d: { K: 'x.........x.....x......x..x.....', S: '....x.......x...', H: '..x...x...x...x.', R: '..x...x...x...x.', G: '.......o.o.....o', F: '..x.' + Z(28) }, prog: [0, 1, 4, 3], ch: '...x..x...x.....', bs: 'x..x......x..x..x......x..x..n..' } },
+		{ name: 'Deep house', kit: 'house', bpm: 124, swing: 0.1,
+			A: { d: { K: 'x...x...x...x...', C: '....x.......x...', O: '..x...x...x...x.', T: '.o.o.o.o.o.o.o.o' }, prog: [0, 1, 2, 3], ch: '...x..x....x....', bs: '..x...x...x...x.' },
+			B: { d: { K: 'x...x...x...x...', C: '....x.......x...', O: '..x...x...x...x.', T: '.o.o.o.o.o.o.o.o', P: '...x..x....x..x.', M: '.......x......x.' }, prog: [0, 3, 4, 1], ch: '...x..x....x..x.', bs: '..xx..x...xx..x.' } },
+		{ name: 'Tech house roller', kit: 'tech', bpm: 126, swing: 0.05,
+			A: { d: { K: 'x...x...x...x...', C: '....x.......x...', O: '..x...x...x...x.', T: 'o.ox.oxoo.ox.oxo' }, prog: [0, 0, 0, 0], ch: Z(14) + 'x.' + Z(16), bs: '..xx..xx..xx..xx' },
+			B: { d: { K: 'x...x...x...x...', C: '....x.......x...', O: '..x...x...x...x.', T: 'o.ox.oxoo.ox.oxo', P: '...x..x....x..x.', F: Z(62) + 'x.' }, prog: [0, 0, 1, 1], ch: '...x......x.....', bs: '.xxx.xxx.xxx.xxx' } },
+		{ name: 'Roller disco', kit: 'disco', bpm: 118, swing: 0,
+			A: { d: { K: 'x...x...x...x...', S: '....x.......x...', O: '..x...x...x...x.', T: 'o.o.o.o.o.o.o.o.', P: '......o..o....o.' }, prog: [0, 1, 2, 3], ch: 'x...............', bs: 'x.x.....x.x...x.' },
+			B: { d: { K: 'x...x...x...x...', S: '....x.......x...', C: '....x.......x...', O: '..x...x...x...x.', T: 'o.o.o.o.o.o.o.o.', P: '......o..o....o.', F: '..x...x...x...x.' }, prog: [0, 3, 4, 1], ch: 'x.......x.......', bs: 'x.x.x.x.x.x.x.n.' } },
+		{ name: 'Dub one-drop', kit: 'dub', bpm: 75, swing: 0.15,
+			A: { d: { K: '........x.......', M: '........x.......', H: 'x.x.x.x.x.x.x.x.' }, prog: [0, 0, 1, 1], ch: '....x.......x...', bs: 'x.....x.x.......x.....x...x.x...' },
+			B: { d: { K: 'x...x...x...x...', M: '........x.......', H: 'x.x.x.x.x.x.x.x.', F: 'x' + Z(63) }, prog: [0, 1, 2, 1], ch: '..x...x...x...x.', bs: 'x.....x.x...x...x.....x...x.x.n.' } },
 	];
-	let beatOn = null, beatNext = null, bStep = 0, bAt = 0, bTimer = 0;
-	function flash(i, at) {
-		setTimeout(() => els[i].animate([{ filter: 'brightness(1.9)' }, { filter: 'brightness(1)' }], { duration: 180 }), Math.max(0, (at - ac.currentTime) * 1000));
-	}
-	function beatHit(b, i, at, vel) { playPad(b.kit, i, at, vel); if (b.kit === kit && mode === 'pads') flash(i, at); }
-	function beatTick() { // books the next ~120 ms of hits ahead of time, so the groove never waits on the page
-		while (beatOn && bAt < ac.currentTime + 0.12) {
-			if (bStep % 16 === 0 && beatNext) { useBeat(beatNext); bStep = 0; } // switch beats on the next bar
-			const b = beatOn, spb = 60 / (metro?.bpm || b.bpm) / 4, at = bAt + (bStep % 2 ? b.swing * spb : 0);
-			for (const [p, pat] of b.lanes) {
-				const ch = pat[bStep % pat.length];
-				if (ch === 'x' || ch === 'o') beatHit(b, p, at, ch === 'x' ? 1 : 0.45);
-				else if (ch >= '1' && ch <= '8') beatHit(b, p + (+ch - 1), at, 0.9);
+	function compile(pt) { // one part → 32 bars, each a list of [16th step, pad, velocity]
+		const bars = [];
+		for (let b = 0; b < 32; b++) {
+			const ev = [], add = (s, p, v) => ev.push([s, p, v]);
+			const fill = b % 8 === 7, big = b === 31, vary = b % 4 === 3 && !fill;
+			for (const [ln, lane] of Object.entries(pt.d)) for (let s = 0; s < 16; s++) {
+				const ch = lane[(b * 16 + s) % lane.length];
+				if (ch !== 'x' && ch !== 'o') continue;
+				if (fill && s >= (big ? 8 : 12) && 'SGHOC'.includes(ln)) continue; // the fill takes over the end of the bar
+				if ((b === 15 || big) && ln === 'K' && s >= 12) continue;           // a breath before the next phrase
+				add(s, SLOT[ln], ch === 'x' ? 1 : 0.45);
 			}
-			if (bStep % 4 === 0) { const acc = bStep % 16 === 0; setTimeout(() => window.wiggler?.beat(acc), Math.max(0, (at - ac.currentTime) * 1000)); }
-			bStep++; bAt += spb;
+			if (b === 0 || b === 16) add(0, SLOT.X, 0.9);
+			if (vary) { add(14, SLOT.O, 0.6); add(15, SLOT.G, 0.4); }
+			if (big) for (let s = 8; s < 16; s++) add(s, s % 4 === 2 ? SLOT.P : SLOT.S, 0.4 + (s - 8) * 0.08); // the roll back into bar 1
+			else if (fill) for (const [s, v] of b === 15 ? [[12, 0.8], [13, 0.4], [14, 0.9], [15, 0.5]] : [[12, 0.5], [13, 0.6], [14, 0.8], [15, 1]]) add(s, SLOT.S, v);
+			const chord = pt.prog[b % pt.prog.length], next = pt.prog[(b + 1) % pt.prog.length];
+			for (let s = 0; s < 16; s++) {
+				const c = pt.ch[(b * 16 + s) % pt.ch.length], k = pt.bs[(b * 16 + s) % pt.bs.length];
+				if (c === 'x' || c === 'o') add(s, CHORD + chord, c === 'x' ? 0.8 : 0.5);
+				if (k === 'x' || k === 'o') add(s, BASS + chord, k === 'x' ? 0.95 : 0.6);
+				else if (k === 'n') add(s, BASS + next, 0.8);
+			}
+			bars.push(ev.sort((a, b) => a[0] - b[0]));
+		}
+		return bars;
+	}
+	for (const p of PATTERNS) p.bars = { A: compile(p.A), B: compile(p.B) };
+
+	// Playback: books the next ~120 ms ahead on the audio clock. A pattern or part change waits for the next bar line.
+	const pat = { on: null, part: 'A', want: null, bar: 0, step: 0, at: 0, timer: 0 };
+	function patTick() {
+		while (pat.on && pat.at < ac.currentTime + 0.12) {
+			if (pat.step === 0 && pat.want) {
+				if (pat.want.p !== pat.on) { pat.on = pat.want.p; usePattern(pat.on); pat.bar = 0; }
+				if (pat.want.part !== pat.part) { pat.part = pat.want.part; pat.bar = 0; }
+				pat.want = null;
+			}
+			const p = pat.on, s16 = 60 / (metro?.bpm || p.bpm) / 4, at = pat.at + (pat.step % 2 ? p.swing * s16 : 0);
+			const lit = [];
+			for (const [s, i, v] of p.bars[pat.part][pat.bar]) if (s === pat.step) { playPad(p.kit, i, at, v, seqBus); lit.push(i); }
+			const beat = pat.step % 4 === 0, acc = pat.step === 0, bar = pat.step === 0 ? pat.bar : -1;
+			if (lit.length || beat) setTimeout(() => { // one timer per 16th, not one per hit
+				if (p.kit === kit && mode === 'pads') for (const i of lit) flash(i, 160);
+				if (beat) window.wiggler?.beat(acc);
+				if (bar >= 0) patUi(bar);
+			}, Math.max(0, (at - ac.currentTime) * 1000));
+			pat.at += s16;
+			if (++pat.step === 16) { pat.step = 0; pat.bar = (pat.bar + 1) % 32; }
 		}
 	}
-	function useBeat(b) {
-		beatOn = b; beatNext = null;
-		ctl['metro.bpm']?.set(b.bpm);
-		if (mode === 'pads' && kit !== b.kit) { kit = b.kit; label(); }
-		beatUi();
+	function usePattern(p) {
+		ctl['metro.bpm']?.set(p.bpm);
+		if (mode === 'pads' && kit !== p.kit) { kit = p.kit; label(); }
 	}
-	async function beatPlay(b) {
+	async function patPlay(p, part) {
 		const c = audio();
 		if (c.state === 'suspended') c.resume();
-		await renderKit(b.kit);
-		if (beatOn) { beatNext = b; return; } // already rolling: change over on the next bar
-		useBeat(b); bStep = 0; bAt = c.currentTime + 0.08;
-		bTimer = setInterval(beatTick, 25); beatTick();
+		await renderKit(p.kit);
+		if (pat.on) { pat.want = { p, part }; patUi(); return; } // already rolling: change over on the next bar
+		Object.assign(pat, { on: p, part, want: null, bar: 0, step: 0, at: c.currentTime + 0.08 });
+		usePattern(p);
+		pat.timer = setInterval(patTick, 25); patTick(); patUi(0);
 	}
-	function beatStop() { clearInterval(bTimer); bTimer = 0; beatOn = beatNext = null; beatUi(); }
+	function beatStop() { clearInterval(pat.timer); pat.timer = 0; pat.on = pat.want = null; patUi(); }
+
 	const beatBar = document.createElement('div');
-	beatBar.className = 'beats'; beatBar.setAttribute('role', 'group'); beatBar.setAttribute('aria-label', 'Beats to jam over');
-	beatBar.innerHTML = `<select class="track beats__pick" aria-label="Pick a beat">${BEATS.map((b, i) => `<option value="${i}">${b.name} · ${b.bpm}</option>`).join('')}</select><button class="track beats__go" type="button" aria-pressed="false">▶ Play beat</button>`;
+	beatBar.className = 'beats'; beatBar.setAttribute('role', 'group'); beatBar.setAttribute('aria-label', 'Patterns for the kits');
+	beatBar.innerHTML = `<select class="track beats__pick" aria-label="Pick a pattern">${PATTERNS.map((p, i) => `<option value="${i}">${KITS[p.kit].name} · ${p.name} · ${p.bpm}</option>`).join('')}</select>`
+		+ `<span class="beats__parts"><button class="chip beats__part" type="button" data-part="A" aria-pressed="true" title="Part A (32 bars)">A</button><button class="chip beats__part" type="button" data-part="B" aria-pressed="false" title="Part B (32 bars): switches on the next bar">B</button></span>`
+		+ `<button class="track beats__go" type="button" aria-pressed="false">▶ Play</button>`
+		+ `<button class="chip beats__midi" type="button" title="Download this pattern (Part A then B, 64 bars) as a MIDI file">⇩ MIDI</button>`;
 	grid.before(beatBar);
-	const beatPick = beatBar.querySelector('.beats__pick'), beatGo = beatBar.querySelector('.beats__go');
-	function beatUi() {
-		beatGo.textContent = beatOn ? '■ Stop beat' : '▶ Play beat';
-		beatGo.setAttribute('aria-pressed', String(!!beatOn)); beatGo.classList.toggle('is-on', !!beatOn);
+	const beatPick = beatBar.querySelector('.beats__pick'), beatGo = beatBar.querySelector('.beats__go'), partBtns = [...beatBar.querySelectorAll('.beats__part')];
+	let partSel = 'A';
+	function patUi(bar) {
+		const part = pat.want?.part || (pat.on ? pat.part : partSel);
+		partBtns.forEach(b => { b.setAttribute('aria-pressed', String(b.dataset.part === part)); b.classList.toggle('is-wait', !!pat.want && b.dataset.part === pat.want.part && pat.want.part !== pat.part); });
+		const txt = pat.on ? `■ ${pat.part} ${(bar ?? pat.bar) + 1}/32` : '▶ Play';
+		if (beatGo.textContent !== txt) beatGo.textContent = txt;
+		beatGo.setAttribute('aria-pressed', String(!!pat.on)); beatGo.classList.toggle('is-on', !!pat.on);
 	}
-	beatGo.addEventListener('click', () => beatOn ? beatStop() : beatPlay(BEATS[beatPick.value]));
-	beatPick.addEventListener('change', () => { if (beatOn) beatPlay(BEATS[beatPick.value]); });
+	beatGo.addEventListener('click', () => pat.on ? beatStop() : patPlay(PATTERNS[beatPick.value], partSel));
+	beatPick.addEventListener('change', () => {
+		const p = PATTERNS[beatPick.value];
+		if (pat.on) patPlay(p, partSel);
+		else if (mode === 'pads' && kit !== p.kit) { kit = p.kit; renderKit(kit); label(); }
+	});
+	partBtns.forEach(b => b.addEventListener('click', () => {
+		partSel = b.dataset.part;
+		if (pat.on) pat.want = { p: pat.want?.p || pat.on, part: partSel };
+		patUi();
+	}));
+
+	// ⇩ MIDI: a standard type-1 file at 96 ticks per beat: tempo, then drums on channel 10 (General MIDI notes), chords, bass
+	const GM = [36, 38, 39, 42, 46, 51, 40, 37, 70, 63, 49, 56];
+	function midiFile(p) {
+		const PPQ = 96, T16 = PPQ / 4, harm = KITS[p.kit].harm, uspb = Math.round(60e6 / p.bpm);
+		const vlq = n => { const b = [n & 127]; while ((n >>= 7)) b.unshift((n & 127) | 128); return b; };
+		const meta = (type, bytes) => [0xff, type, bytes.length, ...bytes];
+		const text = s => [...s].map(c => c.charCodeAt(0) & 127);
+		const track = (name, evs) => { // evs: [tick, bytes]; at the same tick: meta first, then note-offs, then note-ons
+			const rank = b => b[0] === 0xff ? 0 : (b[0] & 0xf0) === 0x80 ? 1 : 2;
+			evs = [[0, meta(3, text(name))], ...evs].sort((a, b) => a[0] - b[0] || rank(a[1]) - rank(b[1]));
+			const out = []; let last = 0;
+			for (const [t, bytes] of evs) { out.push(...vlq(t - last), ...bytes); last = t; }
+			out.push(0, 0xff, 0x2f, 0);
+			return [0x4d, 0x54, 0x72, 0x6b, out.length >>> 24, (out.length >> 16) & 255, (out.length >> 8) & 255, out.length & 255, ...out];
+		};
+		const drums = [], chords = [], bass = [];
+		const note = (arr, ch, n, t, len, v) => arr.push([t, [0x90 | ch, n, Math.max(1, Math.round(v * 120))]], [t + Math.max(1, len), [0x80 | ch, n, 0]]);
+		['A', 'B'].forEach((part, pi) => p.bars[part].forEach((ev, b) => {
+			const t0 = (pi * 32 + b) * 16 * T16;
+			for (const [s, i, v] of ev) {
+				const t = t0 + s * T16 + (s % 2 ? Math.round(p.swing * T16) : 0);
+				if (i < CHORD) note(drums, 9, GM[i], t, T16, v);
+				else if (i < BASS) {
+					const nx = ev.find(e => e[0] > s && e[1] >= CHORD && e[1] < BASS);
+					for (const n of harm[i - CHORD].notes) note(chords, 0, n, t, ((nx ? nx[0] : 16) - s) * T16 - 2, v);
+				} else {
+					const nx = ev.find(e => e[0] > s && e[1] >= BASS);
+					note(bass, 1, harm[i - BASS].bass + 12, t, Math.min(8, (nx ? nx[0] : 16) - s) * T16 - 2, v);
+				}
+			}
+		}));
+		const head = [0x4d, 0x54, 0x68, 0x64, 0, 0, 0, 6, 0, 1, 0, 4, 0, PPQ];
+		const tempo = [[0, meta(0x51, [uspb >> 16, (uspb >> 8) & 255, uspb & 255])], [0, meta(0x58, [4, 2, 24, 8])]];
+		return new Uint8Array([...head, ...track(`${p.name} ${p.bpm} BPM`, tempo), ...track('Drums', drums), ...track('Chords', chords), ...track('Bass', bass)]);
+	}
+	beatBar.querySelector('.beats__midi').addEventListener('click', () => {
+		const p = PATTERNS[beatPick.value], a = document.createElement('a');
+		a.href = URL.createObjectURL(new Blob([midiFile(p)], { type: 'audio/midi' }));
+		a.download = `Nicky Dubs - ${p.name} (${p.bpm} BPM, A+B).mid`;
+		a.click();
+		setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+	});
 
 	// ── Mic kit: record anything (beatbox, claps, pots and pans) and every hit lands on its own pad ──
 	// Hits are found by sudden jumps in loudness, each one trimmed to its natural decay and sorted low to high
-	// (kick-like sounds first). Pads it can't fill keep the kit you had on, so all 16 are always playable.
+	// (kick-like sounds first) onto the 12 drum pads. The chords, the bass and any drum pads it can't fill keep the kit
+	// you had on, so all 24 are always playable.
 	// The kit is saved in this browser and shows up as the last kit in the list.
 	const MIC = 'mic', MIC_MAX = 12; // seconds
 	let micRec = null, micFill = 'soul', micRestored = false;
@@ -895,7 +1006,7 @@
 		} };
 		recBtn.classList.add('is-rec'); recBtn.textContent = '■ Stop 0.0s';
 	}
-	function sliceHits(buf) { // → up to 16 { data, name }, low sounds first
+	function sliceHits(buf) { // → up to 12 { data, name }, low sounds first
 		const sr = buf.sampleRate, n = buf.length, x = new Float32Array(n);
 		for (let ch = 0; ch < buf.numberOfChannels; ch++) { const d = buf.getChannelData(ch); for (let i = 0; i < n; i++) x[i] += d[i] / buf.numberOfChannels; }
 		const hop = Math.round(sr * 0.005), F = Math.floor(n / hop), db = new Float32Array(F);
@@ -934,7 +1045,7 @@
 			}
 			hits.push({ data: d, peak: pk, zcr: zc / (L / sr), low: lo / (all || 1), len: d.length / sr });
 		});
-		const best = hits.sort((a, b) => b.peak - a.peak).slice(0, 16).sort((a, b) => a.zcr - b.zcr);
+		const best = hits.sort((a, b) => b.peak - a.peak).slice(0, CHORD).sort((a, b) => a.zcr - b.zcr);
 		const count = {};
 		return best.map(h => {
 			const w = h.low > 0.3 ? 'Boom' : h.len < 0.1 ? 'Tss' : 'Snap'; // deep, short and bright, or in between
@@ -946,13 +1057,13 @@
 		if (!KITS[fill] || fill === MIC) fill = 'soul';
 		await renderKit(fill);
 		const pads = [], bufs = [];
-		for (let i = 0; i < 16; i++) {
+		for (let i = 0; i < PADS; i++) {
 			if (i < hits.length) {
 				const b = ac.createBuffer(1, hits[i].data.length, sr); b.copyToChannel(hits[i].data, 0);
 				pads.push([hits[i].name, null, 0, 'u']); bufs.push(b);
 			} else { pads.push(KITS[fill].pads[i]); bufs.push(buffers[fill][i]); } // the rest of the kit you had on
 		}
-		KITS[MIC] = { name: '🎙 My mic kit', dusty: false, pads };
+		KITS[MIC] = { name: '🎙 My mic kit', dusty: false, harm: KITS[fill].harm, pads };
 		buffers[MIC] = bufs; renders[MIC] = Promise.resolve(); custom[MIC] ||= []; micFill = fill;
 		if (!KIT_ORDER.includes(MIC)) { KIT_ORDER.push(MIC); kitSel?.insertAdjacentHTML('beforeend', `<option value="${MIC}">${KITS[MIC].name}</option>`); }
 	}
@@ -962,13 +1073,13 @@
 		await buildMicKit(hits, rec.sampleRate, kit === MIC ? micFill : kit);
 		store.put('micKit', { sr: rec.sampleRate, fill: micFill, hits });
 		kit = MIC; setMode('pads');
-		hits.forEach((h, i) => setTimeout(() => els[i].animate([{ filter: 'brightness(2)' }, { filter: 'brightness(1)' }], { duration: 300 }), i * 60));
+		hits.forEach((h, i) => setTimeout(() => flash(i, 300), i * 60));
 		return hits.length;
 	}
 	async function restoreMic() { // the last mic kit, saved in this browser
 		if (micRestored) return; micRestored = true;
 		const v = await store.get('micKit');
-		if (v?.hits?.length) await buildMicKit(v.hits, v.sr, v.fill);
+		if (v?.hits?.length) await buildMicKit(v.hits.slice(0, CHORD), v.sr, v.fill); // older saves held up to 16
 	}
 
 	// Most sample files start with a few ms of silence; cut it so the hit lands the instant you tap.
@@ -1104,7 +1215,7 @@
 	const loops = (() => {
 		const box = pad.querySelector('.loops');
 		if (!box) return null;
-		const LKEYS = ['Digit5', 'Digit6', 'Digit7', 'Digit8', 'KeyT', 'KeyY', 'KeyU', 'KeyI'], LLAB = ['5', '6', '7', '8', 'T', 'Y', 'U', 'I'];
+		const LKEYS = ['Digit7', 'Digit8', 'Digit9', 'Digit0', 'KeyU', 'KeyI', 'KeyO', 'KeyP'], LLAB = ['7', '8', '9', '0', 'U', 'I', 'O', 'P'];
 		const REPS = [['1/4', 1], ['1/8', 0.5], ['1/16', 0.25], ['1/32', 0.125]];
 		const opt = { loop: true, count: true, rev: false, mic: false, rep: 1 };
 		const S = LLAB.map(() => ({ state: 'empty', buf: null, rbuf: null, anchor: 0, src: null, g: null, playAt: 0, off: 0 }));
@@ -1161,13 +1272,22 @@
 			try { micSrc?.disconnect(recNode); } catch {}
 			(opt.mic && micSrc ? micSrc : recTap).connect(recNode);
 		}
-		// The mic hears you late: your ears get the click after the output latency, and the mic adds its own.
-		const micLag = () => opt.mic ? (ac.baseLatency || 0) + (ac.outputLatency || 0) + 0.01 : 0;
+		// You play to what you hear, and you hear the click late by the output latency, so whatever you play lands that
+		// late on the audio clock. The recording window shifts by the same amount (the mic adds a little of its own),
+		// so the loop sits on the grid instead of dragging behind it.
+		const recLag = () => (ac.baseLatency || 0) + (ac.outputLatency || 0) + (opt.mic ? 0.01 : 0);
 		async function record(i) {
 			audio(); if (ac.state === 'suspended') await ac.resume();
 			try { await workletReady; } catch { alert('Recording needs a newer browser (AudioWorklet).'); return; }
 			if (opt.mic && !(await ensureMic())) return;
-			recNode.port.onmessage = e => onRecorded(e.data);
+			let got = { L: [], R: [] }; // the recorder sends the audio in batches; join them once it says done
+			recNode.port.onmessage = ({ data: m }) => {
+				got.L.push(...m.L); got.R.push(...m.R);
+				if (!m.done) return;
+				const join = parts => { const out = new Float32Array(parts.reduce((n, a) => n + a.length, 0)); let o = 0; for (const a of parts) { out.set(a, o); o += a.length; } return out; };
+				const L = join(got.L), R = join(got.R); got = { L: [], R: [] };
+				onRecorded({ L, R });
+			};
 			route();
 			let at;
 			if (opt.count) {
@@ -1175,8 +1295,8 @@
 				at = metro.nextBeat(ac.currentTime + spb() * 3, true); // at least 3 clicks, then the next bar line
 			} else at = ac.currentTime + 0.01;
 			Object.assign(S[i], { state: 'armed', startAt: at });
-			recSlot = i;
-			recNode.port.postMessage({ start: at + micLag() });
+			recSlot = i; kick();
+			recNode.port.postMessage({ start: at + recLag() });
 			setTimeout(() => { if (recSlot === i) window.wiggler?.hit('h', 1); }, Math.max(0, (at - ac.currentTime) * 1000));
 		}
 		function stopRec(i) {
@@ -1186,7 +1306,7 @@
 			if (opt.count && metro.running) end = s.startAt + Math.max(1, Math.round((t - s.startAt) / spb())) * spb();
 			pending = { i, len: Math.round((end - s.startAt) * ac.sampleRate), end };
 			s.state = 'finishing';
-			recNode.port.postMessage({ stop: Math.max(end + micLag(), t) });
+			recNode.port.postMessage({ stop: Math.max(end + recLag(), t) });
 		}
 		function onRecorded({ L, R }) {
 			const p = pending || { i: recSlot, len: L.length, end: ac.currentTime };
@@ -1203,7 +1323,8 @@
 			});
 			Object.assign(s, { buf, rbuf, anchor: s.startAt, state: 'stopped' });
 			play(p.i, Math.max(p.end, ac.currentTime + 0.005)); // starts right where the recording ended, so it stays in time
-			persist();
+			kick();
+			(window.requestIdleCallback || setTimeout)(persist, { timeout: 4000 }); // saving copies the audio: do it when the page is idle
 			league?.bonus(100);
 		}
 
@@ -1246,6 +1367,7 @@
 		}
 		function tap(i) {
 			audio();
+			setTimeout(kick); // after this tap has changed the slot
 			if (delMode) { clear(i); setDel(false); return; }
 			const s = S[i];
 			if (recSlot >= 0 && recSlot !== i) { if (S[recSlot].state !== 'finishing') stopRec(recSlot); return; }
@@ -1337,33 +1459,43 @@
 		chip('del').addEventListener('click', () => setDel(!delMode));
 
 		// ── Slot lights: count-in countdown, recording beat count, playback progress ──
-		let raf = 0;
-		function ui() {
-			raf = rig.open ? requestAnimationFrame(ui) : 0;
-			if (!ac) return;
-			const t = ac.currentTime;
+		// Each slot only touches the page when something it shows has changed, the progress ring moves about 20 times
+		// a second, and the loop stops itself when no slot is busy (kick() restarts it), so idle loops cost nothing.
+		let raf = 0, lastP = 0;
+		const shown = slotEls.map(() => ({ s: '', txt: '' }));
+		const kick = () => { if (!raf && rig.open) raf = requestAnimationFrame(ui); };
+		function ui(now) {
+			raf = 0;
+			if (!ac || !rig.open) return;
+			const t = ac.currentTime, ring = now - lastP > 50;
+			if (ring) lastP = now;
+			let busy = false;
 			S.forEach((s, i) => {
-				const el = slotEls[i], txt = el.firstChild.nextSibling;
+				const el = slotEls[i], seen = shown[i];
 				if (s.state === 'armed' && t >= s.startAt) s.state = 'recording';
-				el.dataset.s = s.state;
-				if (s.state === 'armed') txt.textContent = Math.ceil((s.startAt - t) / spb());
-				else if (s.state === 'recording') txt.textContent = opt.count && metro.running ? Math.floor((t - s.startAt) / spb()) + 1 : (t - s.startAt).toFixed(1);
-				else if (s.state === 'playing') {
+				let txt = '';
+				if (s.state === 'armed') txt = String(Math.ceil((s.startAt - t) / spb()));
+				else if (s.state === 'recording') txt = opt.count && metro.running ? String(Math.floor((t - s.startAt) / spb()) + 1) : (t - s.startAt).toFixed(1);
+				else if (s.state === 'finishing') txt = '…';
+				else if (s.state === 'playing' && ring) {
 					const d = s.buf.duration, ph = ((s.off + Math.max(0, t - s.playAt)) % d) / d;
 					el.style.setProperty('--p', (opt.rev ? 1 - ph : ph).toFixed(3));
-					txt.textContent = '';
-				} else txt.textContent = s.state === 'empty' ? '' : s.state === 'finishing' ? '…' : '';
+				}
+				if (seen.s !== s.state) { el.dataset.s = seen.s = s.state; }
+				if (seen.txt !== txt) { el.firstChild.nextSibling.textContent = seen.txt = txt; }
+				if (s.state !== 'empty' && s.state !== 'stopped') busy = true;
 			});
+			if (busy) raf = requestAnimationFrame(ui);
 		}
 		addEventListener('keydown', e => {
 			if (!rig.open || e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
-			if (mode === 'synth' && e.code.startsWith('Key')) return; // T-I belong to the piano in synth mode
+			if (mode === 'synth' && e.code.startsWith('Key')) return; // U-P belong to the piano in synth mode
 			const i = LKEYS.indexOf(e.code);
 			if (i < 0) return;
 			e.preventDefault(); tap(i);
 		});
 		return {
-			wake() { materialize(); if (!raf) raf = requestAnimationFrame(ui); },
+			wake() { materialize(); kick(); },
 			load(arr) { saved = arr; materialize(); },
 			sleep() { S.forEach((s, i) => { if (recSlot === i) clear(i); else if (s.state === 'playing') pause(i); }); repeatOff(); scratchOff(); setDel(false); },
 		};
@@ -1689,10 +1821,10 @@
 		const cv = $('.roll__cv'), cx = cv.getContext('2d');
 		const GUT = 36, RUL = 14;
 		let BW = 26, RH = 11, sx = 0, sy = (108 - 72) * RH, W = 0, H = 0, dpr = 1;
-		const rows = () => lane === 'synth' ? 85 : 16;              // synth lane: MIDI 24 (C1) to 108 (C8)
+		const rows = () => lane === 'synth' ? 85 : PADS;             // synth lane: MIDI 24 (C1) to 108 (C8)
 		const rowOf = n => lane === 'synth' ? 108 - n : n;
 		const noteOfRow = r => lane === 'synth' ? 108 - r : r;
-		const rh = () => lane === 'synth' ? RH : Math.max(RH, (H - RUL) / 16);
+		const rh = () => lane === 'synth' ? RH : Math.max(RH, (H - RUL) / PADS);
 		const inLane = nt => (nt.k === 'synth') === (lane === 'synth');
 		const BLACK = [1, 3, 6, 8, 10];
 		const padDef = (k, n) => (KITS[k] || KITS[kit]).pads[n];
@@ -1857,7 +1989,7 @@
 			const t = timeOf(b);
 			if (t < ac.currentTime - 0.005) return;
 			if (nt.k === 'synth') { const e = synthUi?.engine(); if (!e) return; const v = e.noteOn(nt.n, nt.v, t); e.releaseAt(v, timeOf(b + nt.d)); }
-			else playPad(nt.k, nt.n, t, nt.v);
+			else playPad(nt.k, nt.n, t, nt.v, seqBus);
 		}
 		hooks.push(() => { if (playing) { const now = ac.currentTime; anchorBeat = beatAt(now); anchorTime = now; schedTo = Math.min(schedTo, beatAt(now)); } rspb = 60 / tempo; });
 		function loop() {
@@ -1931,7 +2063,7 @@
 		function onMidi({ data: [st, d1, d2] }) {
 			if (!rig.open) return;
 			const cmd = st & 0xf0, drums = (st & 0x0f) === 9;
-			if (cmd === 0x90 && d2 > 0) drums ? hit(((d1 - 36) % 16 + 16) % 16) : synthUi?.noteOn(d1, d2 / 127);
+			if (cmd === 0x90 && d2 > 0) drums ? hit(((d1 - 36) % PADS + PADS) % PADS) : synthUi?.noteOn(d1, d2 / 127);
 			else if ((cmd === 0x80 || cmd === 0x90) && !drums) synthUi?.noteOff(d1);
 		}
 
