@@ -599,7 +599,7 @@
 		}
 		const f = FX[id];
 		if (id === 'rev') {
-			set(nodes.rev.send.gain, FXP.rev > 0 ? 1 : 0); set(nodes.rev.ret.gain, FXP.rev * 32);
+			set(nodes.rev.send.gain, FXP.rev > 0 ? 1 : 0); set(nodes.rev.ret.gain, FXP.rev * 2.4); // ConvolverNode normalizes to about -58 dB; 2.4 puts 100% about 2 dB under the dry hit
 			if (!f.conv.buffer) f.conv.buffer = irFor();
 		} else if (id === 'dly') {
 			const e = FXP.echo;
