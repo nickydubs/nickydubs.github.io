@@ -8,11 +8,13 @@
     get(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } },
     set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} },
   };
-  const DEF = { cutKeys: 'Space+Enter', mixBars: 32, style: 'blend', maxStretch: 10, xfCurve: 'smooth', amFx: true,
+  const DEF = { cutKeys: 'Space+Enter', mixBars: 32, style: 'swell', maxStretch: 10, xfCurve: 'smooth', amFx: true,
     route: 'now', fx: {}, master: 0.9, dropTempo: 'glide', glideBeats: 16, keyLock: true };
   const S = Object.assign({}, DEF, store.get('djfx.settings', {}));
   if (S.route === 'A' || S.route === 'B') S.route = 'now';
   if (!S.am2) { S.style = 'blend'; S.mixBars = 32; delete S.mixBeats; delete S.tempoMode; S.am2 = true; }   // automix v2: phrase blends by default
+  if (!S.am3) { S.style = 'swell'; S.am3 = true; }   // Drive: swell + cut on the 1 by default (Nicky liked it better); the blend is in Pro
+  S.drive = Object.assign({ moments: ['echo', 'reverb', 'filter', 'autofilter'], buildBars: 8, land: 'drop', loopEcho: true }, S.drive || {});
   const META = store.get('djfx.tracks', {});
   const saveS = () => store.set('djfx.settings', S), saveMeta = () => store.set('djfx.tracks', META);
   const fmtT = s => { if (!isFinite(s)) return '--:--'; s = Math.max(0, s); return Math.floor(s / 60) + ':' + String(Math.floor(s % 60)).padStart(2, '0'); };
@@ -60,6 +62,19 @@
     kn.addEventListener('keydown', e => { if (e.key === 'ArrowUp' || e.key === 'ArrowRight') set(v + (o.max - o.min) / 40); if (e.key === 'ArrowDown' || e.key === 'ArrowLeft') set(v - (o.max - o.min) / 40); });
     set(v, false);
     return { set, get: () => v };
+  }
+  // One button that steps through a list instead of a pair of arrows: tap = next, long-press or Shift-click = back
+  function cycler(el, o) {
+    el.classList.add('cyc');
+    el.innerHTML = '<button type="button" class="cyb" title="Tap for the next one; long-press or Shift-click to go back"></button>' + (o.label ? '<span class="kl">' + o.label + '</span>' : '');
+    const b = $('.cyb', el); let i = clamp(o.value, 0, o.list.length - 1), long = false, timer = 0;
+    const set = (ni, emit = true) => { i = ((Math.round(ni) % o.list.length) + o.list.length) % o.list.length; b.textContent = o.fmt ? o.fmt(o.list[i]) : o.list[i]; if (emit && o.onInput) o.onInput(i); };
+    b.addEventListener('pointerdown', () => { long = false; timer = setTimeout(() => { long = true; set(i - 1); }, 500); });
+    for (const ev of ['pointerup', 'pointerleave', 'pointercancel']) b.addEventListener(ev, () => clearTimeout(timer));
+    b.addEventListener('click', e => { if (long) { long = false; return; } set(e.shiftKey ? i - 1 : i + 1); });
+    b.addEventListener('contextmenu', e => e.preventDefault());
+    set(i, false);
+    return { set, get: () => i, el: b };
   }
   const dB = g => (g <= 0.0001 ? '-∞' : (20 * Math.log10(g)).toFixed(0)) + 'dB';
 
@@ -131,7 +146,7 @@
   }
 
   /* ---------------------------------------------------------------- decks UI */
-  const LOOPS = [1 / 32, 1 / 16, 1 / 8, 1 / 4, 1 / 2, 1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024];
+  const LOOPS = [1 / 4, 1 / 2, 1, 2, 4, 8, 16, 32, 64];   // loop lengths in beats, 1/16 note to 16 bars
   const loopLabel = b => b < 1 ? '1/' + Math.round(1 / b) : b < 4 ? b + (b === 1 ? ' beat' : ' beats') : (b / 4) + (b === 4 ? ' bar' : ' bars');
   const UI = {};
   function buildDeck(id) {
@@ -142,7 +157,7 @@
       <canvas class="ovw"></canvas>
       <div class="transport"><button data-a="pp" title="Back 32 bars, on the next bar line ([)">« 32</button><button data-a="cue">CUE</button><button data-a="play" class="btn-play">▶ PLAY</button><button data-a="sync">SYNC</button><button data-a="pn" title="Forward 32 bars, on the next bar line (])">32 »</button></div>
       <div class="hot">${[0, 1, 2, 3].map(i => `<button data-h="${i}" title="Tap: set or jump (on the NEXT deck: drop it on the 1). Long-press: delete">Q${i + 1}</button>`).join('')}</div>
-      <div class="loop"><button data-a="lhalf" aria-label="Halve loop">◀</button><span class="len" data-f="loop">4 beats</span><button data-a="ldouble" aria-label="Double loop">▶</button><button data-a="loop">LOOP</button><button data-a="kick" title="Leave the loop on its next bar line, straight back into the song, with the high-pass filter on">OUT · HPF</button></div>
+      <div class="loop"><span data-f="lcyc"></span><button data-a="loop">LOOP</button><button data-a="kick" title="Leave the loop on its next bar line, straight back into the song, with the high-pass filter on">OUT · HPF</button></div>
       <div class="pitch"><input type="range" min="-1" max="1" step="0.0005" value="0" data-f="pitch" aria-label="Pitch"><div class="row"><button data-a="nd" title="Nudge slower (hold)">−</button><button data-a="nu" title="Nudge faster (hold)">+</button></div></div>
       <details class="gridbox"><summary>More: key lock, pitch range, beat grid</summary><div class="grid-edit"><button data-a="kl" title="Key lock: tempo changes keep the pitch">KEY LOCK</button><button data-a="q" class="on" title="Quantize cues and loops to the beat grid">QUANTIZE</button><button data-a="range" title="Pitch range">±8%</button><button data-a="g-">◀ 10ms</button><button data-a="g+">10ms ▶</button><button data-a="down">Set downbeat here</button><button data-a="q1here">Q1 = first downbeat</button><button data-a="b/2">BPM ÷2</button><button data-a="b*2">BPM ×2</button><input type="number" step="0.01" min="40" max="250" data-f="bpmEdit" style="width:84px" aria-label="Track BPM"></div></details>`;
     const u = UI[id] = { el, f: n => $(`[data-f="${n}"]`, el), ovw: $('canvas.ovw', el), ovImg: null, peaks: null };
@@ -163,9 +178,8 @@
       btn.addEventListener('pointerdown', e => { btn.setPointerCapture(e.pointerId); d.bend = b; d.applyRate(); });
       const up = () => { d.bend = 1; d.applyRate(); }; btn.addEventListener('pointerup', up); btn.addEventListener('pointercancel', up);
     }
-    const loopIdx = () => LOOPS.indexOf(d.loop.beats);
-    act('lhalf', () => d.resizeLoop(LOOPS[Math.max(0, loopIdx() - 1)]));
-    act('ldouble', () => d.resizeLoop(LOOPS[Math.min(LOOPS.length - 1, loopIdx() + 1)]));
+    u.lcyc = cycler(u.f('lcyc'), { list: LOOPS, value: Math.max(0, LOOPS.indexOf(d.loop.beats)), fmt: loopLabel, onInput: i => d.resizeLoop(LOOPS[i]) });
+    u.lcyc.el.dataset.f = 'loop';
     act('loop', () => { if (!d.loaded) return; d.loop.on ? d.exitLoop() : d.setLoop(d.loop.beats); });
     act('kick', () => kickOut(id));
     $$('[data-h]', el).forEach(b => {
@@ -290,12 +304,12 @@
   let pendingCut = null, pendingDrop = null;
   // Start the NEXT deck from hot cue `cueIdx` exactly on the NOW deck's next downbeat, switch the crossfader to it there,
   // and (withCut) kill every effect on that same downbeat. Then the roles swap and the following track loads.
-  function dropNext(cueIdx = 0, withCut = true) {
+  function dropNext(cueIdx = 0, withCut = true, startAt = null) {
     const O = D('now'), I = D('next');
     if (!I.loaded) { toast('Nothing loaded on the NEXT deck yet'); return; }
     if (pendingDrop) { if (withCut) cutAll(false); return; }
     if (AM.plan) cancelPlan(true);
-    const start = I.hot[cueIdx] != null ? I.hot[cueIdx] : q1Of(I);
+    const start = startAt != null ? startAt : I.hot[cueIdx] != null ? I.hot[cueIdx] : q1Of(I);
     const now = ctx.currentTime;
     const T = O.playing ? (O.nextDownbeat(0.06) || now + 0.05) : now + 0.05;
     const bO = O.playing ? O.effBpm(T) : I.bpm, bI = I.bpm, close = Math.abs(bI / bO - 1) <= S.maxStretch / 100;
@@ -334,7 +348,7 @@
   function drawOverview(id) {
     const u = UI[id], c = u.ovw; fit(c);
     const g = c.getContext('2d'), W = c.width, H = c.height; g.clearRect(0, 0, W, H);
-    if (!u.peaks || !W || !H) { u.ovImg = null; return; } // hidden canvas (phone mode): nothing to draw
+    if (!u.peaks || !W || !H) { u.ovImg = null; return; } // hidden canvas (Drive mode): nothing to draw
     const P = u.peaks.peaks, PL = u.peaks.peaksLow, n = P.length;
     for (let x = 0; x < W; x++) {
       const a = Math.floor(x / W * n), b = Math.max(a + 1, Math.floor((x + 1) / W * n)); let m = 0, ml = 0;
@@ -401,9 +415,10 @@
       g.font = 'bold ' + (12 * DPR) + 'px system-ui'; g.fillStyle = col;
       g.fillText(label + ' · ' + d.track.name + ' · ' + d.effBpm(now).toFixed(1) + ' BPM · ' + DJ.keyLabel(d.key), 10 * DPR, y0 + 16 * DPR);
     };
-    const rO = O.rateAt(now), pO = O.pos(now);
+    const rO = O.rateAt(now), pO = O.scratch ? O.scratch.p : O.pos(now);
     drawLane(O, 0, COL.now, x => pO + (x - cx) / pps * rO, 'NOW');
-    if (I.playing && I.anchorT <= now) { const rI = I.rateAt(now), pI = I.pos(now); drawLane(I, h, COL.next, x => pI + (x - cx) / pps * rI, 'NEXT'); }
+    if (I.scratch && !I.playing) drawLane(I, h, COL.next, x => I.scratch.p + (x - cx) / pps, 'NEXT');
+    else if (I.playing && I.anchorT <= now) { const rI = I.rateAt(now), pI = I.scratch ? I.scratch.p : I.pos(now); drawLane(I, h, COL.next, x => pI + (x - cx) / pps * rI, 'NEXT'); }
     else {
       const close = I.bpm && Math.abs(I.bpm / (O.effBpm(now) || I.bpm) - 1) <= S.maxStretch / 100;
       const xD = tDrop ? cx + (tDrop - now) * pps : cx, rI = (O.playing && close && S.dropTempo !== 'native') ? O.effBpm(now) / I.bpm : 1;
@@ -419,16 +434,32 @@
     g.fillStyle = '#fff'; g.fillRect(cx - 1, 0, 2, H);
   }
 
+  // Scratch on the roll: press on a lane to grab that record (holding still stops it), drag to move it like vinyl
+  // (left = forwards, right = backwards, as fast as the hand), let go to drop back on the beat
+  (() => {
+    const roll = $('#roll'); let sc = null;
+    roll.addEventListener('pointerdown', e => {
+      const r = roll.getBoundingClientRect(), d = D(e.clientY - r.top < r.height / 2 ? 'now' : 'next');
+      if (!d.loaded) return;
+      if (!d.scratchStart()) { toast('Scratching needs the key lock, which this browser cannot run'); return; }
+      roll.setPointerCapture(e.pointerId); e.preventDefault();
+      const ref = D('now').loaded ? D('now') : d, now = ctx.currentTime;
+      sc = { d, x0: e.clientX, p0: d.scratch.p0, k: 8 * 60 / (ref.effBpm(now) || 120) / r.width * (d.playing ? d.rateAt(now) : 1) };
+    });
+    roll.addEventListener('pointermove', e => { if (sc) sc.d.scratchTo(sc.p0 + (sc.x0 - e.clientX) * sc.k); });
+    const up = () => { if (sc) { sc.d.scratchEnd(); sc = null; } };
+    for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture']) roll.addEventListener(ev, up);
+  })();
+
   /* ---------------------------------------------------------------- mixer UI */
   const trimDb = v => Math.pow(10, v / 20), eqDb = v => v <= -25 ? -60 : v;
   function buildMixer() {
+    // compact: one row per deck (gain, EQ, fader), no meters; the master clip light covers the whole mix
     const m = $('#mixer');
-    m.innerHTML = `<span class="lbl">Mixer</span><div class="strips">${['A', 'B'].map(id => `
-      <div class="strip" data-s="${id}"><span class="tag">${id}</span><span class="srole" data-srole="${id}"></span>
-        <div data-k="trim"></div><span class="led" data-clip="${id}" title="Channel clip"></span>
-        <div data-k="hi"></div><div data-k="mid"></div><div data-k="lo"></div>
-        <div class="fmrow"><input type="range" class="vfader" min="0" max="1" step="0.001" value="1" data-fader="${id}" aria-label="Channel ${id} fader"><div class="meter"><i data-meter="${id}"></i></div></div>
-      </div>`).join('')}</div>
+    m.innerHTML = `<span class="lbl">Mixer</span>${['A', 'B'].map(id => `
+      <div class="mrow" data-s="${id}"><span class="tag">${id}</span><span class="srole" data-srole="${id}"></span>
+        <div data-k="trim"></div><div data-k="hi"></div><div data-k="mid"></div><div data-k="lo"></div>
+        <input type="range" class="hfader" min="0" max="1" step="0.001" value="1" data-fader="${id}" aria-label="Channel ${id} fader"></div>`).join('')}
       <div class="xf"><span class="lbl">Crossfader</span><input type="range" id="xfader" min="0" max="1" step="0.001" value="0.5" aria-label="Crossfader"></div>`;
     for (const id of ['A', 'B']) {
       const d = eng.decks[id], s = $(`[data-s="${id}"]`, m);
@@ -490,8 +521,8 @@
           applyParam(s, p.k, start);
         } else if (p.div || p.list) {
           const L = p.list || DIVK, i = Math.max(0, L.indexOf(start));
-          knobs[s.id + '.' + p.k] = knob(holder, { label: p.label, min: 0, max: L.length - 1, value: i, def: L.indexOf(p.def), fmt: v => p.div ? divLabel(L[Math.round(v)]) : L[Math.round(v)],
-            onInput: v => { const dv = L[Math.round(v)]; applyParam(s, p.k, dv); saveFx(s, p.k, dv); } });
+          knobs[s.id + '.' + p.k] = cycler(holder, { label: p.label, list: L, value: i, fmt: v => p.div ? divLabel(v) : v,
+            onInput: j => { const dv = L[j]; applyParam(s, p.k, dv); saveFx(s, p.k, dv); } });
           applyParam(s, p.k, L[i]);
         } else {
           knob(holder, { label: p.label, min: p.min, max: p.max, value: start, def: p.def, fmt: p.fmt, onInput: v => { applyParam(s, p.k, v); saveFx(s, p.k, v); } });
@@ -536,7 +567,7 @@
     eng.fx.fire('filter', true, T);
     setTimeout(renderFx, Math.max(0, (T - ctx.currentTime) * 1000));
   }
-  function swishLen(step) {   // phone: cycle the swish length
+  function swishLen(step) {   // cycle the auto filter length
     const k = knobs['autofilter.div']; if (!k) return;
     k.set((Math.round(k.get()) + step + SWISH.length) % SWISH.length);
   }
@@ -825,9 +856,8 @@
   }
 
   /* ---------------------------------------------------------------- render loop */
-  const clipUntil = { A: 0, B: 0 };
   function frame() {
-    const now = ctx.currentTime, tms = performance.now();
+    const now = ctx.currentTime;
     drawRoll(now);
     for (const id of ['A', 'B']) {
       const d = eng.decks[id], u = UI[id];
@@ -843,14 +873,11 @@
         kEl.textContent = DJ.keyLabel(d.key); kEl.classList.toggle('good', !!(other.loaded && DJ.keyDistance(d.key, other.key) <= 1));
         const bi = d.beatIndex(pos); u.f('beat').textContent = 'bar ' + (Math.floor(bi / 4) + 1) + '.' + ((((Math.floor(bi) % 4) + 4) % 4) + 1);
         $('[data-a="loop"]', u.el).classList.toggle('on', d.loop.on);
-        u.f('loop').textContent = loopLabel(d.loop.beats);
+        const li = LOOPS.indexOf(d.loop.beats); if (li >= 0 && li !== u.lcyc.get()) u.lcyc.set(li, false);
         $$('[data-h]', u.el).forEach((b, i) => b.classList.toggle('set', d.hot[i] != null));
       }
-      const pk = d.peak(); if (pk > 0.99) clipUntil[id] = tms + 400;
-      $(`[data-clip="${id}"]`).classList.toggle('on', tms < clipUntil[id]);
-      $(`[data-meter="${id}"]`).style.height = Math.min(100, Math.max(0, 100 + 100 * Math.log10(pk + 1e-6) / 2.4)) + '%';
     }
-    paintPlay();
+    paintPlay(); synBeat(now);
     const lead = leadDeck(); let bpm = null, on = false, bar = false;
     if (lead) { bpm = lead.effBpm(now); const bi = lead.beatIndex(lead.pos(now)), fr = ((bi % 1) + 1) % 1; on = fr < 0.15; bar = on && (((Math.floor(bi) % 4) + 4) % 4) === 0; $('#fxBpmSrc').textContent = roleOf(lead.id) === 'now' ? 'current' : 'next'; }
     else $('#fxBpmSrc').textContent = 'auto';
@@ -862,6 +889,17 @@
     if (pendingDrop) { db.classList.add('pending'); db.textContent = 'DROP in ' + beatsTo(pendingDrop.T); } else { db.classList.remove('pending'); db.textContent = '▶ NEXT ON THE 1'; }
     if (AM.plan) { const p = AM.plan; amStatus(now < p.T0 ? 'mix in ' + fmtT(p.T0 - now) + (p.echoOut ? ' (tempos too far apart: swell and cut)' : ' · ' + p.bars + '-bar blend') : now < p.T1 ? 'mixing → ' + p.I.track.name + (p.tSwap ? (now < p.tSwap ? ' · bass swap in ' + (p.tSwap - now).toFixed(0) + 's' : ' · done in ' + (p.T1 - now).toFixed(0) + 's') : ' · cut in ' + (p.T1 - now).toFixed(1) + 's') : 'cut!'); }
     else if (AM.on && AM.held) amStatus('paused: press PLAY to carry on');
+  }
+  // Synesthesia (if loaded): one note per beat of the NOW deck, coloured by the track's own energy at that spot
+  // (read from the analysis, so it costs no audio analysis while playing)
+  let synLast = -1;
+  function synBeat(now) {
+    if (!window.NDSyn) return;
+    const d = D('now'), u = UI[d.id]; if (!d.playing || !u.peaks) return;
+    const pos = d.pos(now), b = Math.floor(d.beatIndex(pos)); if (b === synLast) return; synLast = b;
+    const P = u.peaks, i = Math.min(P.peaks.length - 1, Math.max(0, Math.floor(pos * P.peakRate)));
+    const full = P.peaks[i] || 0, low = P.peaksLow[i] || 0, bar = ((b % 4) + 4) % 4 === 0;
+    try { NDSyn.note(null, clamp(1 - low / (full + 1e-6), 0, 1), clamp(full * (bar ? 1.2 : 0.8), 0, 1)); } catch (e) {}
   }
   // the FX follow the playing deck's tempo (also while the tab is hidden)
   setInterval(() => {
@@ -876,5 +914,5 @@
     $('#foot').textContent = 'Audio: ' + ctx.sampleRate + ' Hz · output latency ~' + Math.round(((ctx.baseLatency || 0) + (ctx.outputLatency || 0)) * 1000) + ' ms · key lock ' + (ok ? 'ready (KEY button on each deck)' : 'unavailable in this browser: tempo changes shift pitch');
   });
   if (window.NDAudio) NDAudio.frames(frame, 30); else (function loop() { frame(); requestAnimationFrame(loop); })();
-  window.DJFX = { kickOut, swishLen, SWISH, phraseSkip, paintPlay, UI, eng, tracks, addFiles, applyHint, saveMeta, loadDeck, AM, R, setAutomix, mixNow, cutAll, dropNext, S, ensureNext };
+  window.DJFX = { kickOut, swishLen, SWISH, phraseSkip, paintPlay, playPressed, UI, eng, tracks, addFiles, applyHint, saveMeta, loadDeck, AM, R, D, setAutomix, mixNow, cutAll, dropNext, S, saveS, ensureNext, setRoute, renderFx, toast, q1Of, pending: () => pendingDrop };
 })();

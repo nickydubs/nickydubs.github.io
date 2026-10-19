@@ -106,6 +106,35 @@ function DJStretchWorklet() {
     }
   }
   registerProcessor('djfx-stretch', Stretch);
+
+  // Scratch: the read head chases the position the hand sets (seconds into the track), smoothed over ~12 ms, so a
+  // drag plays the record at the drag's speed, backwards too, and holding still stops it. Linear interpolation,
+  // a DC blocker (a still record must not leave an offset), 6 ms fades in and out; it ends itself after the fade out.
+  class Scratch extends AudioWorkletProcessor {
+    constructor(opts) {
+      super();
+      const b = BUFS.get(opts.processorOptions.id); this.ch = b ? b.ch : [new Float32Array(1)]; this.len = this.ch[0].length;
+      this.pos = opts.processorOptions.pos * sampleRate; this.target = this.pos; this.on = true; this.g = 0;
+      this.k = 1 - Math.exp(-1 / (sampleRate * 0.012)); this.kg = 1 - Math.exp(-1 / (sampleRate * 0.006));
+      this.x1 = [0, 0]; this.y1 = [0, 0]; this.r = 1 - 2 * Math.PI * 25 / sampleRate;
+      this.port.onmessage = e => { const d = e.data; if (d.pos != null) this.target = d.pos * sampleRate; if (d.off) this.on = false; };
+    }
+    process(I, O) {
+      const out = O[0], n = out[0].length, last = this.len - 2;
+      for (let i = 0; i < n; i++) {
+        this.pos += (this.target - this.pos) * this.k; this.g += ((this.on ? 1 : 0) - this.g) * this.kg;
+        const p = this.pos < 0 ? 0 : this.pos > last ? last : this.pos, j = p | 0, f = p - j;
+        for (let c = 0; c < out.length; c++) {
+          const x = this.ch[c < this.ch.length ? c : 0], v = x[j] + (x[j + 1] - x[j]) * f;
+          const y = v - this.x1[c] + this.r * this.y1[c]; this.x1[c] = v; this.y1[c] = y;
+          out[c][i] = y * this.g;
+        }
+      }
+      if (!this.on && this.g < 1e-4) { this.port.postMessage('done'); return false; }
+      return true;
+    }
+  }
+  registerProcessor('djfx-scratch', Scratch);
 }
 
 window.DJ = window.DJ || {};

@@ -225,7 +225,15 @@
 	const stats = { hits: 0, live: 0, rendered: 0, buildMs: 0, batches: 0 };
 	const BASS = { sub: 1, reese: 1, wobble: 1, b808: 1, pluck: 1, warp: 1 };
 	const SENDS = { pad: [1, 0], rhodes: [1, 0], organ: [0, 1], stab: [0, 1], skank: [0, 1], stabL: [0, 1], vox: ['wet', 1], pluckL: ['wet', 1], bell: ['wet', 1] };
+	// Synesthesia (the site's synesthesia.js, if loaded): every other sound becomes a light, at the moment it sounds
+	let synN = 0;
+	function syn(hz, bright, str, at) {
+		if (!window.NDSyn || document.hidden || ++synN & 1) return;
+		setTimeout(() => { try { NDSyn.note(hz, bright, str); } catch {} }, Math.max(0, (at - ac.currentTime) * 1000));
+	}
+	const SYNB = { K: 0.1, S: 0.5, C: 0.55, G: 0.6, H: 0.95, O: 0.9, R: 1, M: 0.8, T: 0.85, P: 0.4, X: 0.9 };
 	function snd(t, d, at, name, n, secs, v, a5 = 0, a6 = 0, vk = null) {
+		if (!REC) syn(name === 'impact' ? null : hz(n), BASS[name] ? 0.15 : 0.7, v, at);
 		const s16 = Math.round(secs / U16 * 16), r5 = name === 'wobble' ? Math.round(a5 * U16 * 1000) : name === 'pad' ? Math.round(a5 / 100) : 0, r6 = name === 'wobble' ? Math.round(a6 * 10) : 0;
 		const key = `${name}|${n}|${s16}|${r5}|${r6}`;
 		if (REC) { if (!REC.has(key)) REC.set(key, { key, name, n, s16, r5, r6 }); return; }
@@ -357,6 +365,7 @@
 	const clock = { playing: false, step: 0, time: 0, bpm: 170, glide: null };
 	function sectionAt(t, bar) { for (const s of t.sections) if (bar < s.at + s.bars) return s; return null; }
 	function playStep(t, g, time, dur) {
+		if (t.own) return; // your own tracks play as audio, not steps
 		const d = t.deck, G = t.G, st = G.stretch;
 		U16 = dur;
 		let local = g - t.start;
@@ -367,7 +376,7 @@
 		const L = Math.floor(local / st), lbar = Math.floor(L / 16), ls = L % 16, stepDur = dur * st, beatDur = stepDur * 4;
 		const sec = sectionAt(t, bar), inSec = bar - sec.at, sw = ls % 2 ? G.swing * stepDur : 0, at = time + sw;
 		const E = t.energy, ten = S.tension, phraseEnd = (inSec % 8 === 7) && ls >= 12;
-		const hit = (lane, v = 1) => { if (REC) return; const b = t.kit[lane]; if (!b) return; const s = ac.createBufferSource(), gg = ac.createGain(); s.buffer = b; gg.gain.value = v; link(s, gg, d.drums); s.start(at); V.play(s, gg, d.id + lane, at); if (lane === 'K') duck(d, at, beatDur); };
+		const hit = (lane, v = 1) => { if (REC) return; const b = t.kit[lane]; if (!b) return; const s = ac.createBufferSource(), gg = ac.createGain(); s.buffer = b; gg.gain.value = v; link(s, gg, d.drums); s.start(at); V.play(s, gg, d.id + lane, at); if (lane === 'K') duck(d, at, beatDur); syn(null, SYNB[lane] ?? 0.5, v, at); };
 		const lane = (l, v = 1) => { const p = t.drums[l]; if (!p) return; const c = p[(lbar * 16 + ls) % p.length]; if (c === 'x') hit(l, v); else if (c === 'o') hit(l, 0.45 * v); };
 		const type = sec.type, chordIdx = Math.floor(lbar / t.chordBars) % t.prog.length, deg = t.prog[chordIdx];
 		const nextDeg = t.prog[(Math.floor((lbar + 1) / t.chordBars)) % t.prog.length];
@@ -450,9 +459,92 @@
 	}
 	function duck(d, t, beatDur) { const p = d.duck.gain; p.cancelScheduledValues(t); p.setValueAtTime(0.32, t); p.setTargetAtTime(1, t + 0.01, beatDur * 0.14); }
 
+	// ── Your own tracks: they stay on this device. Each one is analysed once (tempo, key, phrases and cue points, with
+	// the DJ app's analysis), then the selecta plays one after each track it writes. The track before it is written
+	// toward it (its key, or one step round the wheel nearer, and its tempo when the genre allows), it mixes in from its
+	// MIX IN cue, and it mixes out at its own MIX OUT near the end, never mid-song. Audio is decoded only when it is
+	// about to play, and let go once it has.
+	const OWN = { list: [], pinned: null, busy: false };
+	const OWN_LEVEL = 0.25; // the loud parts of your tracks sit level with the selecta's drops (measured: mastered tracks peak lower at the same loudness)
+	const camOf = k => { const w = x => ((x - 1) % 12 + 12) % 12 + 1; return k.minor ? { n: w(8 + 7 * (k.tonic - 9)), L: 'A' } : { n: w(8 + 7 * k.tonic), L: 'B' }; };
+	function addOwn(files) {
+		for (const f of files) if (/^audio\//.test(f.type) || /\.(mp3|wav|flac|ogg|m4a|aac|opus|aiff?)$/i.test(f.name)) OWN.list.push({ file: f, name: f.name.replace(/\.[^.]+$/, ''), status: 'waiting', meta: null, played: false });
+		drawOwn(); analyseOwn();
+	}
+	async function decodeOwn(o) { audio(); return ac.decodeAudioData(await o.file.arrayBuffer()); }
+	async function analyseOwn() {
+		if (OWN.busy || !window.DJ?.analyze) return; OWN.busy = true;
+		try {
+			for (const o of OWN.list) {
+				if (o.status !== 'waiting') continue;
+				o.status = 'reading'; drawOwn();
+				try {
+					const buf = await decodeOwn(o), r = await DJ.analyze(buf), m = { bpm: r.bpm, firstBeat: r.firstBeat, q1: r.q1 };
+					const cues = DJ.cues(r, m, buf.duration);
+					if (!cues) { o.status = 'too short to mix'; continue; }
+					// how loud it is where it is loud: the 90th percentile of 1-second levels (its drops, not its intro)
+					const x = buf.getChannelData(0), sr = buf.sampleRate, lv = [];
+					for (let i0 = 0; i0 + sr <= x.length; i0 += sr) { let e = 0; for (let i = i0; i < i0 + sr; i += 16) e += x[i] * x[i]; lv.push(Math.sqrt(e / (sr / 16))); }
+					lv.sort((p, q) => p - q);
+					o.meta = { bpm: Math.round(r.bpm * 10) / 10, q1: r.q1, cues, cam: camOf(r.key), loud: lv[Math.floor(lv.length * 0.9)] || 0.1 };
+					o.status = 'ready';
+				} catch (err) { console.warn('could not read', o.name, err); o.status = 'could not read this file'; }
+				drawOwn();
+			}
+		} finally { OWN.busy = false; }
+		if (OWN.list.some(o => o.status === 'waiting')) analyseOwn();
+	}
+	const nextOwn = () => (OWN.pinned && !OWN.pinned.played ? OWN.pinned : null) || OWN.list.find(o => o.meta && !o.played && !o.queued);
+	function ownTrack(o, cur) {
+		const m = o.meta, c = m.cues, bar = 240 / m.bpm;
+		const blendIn = !!cur && Math.abs(m.bpm - cur.bpm) / cur.bpm <= 0.08;
+		const p0 = blendIn || c.drop == null ? c.mixIn : Math.max(m.q1, c.drop - 16 * bar); // a cut lands 16 bars before the drop
+		const bars = Math.max(16, Math.floor((c.end - p0) / bar)), mixAt = clamp(Math.round((c.mixOut - p0) / bar), 8, bars - 8);
+		const sections = c.blocks.filter(b => b.at >= p0 - 0.01 && b.at < c.end).map(b => ({ type: b.type, at: Math.round((b.at - p0) / bar), bars: 8, dip: [null, null, 'Your track'] }));
+		if (!sections.length || sections[0].at > 0) sections.unshift({ type: 'intro', at: 0, bars: sections.length ? sections[0].at : bars, dip: [null, null, 'Your track'] });
+		const t = { own: o, no: ++trackNo, genre: 'own', G: { name: 'Your track', stretch: 1 }, name: o.name, key: m.cam, bpm: m.bpm, energy: 0.7, sections, bars,
+			p0, mixAt, start: -1, deck: null, blendIn, blendOut: true, kit: null, src: null };
+		o.queued = true; if (cur) cur.blendOut = blendIn;
+		decodeOwn(o).then(buf => { t.buf = buf; t.gain = clamp(OWN_LEVEL / m.loud, 0.1, 3) / 1.25; t.kit = {}; }, () => { o.status = 'could not read this file'; o.played = true; drawOwn(); });
+		return t;
+	}
+	function startOwn(t, lb) { // (re)start the audio on the clock's bar line, at the file position of local bar lb
+		stopOwn(t, clock.time);
+		const s = ac.createBufferSource(), g = ac.createGain(); s.buffer = t.buf; s.playbackRate.value = clock.bpm / t.bpm;
+		g.gain.setValueAtTime(0, clock.time); g.gain.linearRampToValueAtTime(t.gain, clock.time + 0.01);
+		link(s, g, t.deck.drums); s.start(clock.time, Math.min(t.buf.duration - 0.05, t.p0 + lb * 240 / t.bpm));
+		t.src = s; t.srcG = g; t.resync = false;
+	}
+	function stopOwn(t, at) {
+		if (!t.src) return; const { src, srcG } = t; t.src = t.srcG = null;
+		try { srcG.gain.cancelScheduledValues(at); srcG.gain.setValueAtTime(srcG.gain.value, at); srcG.gain.linearRampToValueAtTime(0, at + 0.02); src.stop(at + 0.05); } catch {}
+	}
+	function toward(prev, tgt) { // the next key: one compatible step nearer to tgt
+		if (!prev) return { ...tgt };
+		if (prev.n === tgt.n) return { n: tgt.n, L: tgt.L };
+		const d = (tgt.n - prev.n + 12) % 12, step = d <= 6 ? 1 : -1;
+		return { n: ((prev.n - 1 + step + 12) % 12) + 1, L: prev.L };
+	}
+	// Tap one of your tracks: it is next, and the mix toward it starts on the next 8-bar phrase
+	function queueOwn(o) {
+		if (!o.meta) return;
+		OWN.pinned = o; o.played = false;
+		const N = sel.next, t = sel.now;
+		if (!t || (N && N.deck)) { drawOwn(); return; } // nothing playing yet, or a mix is already under way: it goes after
+		if (N) { if (N.own) N.own.queued = false; else N.cache = N.todo = N.known = null; }
+		sel.next = ownTrack(o, t); OWN.pinned = null;
+		if (clock.playing) {
+			const bar = Math.floor((clock.step - t.start) / 16), nb = Math.ceil((bar + 1) / 8) * 8, at = t.mixAt + (sel.next.blendIn ? 0 : 8);
+			if (at > nb) { t.start -= (at - nb) * 16; if (t.own) t.resync = true; }
+		}
+		drawOwn();
+	}
+
 	// ── The selecta: picks the next track and mixes it in ──
 	const sel = { now: null, next: null, history: [], hold: null };
 	function pickNext(cur) {
+		const due = nextOwn();
+		if (cur && !cur.own && due) return ownTrack(due, cur);
 		const r = rng(Date.now() >>> 0);
 		const on = ORDER.filter(g => S.genres[g]);
 		const pool = on.length ? on : ORDER;
@@ -467,10 +559,12 @@
 				if (Math.abs(mid - cur.bpm) / cur.bpm <= 0.08) sc += 0.7; // blendable
 				if (recent.length === 3 && recent.every(x => x === g)) sc -= 2;
 			}
+			if (due && Math.abs(mid - due.meta.bpm) / due.meta.bpm <= 0.08) sc += 1.2; // one of your tracks is next: head toward its tempo
 			if (sc > bestScore) { bestScore = sc; best = g; }
 		}
-		const key = nextKey(cur?.key, r() < GENRES[best].minor, r);
-		const t = makeTrack(best, key, cur);
+		const key = due ? toward(cur?.key, due.meta.cam) : nextKey(cur?.key, r() < GENRES[best].minor, r);
+		const t = makeTrack(best, key, cur), Gb = GENRES[best].bpm;
+		if (due && due.meta.bpm >= Gb[0] - 6 && due.meta.bpm <= Gb[1] + 6) t.bpm = Math.round(due.meta.bpm); // and its tempo, when the genre allows
 		t.blendIn = !!cur && Math.abs(t.bpm - cur.bpm) / cur.bpm <= 0.08;
 		if (cur) { cur.blendOut = t.blendIn; }
 		audio(); drumKit(best).then(k => { t.kit = k; });
@@ -497,6 +591,8 @@
 		}
 		if (N?.deck && (b2 >= nowT.bars || !N.blendIn)) { // the old track is done: the new one is now
 			nowT.deck.track = null; nowT.deck.fader.gain.setTargetAtTime(0, clock.time, 0.05);
+			if (nowT.own) { stopOwn(nowT, clock.time + 0.25); nowT.buf = null; nowT.own.played = true; nowT.own.queued = false; }
+			if (N.own) { N.own.played = true; drawOwn(); }
 			nowT.cache = nowT.todo = nowT.known = null; // its sounds are done with (anything still ringing keeps its own buffer)
 			sel.history.push({ name: nowT.name, genre: nowT.genre, key: nowT.key, bpm: nowT.bpm, how: N.blendIn ? 'blend' : 'cut' });
 			sel.now = N; sel.next = null; sel.hold = null; clock.bpm = N.bpm;
@@ -509,6 +605,13 @@
 			clock.bpm = sel.now.bpm + (sel.next.bpm - sel.now.bpm) * clamp(o / 32, 0, 1);
 		}
 		echo.delayTime.setTargetAtTime(Math.min(3.9, 0.75 * 60 / clock.bpm), clock.time, 0.05); // dotted 8th
+		for (const t of [sel.now, sel.next]) { // your tracks: start on the bar, then follow the clock's tempo bar by bar
+			if (!t?.own || !t.deck || !t.buf) continue;
+			const lb = Math.floor((g - t.start) / 16);
+			if (lb < 0 || lb >= t.bars) continue;
+			if (!t.src || t.resync) startOwn(t, lb); else t.src.playbackRate.setValueAtTime(clock.bpm / t.bpm, clock.time);
+			syn(null, 0.5, 0.8, clock.time);
+		}
 	}
 	function resetDeck(d, fader) { const t = clock.time; for (const [p, v] of [[d.fader.gain, fader], [d.low.gain, 0], [d.hp.frequency, 18], [d.throw.gain, 0]]) { p.cancelScheduledValues(t); p.setValueAtTime(v, t); } }
 	function mixBar(t, bar, time, barDur) { // where each fader/EQ should be by the end of this bar
@@ -519,7 +622,7 @@
 		const sec = sectionAt(t, Math.min(bar, t.bars - 1));
 		if (sec?.type === 'build') { const k = bar - sec.at; hp = k < 8 ? 18 : 18 * (300 / 18) ** ((k - 7) / 9); }
 		if (t === sel.now && !t.blendOut && bar - t.mixAt >= 8) hp = 18 * (400 / 18) ** ((bar - t.mixAt - 7) / 9); // winding up for the cut
-		if (sec?.type === 'break') hp = 60;
+		if (sec?.type === 'break' && !t.own) hp = 60;
 		d.fader.gain.linearRampToValueAtTime(fader, end);
 		d.low.gain.setTargetAtTime(low, time, 0.06);
 		d.hp.frequency.setTargetAtTime(hp, time, sec?.type === 'build' ? barDur / 3 : 0.05);
@@ -542,7 +645,7 @@
 		while (clock.time < ac.currentTime + ahead) {
 			if (clock.step % 16 === 0) onBar();
 			const dur = 15 / clock.bpm;
-			for (const t of [sel.now, sel.next]) if (t?.deck && t.kit) playStep(t, clock.step, clock.time, dur);
+			for (const t of [sel.now, sel.next]) if (t?.deck && t.kit && !t.own) playStep(t, clock.step, clock.time, dur);
 			clock.time += dur; clock.step++;
 		}
 	}
@@ -568,6 +671,7 @@
 		if (!clock.playing) return;
 		clock.playing = false; if (worker) worker.onmessage = null;
 		M.setGain(0); V.stopAll(); // and nothing already booked plays later
+		for (const t of [sel.now, sel.next]) if (t?.own && t.src) { stopOwn(t, ac.currentTime); t.resync = true; }
 		// resume on a bar line: the current bar starts again from its downbeat
 		const old = clock.step; clock.step = Math.ceil(clock.step / 16) * 16;
 		for (const t of [sel.now, sel.next]) if (t?.deck) { const bar = Math.floor((old - t.start) / 16); t.start = clock.step - bar * 16; }
@@ -581,20 +685,21 @@
 	function mixNow() { // jump the current track to its mix-out point on the next bar
 		const t = sel.now; if (!t || !clock.playing) return;
 		const bar = Math.floor((clock.step - t.start) / 16), target = t.mixAt - 24;
-		if (bar < target) t.start -= (target - bar) * 16;
+		if (bar < target) { t.start -= (target - bar) * 16; if (t.own) t.resync = true; }
 		sel.hold = null;
 	}
 
 	// ── Screen ──
 	const ui = {};
-	const SEC_COL = { intro: '#5c74ff', break: '#34d6ff', build: '#ffd23d', drop: '#ff7a3d', switch: '#ff4f7b', outro: '#5c74ff' };
-	const SEC_NAME = { intro: 'Intro', break: 'Breakdown', build: 'Build', drop: 'Drop', switch: 'Switch-up', outro: 'Outro' };
+	const SEC_COL = { intro: '#5c74ff', break: '#34d6ff', build: '#ffd23d', drop: '#ff7a3d', switch: '#ff4f7b', outro: '#5c74ff', groove: '#9b7dff' };
+	const SEC_NAME = { intro: 'Intro', break: 'Breakdown', build: 'Build', drop: 'Drop', switch: 'Switch-up', outro: 'Outro', groove: 'Groove' };
+	const gName = g => g === 'own' ? 'Your track' : GENRES[g].name;
 	function buildUi() {
 		ui.play = $('#play'); ui.play.addEventListener('click', () => want ? stop() : start());
 		$('#next').addEventListener('click', mixNow);
 		$('#hold').addEventListener('click', e => {
 			const t = sel.now; if (!t) return;
-			if (sel.hold) sel.hold = null; else { const bar = Math.floor((clock.step - t.start) / 16), s = sectionAt(t, bar); if (s && s.type !== 'outro') sel.hold = s; }
+			if (sel.hold) sel.hold = null; else { const bar = Math.floor((clock.step - t.start) / 16), s = sectionAt(t, bar); if (s && s.type !== 'outro' && !t.own) sel.hold = s; }
 			e.currentTarget.classList.toggle('on', !!sel.hold);
 		});
 		const fz = $('#faders');
@@ -615,6 +720,13 @@
 		ui.lite = $('#lite'); ui.lite.classList.toggle('on', NDAudio.prefs.lite);
 		ui.lite.addEventListener('click', () => NDAudio.setPref('lite', !NDAudio.prefs.lite));
 		NDAudio.onPref(k => { if (k === 'lite') ui.lite.classList.toggle('on', NDAudio.prefs.lite); });
+		const oin = $('#ownIn');
+		$('#ownAdd').addEventListener('click', () => oin.click());
+		oin.addEventListener('change', () => { addOwn([...oin.files]); oin.value = ''; });
+		$('#ownList').addEventListener('click', e => { const b = e.target.closest('[data-own]'); if (b) queueOwn(OWN.list[+b.dataset.own]); });
+		addEventListener('dragover', e => e.preventDefault());
+		addEventListener('drop', e => { e.preventDefault(); if (e.dataTransfer.files.length) addOwn([...e.dataTransfer.files]); });
+		if (window.NDSyn) { try { audio(); NDSyn.mount(document.body, { analyser }); NDSyn.toggleButton($('.vol')); } catch (err) { console.warn('synesthesia unavailable', err); } }
 		ui.cv = $('#arc'); ui.cx = ui.cv.getContext('2d');
 		NDAudio.frames(draw, 20);
 		if (navigator.mediaSession) {
@@ -631,7 +743,16 @@
 	}
 	function drawList() {
 		const h = sel.history.slice(-12).reverse();
-		$('#history').innerHTML = h.map(x => `<li><b>${x.name}</b><span>${GENRES[x.genre].name} · ${x.bpm} · ${x.key.n}${x.key.L}</span><i>${x.how === 'blend' ? 'blended out' : 'echo-out cut'}</i></li>`).join('') || '<li class="muted">Tracks it has played will show up here.</li>';
+		$('#history').innerHTML = h.map(x => `<li><b>${esc(x.name)}</b><span>${gName(x.genre)} · ${x.bpm} · ${x.key.n}${x.key.L}</span><i>${x.how === 'blend' ? 'blended out' : 'echo-out cut'}</i></li>`).join('') || '<li class="muted">Tracks it has played will show up here.</li>';
+	}
+	const esc = v => String(v).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+	function drawOwn() {
+		const el = $('#ownList'); if (!el) return;
+		const n = sel.next?.own;
+		el.innerHTML = OWN.list.map((o, i) => {
+			const m = o.meta, st = o === n ? 'next' : o.played ? 'played' : o === OWN.pinned ? 'next after this mix' : m ? `${m.bpm} BPM · ${m.cam.n}${m.cam.L} · tap to play it next` : o.status;
+			return `<li><button type="button" data-own="${i}" class="${o === n || o === OWN.pinned ? 'on' : ''}" ${m ? '' : 'disabled'}><b>${esc(o.name)}</b><span>${esc(st)}</span></button></li>`;
+		}).join('');
 	}
 	const txt = (el, s) => { if (el.textContent !== s) el.textContent = s; };
 	let bins = null;
@@ -641,9 +762,10 @@
 			const bar = clamp(Math.floor((clock.step - t.start) / 16), 0, t.bars - 1), s = sectionAt(t, bar);
 			txt($('#nowName'), t.name); txt($('#nowMeta'), `${t.G.name} · ${Math.round(clock.bpm)} BPM · ${keyLabel(t)}`);
 			txt($('#section'), `${SEC_NAME[s.type]} ${bar - s.at + 1}/${s.bars}${sel.hold ? ' · held' : ''}`);
-			txt($('#dipole'), s.type === 'intro' || s.type === 'outro' ? 'Mixing zone: drums and bass only, ready for the next track' : `Call and response: ${s.dip[2].toLowerCase()}`);
+			txt($('#dipole'), t.own ? 'Your track: it mixes out at its own mix-out point' : s.type === 'intro' || s.type === 'outro' ? 'Mixing zone: drums and bass only, ready for the next track' : `Call and response: ${s.dip[2].toLowerCase()}`);
 		}
 		if (n) {
+			if (n.own !== (draw.own ?? null)) { draw.own = n.own ?? null; drawOwn(); }
 			const ready = n.deck ? 'mixing in now' : `in ${Math.max(0, (n.blendIn ? t.mixAt : t.mixAt + 16) - Math.floor((clock.step - t.start) / 16))} bars`;
 			txt($('#nextName'), n.name); txt($('#nextMeta'), `${n.G.name} · ${n.bpm} BPM · ${keyLabel(n)} · ${n.blendIn ? '32-bar blend' : 'echo-out cut'} ${ready}`);
 		} else { txt($('#nextName'), '…'); txt($('#nextMeta'), 'Choosing as the track plays'); }
@@ -652,7 +774,7 @@
 		if (cv.width !== W * dpr) { cv.width = W * dpr; cv.height = H * dpr; }
 		cx.setTransform(dpr, 0, 0, dpr, 0, 0); cx.clearRect(0, 0, W, H);
 		if (!t) return;
-		const LV = { intro: 0.35, break: 0.25, build: 0.6, drop: 1, switch: 0.9, outro: 0.35 };
+		const LV = { intro: 0.35, break: 0.25, build: 0.6, drop: 1, switch: 0.9, outro: 0.35, groove: 0.6 };
 		for (const s of t.sections) {
 			const x = s.at / t.bars * W, w = s.bars / t.bars * W - 2, h = (H - 18) * LV[s.type];
 			cx.fillStyle = SEC_COL[s.type] + '55'; cx.fillRect(x, H - h, w, h);
@@ -668,5 +790,5 @@
 		}
 	}
 	buildUi();
-	window.SELECTA = { sel, clock, S, GENRES, makeTrack, chordNotes, nextKey, camName, playStep, decks, drumKit, stats, plan, mixNow, start, stop, get M() { return M; }, get V() { return V; } };
+	window.SELECTA = { sel, clock, S, GENRES, makeTrack, chordNotes, nextKey, camName, playStep, decks, drumKit, stats, plan, mixNow, start, stop, OWN, addOwn, queueOwn, camOf, get M() { return M; }, get V() { return V; } };
 })();

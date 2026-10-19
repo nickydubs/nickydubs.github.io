@@ -40,7 +40,7 @@ header h1 b{color:var(--accent)}
 .led.beat.down{background:var(--red);box-shadow:0 0 18px var(--red)}
 
 .roll{padding:8px;margin-bottom:10px}
-canvas.roll{height:250px;cursor:default}
+canvas.roll{height:250px;cursor:grab;touch-action:none}
 @media (max-width:620px){canvas.roll{height:200px}}
 .decks{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px}
 @media (max-width:860px){.decks{grid-template-columns:1fr}}
@@ -66,20 +66,19 @@ canvas.zoom{height:96px} canvas.ovw{height:34px;cursor:pointer}
 .hot button.set{background:#3a2a6b;border-color:#7b61ff}
 .pitch{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center}
 input[type=range]{width:100%;accent-color:var(--accent);height:30px}
-.loop{display:grid;grid-template-columns:auto 1fr auto auto auto;gap:6px;align-items:center}
-.loop .len{text-align:center;font:700 16px var(--mono)}
+.loop{display:grid;grid-template-columns:1fr auto auto;gap:6px;align-items:center}
+.cyc{display:flex;flex-direction:column;align-items:center;gap:2px;min-width:0}
+.cyc .cyb{width:100%;min-height:40px;font:700 14px var(--mono);white-space:nowrap}
+.loop .cyc .cyb{font-size:16px}
+.cyc .kl{font:600 10px var(--mono);color:var(--muted);text-transform:uppercase}
 .grid-edit{display:flex;flex-wrap:wrap;gap:6px}
 .grid-edit button{min-height:36px;padding:4px 8px;font-size:13px}
 
 .mixer{display:flex;flex-direction:column;gap:10px}
-.strips{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.strip .srole{font:700 11px var(--mono);color:var(--muted)}
-.strip{display:flex;flex-direction:column;align-items:center;gap:6px;background:var(--panel2);border-radius:8px;padding:6px 4px}
-.strip .tag{font-size:16px}
-.vfader{writing-mode:vertical-lr;direction:rtl;width:36px;height:140px}
-.meter{width:10px;height:140px;background:#07090b;border-radius:4px;position:relative;overflow:hidden}
-.meter i{position:absolute;left:0;right:0;bottom:0;background:linear-gradient(to top,var(--green) 0 70%,var(--amber) 70% 90%,var(--red) 90%)}
-.fmrow{display:flex;gap:8px;align-items:flex-end}
+.mrow{display:grid;grid-template-columns:auto repeat(4,auto) 1fr;gap:6px;align-items:center;background:var(--panel2);border-radius:8px;padding:6px}
+.mrow .tag{font-size:16px} .mrow .srole{display:none}
+.hfader{min-width:60px}
+@media (max-width:480px){.mrow{grid-template-columns:auto repeat(4,auto)}.hfader{grid-column:1/-1}}
 .xf{display:flex;flex-direction:column;gap:6px}
 .xf input{height:40px}
 
@@ -144,41 +143,39 @@ dialog{background:var(--panel);color:var(--fg);border:1px solid var(--line);bord
 dialog::backdrop{background:rgba(0,0,0,.6)}
 .toast{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:8px 14px;border-radius:999px;z-index:10}
 
-/* Phone mode (js/phone.js): one screen for the drive; the full deck stays on the page, hidden */
-#phone{display:none}
-body.phone #phone{display:flex;flex-direction:column;gap:10px;margin-bottom:10px}
-body.phone header .am,body.phone header .row,body.phone #foot{display:none}
+/* Drive mode (js/drive.js): the default screen. Two big buttons; the full deck stays on the page, hidden */
+#drive{display:none}
+body.drive #drive{display:flex;flex-direction:column;gap:10px;margin-bottom:10px}
+body.drive header .am,body.drive header .row,body.drive #foot,body.drive #driveSet{display:none}
 /* the full deck stays laid out offscreen so its canvases keep a real size and keep drawing */
-body.phone .decks,body.phone .fxunit,body.phone .lower{position:absolute;left:-10000px;top:0;width:960px;visibility:hidden;pointer-events:none}
-body.phone{overflow-x:hidden}
-body.phone canvas.roll{height:150px}
-body.phone #phoneBack{display:none}
-.ph-track{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center;min-width:0}
-.ph-track .role{font:800 12px/1 var(--mono);letter-spacing:.1em;padding:5px 8px;border-radius:6px}
-.ph-now .role{background:var(--green);color:#06210f} .ph-next .role{background:var(--accent);color:#111}
-.ph-t{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
-.ph-now .ph-t{font-size:17px}
-.ph-b{font-size:15px;font-weight:700}
-.ph-main{display:grid;grid-template-columns:1fr 1.4fr;gap:8px}
-.ph-main button{min-height:84px;font-size:20px;font-weight:800}
-.ph-play.on{background:var(--green);border-color:var(--green);color:#06210f}
-.ph-drop{background:#123d24;border-color:var(--green)} .ph-drop.pending{background:var(--green);color:#06210f}
-.ph-fx{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.ph-fxc{display:grid;grid-template-columns:1fr 1fr;gap:6px;background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:8px}
-.ph-fxc .name{grid-column:1/-1;font-weight:700}
-.ph-fxc.armed{border-color:var(--amber)} .ph-fxc.live{border-color:var(--red)}
-.ph-fxc button{min-height:48px;font-weight:700}
-.ph-fxc [data-arm].on{background:var(--amber);border-color:var(--amber);color:#111}
-.ph-fxc [data-fire].on{background:var(--red);border-color:var(--red);color:#fff}
-.ph-loop{display:grid;grid-template-columns:auto 1fr auto 1.3fr;gap:8px}
-.ph-loop button{min-height:56px;font-weight:800} .ph-lp.on{background:#5c4a0f;border-color:#ffd23f} .ph-kick{background:#0f3a5c;border-color:#34d6ff}
-.ph-len{min-height:0;padding:2px 8px;margin-left:6px;font-size:12px;font-weight:700}
-.ph-cut{display:grid;grid-template-columns:1fr 1.4fr;gap:8px}
-.ph-skip{display:grid;grid-template-columns:1fr 1fr;gap:8px} .ph-skip button{min-height:48px;font-weight:700}
-.ph-cut button{min-height:72px;font-size:18px;font-weight:800}
-.ph-cutall{background:#5c0f16;border-color:var(--red)} .ph-cutall.pending{background:var(--red);animation:pulse .25s infinite alternate}
-.ph-foot{display:grid;grid-template-columns:1.3fr 1fr 1fr;gap:8px}
-.ph-foot button{min-height:52px;font-weight:700}
+body.drive .decks,body.drive .fxunit,body.drive .lower{position:absolute;left:-10000px;top:0;width:960px;visibility:hidden;pointer-events:none;height:0;overflow:hidden}
+body.drive{overflow-x:hidden}
+body.drive canvas.roll{height:150px}
+body.drive #driveBack{display:none}
+.dv-track{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center;min-width:0}
+.dv-track .role{font:800 12px/1 var(--mono);letter-spacing:.1em;padding:5px 8px;border-radius:6px}
+.dv-now .role{background:var(--green);color:#06210f} .dv-next .role{background:var(--accent);color:#111}
+.dv-t{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.dv-now .dv-t{font-size:18px}
+.dv-b{font-size:15px;font-weight:700}
+.dv-where{margin:-4px 0 0;font-size:12px;color:var(--muted);min-height:15px}
+.dv-big{display:grid;grid-template-columns:1.5fr 1fr;gap:10px}
+.dv-big button{min-height:150px;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:6px;border-radius:14px}
+.dv-big b{font-size:28px;letter-spacing:.04em} .dv-big small{font-size:13px;color:var(--muted);font-weight:500;text-align:center}
+@media (max-width:520px){.dv-big{grid-template-columns:1fr}.dv-big button{min-height:110px}}
+.dv-nextb{background:#123d24;border-color:var(--green)}
+.dv-nextb[data-step=loop]{background:#3a300b;border-color:var(--accent)}
+.dv-nextb[data-step=drop]{background:#0f3a5c;border-color:#34d6ff}
+.dv-nextb.pending{background:var(--green);color:#06210f} .dv-nextb.pending small{color:#06210f}
+.dv-moment{background:#3a1240;border-color:#d06bff}
+.dv-row{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+@media (min-width:700px){.dv-row{grid-template-columns:repeat(8,1fr)}}
+.dv-row button{min-height:52px;font-weight:700}
+.dv-play.on{background:var(--green);border-color:var(--green);color:#06210f}
+.dv-row .nd-syn-btn{width:100%;height:100%;min-height:52px;border-radius:8px;font-weight:700}
+#driveSet{display:flex;flex-direction:column;gap:8px;margin-top:10px}
+#driveSet button{min-height:34px;padding:4px 10px;font-size:13px}
+#driveSet label{display:flex;gap:6px;align-items:center}
 .ph-save,.save-off{font-size:13px;color:var(--muted);background:transparent;border-style:dashed}
 .ph-save{min-height:44px}
 .ph-save:disabled,.save-off:disabled{opacity:.8;color:var(--green);border-color:var(--green)}
@@ -200,7 +197,7 @@ body.phone #phoneBack{display:none}
 </header>
 
 <section class="panel roll">
-  <canvas class="roll" id="roll" aria-label="Audio roll: the playing track on top, the next track below, lined up on the drop point"></canvas>
+  <canvas class="roll" id="roll" title="Press and drag a lane to scratch it like vinyl" aria-label="Audio roll: the playing track on top, the next track below, lined up on the drop point. Press and drag a lane to scratch it."></canvas>
 </section>
 <section class="decks">
   <div class="panel deck" data-id="A" id="deckA"></div>
@@ -267,12 +264,13 @@ body.phone #phoneBack{display:none}
   <div class="row" style="justify-content:flex-end"><button id="settingsClose">Done</button></div>
 </dialog>
 
-<script src="../audio-core.js?v=20261019a"></script>
-<script src="js/analysis.js?v=20261019a"></script>
-<script src="js/keylock.js?v=20261019a"></script>
-<script src="js/engine.js?v=20261019a"></script>
-<script src="js/app.js?v=20261019a"></script>
-<script src="js/phone.js?v=20261019a"></script>
-<script src="js/defaults.js?v=20261019a"></script>
+<script src="../audio-core.js?v=20261019c"></script>
+<script src="js/analysis.js?v=20261019c"></script>
+<script src="js/keylock.js?v=20261019c"></script>
+<script src="js/engine.js?v=20261019c"></script>
+<script src="../synesthesia.js?v=20261019c"></script>
+<script src="js/app.js?v=20261019c"></script>
+<script src="js/drive.js?v=20261019c"></script>
+<script src="js/defaults.js?v=20261019c"></script>
 </body>
 </html>

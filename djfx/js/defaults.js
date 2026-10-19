@@ -46,7 +46,7 @@
     busy = true; await addNext(); busy = false;
   }
 
-  // ── "Save songs offline" button (phone panel and the full deck's playlist bar) ──
+  // ── "Save songs offline" button (Drive screen and the full deck's playlist bar) ──
   const btns = [];
   async function savedCount() { let n = 0; for (const e of list) if (await cached(e)) n++; return n; }
   async function paint(note) {
@@ -62,7 +62,7 @@
   function addButtons() {
     if (!('caches' in window)) return;
     const mk = cls => { const b = document.createElement('button'); b.className = cls; b.addEventListener('click', saveAll); btns.push(b); return b; };
-    document.querySelector('#phone')?.append(mk('ph-save'));
+    document.querySelector('#drive')?.append(mk('ph-save'));
     document.querySelector('#openFiles')?.parentElement?.append(mk('save-off'));
     paint();
   }

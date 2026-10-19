@@ -21,12 +21,6 @@ window.DJ = window.DJ || {};
     detach(fx) { this.in.disconnect(); try { fx.out.disconnect(this.out); } catch (e) {} this.in.connect(this.out); }
   }
 
-  function peakOf(an, buf) {
-    an.getFloatTimeDomainData(buf); let m = 0;
-    for (let i = 0; i < buf.length; i++) { const a = Math.abs(buf[i]); if (a > m) m = a; }
-    return m;
-  }
-
   /* ------------------------------------------------------------------ Deck */
   class Deck {
     constructor(eng, id) {
@@ -35,11 +29,10 @@ window.DJ = window.DJ || {};
       this.lo = ctx.createBiquadFilter(); this.lo.type = 'lowshelf'; this.lo.frequency.value = 220;
       this.mid = ctx.createBiquadFilter(); this.mid.type = 'peaking'; this.mid.frequency.value = 1000; this.mid.Q.value = 0.7;
       this.hi = ctx.createBiquadFilter(); this.hi.type = 'highshelf'; this.hi.frequency.value = 3800;
-      this.meter = ctx.createAnalyser(); this.meter.fftSize = 512; this.mbuf = new Float32Array(512);
       this.insert = new Insert(ctx);
       this.fader = ctx.createGain(); this.xf = ctx.createGain();
       this.trim.connect(this.lo); this.lo.connect(this.mid); this.mid.connect(this.hi);
-      this.hi.connect(this.meter); this.hi.connect(this.insert.in);
+      this.hi.connect(this.insert.in);
       this.insert.out.connect(this.fader); this.fader.connect(this.xf); this.xf.connect(eng.sum);
       this.buffer = null; this.track = null; this.bpm = 0; this.firstBeat = 0; this.key = null;
       this.rate = 1; this.bend = 1; this.range = 0.08; this.quantize = true;
@@ -204,10 +197,10 @@ window.DJ = window.DJ || {};
     }
 
     /* -- loops: native sample-accurate looping -- */
-    setLoop(beats) {
+    setLoop(beats, unitBeats = 0) {        // unitBeats: snap the start to that grid (4 = the bar it is in), else to the beat
       if (!this.loaded) return;
       const t = this.ctx.currentTime; this.reanchor(t);
-      const p = this.pos(t), len = beats * this.beatLen, unit = Math.min(len, this.beatLen);
+      const p = this.pos(t), len = beats * this.beatLen, unit = unitBeats ? unitBeats * this.beatLen : Math.min(len, this.beatLen);
       const start = this.quantize ? this.firstBeat + Math.floor((p - this.firstBeat) / unit) * unit : p;
       this.loop = { on: true, start, end: start + len, beats };
       if (this.src) { this.src.loopStart = start; this.src.loopEnd = start + len; this.src.loop = true; }
@@ -235,6 +228,26 @@ window.DJ = window.DJ || {};
       this.loop.on = false; if (this.src) this.src.loop = false;
     }
 
+    /* -- scratch: grab the record, move it by hand, let go --
+       The track keeps running underneath, muted, so letting go drops straight back onto the beat-synced spot
+       (the mix never drifts). A paused deck stays paused where the hand left it. Needs the key lock worklet's copy of the track. */
+    scratchStart() {
+      if (!this.loaded || !this.bufId || this.scratch) return false;
+      const t = this.ctx.currentTime, p = this.pos(t);
+      const node = new AudioWorkletNode(this.ctx, 'djfx-scratch', { numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [2], processorOptions: { id: this.bufId, pos: p } });
+      node.connect(this.trim); node.port.onmessage = () => node.disconnect();
+      if (this.srcGain) { hold(this.srcGain.gain, t); this.srcGain.gain.linearRampToValueAtTime(0, t + 0.006); }
+      this.scratch = { node, p0: p, p };
+      return true;
+    }
+    scratchTo(p) { const s = this.scratch; if (!s) return; s.p = clamp(p, 0, this.duration - 0.01); s.node.port.postMessage({ pos: s.p }); }
+    scratchEnd() {
+      const s = this.scratch; if (!s) return; this.scratch = null;
+      const t = this.ctx.currentTime; s.node.port.postMessage({ off: true });
+      if (this.srcGain) { hold(this.srcGain.gain, t); this.srcGain.gain.linearRampToValueAtTime(1, t + 0.008); }
+      else if (!this.playing) this.pausedPos = s.p;
+    }
+
     /* -- cues -- */
     q(p) { return this.quantize && this.bpm ? this.gridPos(p, 1, 'round') : p; }
     cueDown() {
@@ -258,7 +271,6 @@ window.DJ = window.DJ || {};
       } else { this.pausedPos = this.hot[i]; this.play(); }
     }
 
-    peak() { return peakOf(this.meter, this.mbuf); }
   }
 
   /* ------------------------------------------------------------------ FX unit */
