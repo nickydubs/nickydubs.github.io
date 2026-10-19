@@ -1,7 +1,8 @@
 // Nicky Dubs beat pad: 24 pads, twelve kits plus one you record yourself, synthesized right here in the browser (no samples to
-// download, nothing copyrighted), with a DJ filter, reverb, echo and crush. Sounds are pre-rendered into buffers, so a hit is just
-// "start this buffer now": the lowest latency the browser can do. Lives in a popup so the page can't
-// scroll under your fingers, with the Air Wiggler (bot.js) reacting above the pads.
+// download, nothing copyrighted), with a DJ filter, echo, duck, glue and crush on the whole kit. Sounds are pre-rendered into
+// buffers, so a hit is just "start this buffer now". The context, the master and the voice cap come from audio-core.js
+// (shared with DJFX and the Robo-Selecta). Lives in a popup so the page can't scroll under your fingers, with the
+// Air Wiggler (bot.js) reacting above the pads.
 (() => {
 	const pad = document.querySelector('.pad'), rig = document.querySelector('.rig');
 	if (!pad || !rig) return;
@@ -376,8 +377,28 @@
 	const KIT_ORDER = ['soul', '808', 'jungle', 'liquid', 'neuro', 'dubstep', 'half', 'ukg', 'house', 'tech', 'disco', 'dub']; // '808' would sort first on its own
 	const buffers = {}, custom = Object.fromEntries(Object.keys(KITS).map(k => [k, []])), renders = {};
 	let rendering = null;
-	function renderKit(id) { // one kit's pads, rendered once
-		return renders[id] ||= Promise.all(KITS[id].pads.map(p => renderPad(p, KITS[id].dusty))).then(b => { buffers[id] = b; });
+	function renderKit(id) { // one kit's pads, rendered once (and measured once, for the level trims)
+		return renders[id] ||= Promise.all(KITS[id].pads.map(p => renderPad(p, KITS[id].dusty))).then(b => { b.forEach(levelTrim); buffers[id] = b; });
+	}
+	// Even out the pads: each sound's loudest 150 ms is measured once (deep lows count for less, as they do to the ear),
+	// and the pad is nudged halfway toward one common level, 6 dB at most either way. A hit just reads the number.
+	const trims = new WeakMap(), TARGET_DB = -17; // the median over all twelve kits, so the kits stay as loud as they were overall
+	function levelTrim(buf) {
+		let t = trims.get(buf);
+		if (t !== undefined) return t;
+		const d = buf.getChannelData(0), w = Math.max(1, Math.round(buf.sampleRate * 0.15)), a = Math.exp(-2 * Math.PI * 120 / buf.sampleRate);
+		const sq = new Float32Array(d.length);
+		let hp = 0, prev = 0, sum = 0, best = 0;
+		for (let i = 0; i < d.length; i++) {
+			hp = a * (hp + d[i] - prev); prev = d[i]; // one-pole high-pass at 120 Hz
+			sq[i] = hp * hp; sum += sq[i];
+			if (i >= w) sum -= sq[i - w];
+			if (sum > best) best = sum;
+		}
+		const db = 10 * Math.log10(best / Math.min(w, d.length) + 1e-12);
+		t = 10 ** (Math.max(-6, Math.min(6, (TARGET_DB - db) / 2)) / 20);
+		trims.set(buf, t);
+		return t;
 	}
 	function renderAll() { // the kit on screen first, then the rest one at a time with a breather, so playing never stutters
 		return rendering ||= (async () => {
@@ -457,42 +478,23 @@
 	function saveAll() {
 		const values = {};
 		for (const p in ctl) values[p] = ctl[p].get();
-		store.put('state', { values, patch: synthUi?.patch(), dirty: synthUi?.isDirty() });
-		store.put('history', { list: hist.list, pos: hist.pos });
+		return Promise.all([store.put('state', { values, patch: synthUi?.patch(), dirty: synthUi?.isDirty() }),
+			store.put('history', { list: hist.list, pos: hist.pos })]);
 	}
 	addEventListener('pagehide', () => { commit(); saveAll(); });
 
 	// ── Live audio graph ──
-	// pads → bus ──┬──────────────────────────→ mix → DJ filter (HP → LP) → [glue compressor] → master → soft clipper → speakers
-	//              └→ send → reverb / echo / crush → returns ─┘   loops ─┘
-	// No DynamicsCompressorNode anywhere: Chrome's has a fixed ~6 ms look-ahead you can feel. The glue compressor and
-	// bitcrusher below are tiny AudioWorklets with zero look-ahead, and a tanh waveshaper catches the final peaks.
-	let ac, bus, seqBus, clickBus, sendBus, mix, hpF, lpF, postComp, master, compNode = null, crushNode = null;
+	// pads ─┬→ kick ──────────────────┐
+	//       └→ duck (sidechain on the kick) ┴→ bus → mix → DJ filter (HP → LP) → trim → master → speakers
+	//       each hit also feeds its own send level → echo / room / crush → returns ─┘    loops ─┘
+	// The master is the shared one from audio-core.js: glue, master volume, a gentle limiter, a clip light and a guard
+	// against bad samples, all in one tiny worklet. An effect whose knob is at 0 is unplugged from the sends, so idle
+	// effects cost nothing.
+	let ac, bus, seqBus, duckBus, duckSeq, synthBus, clickBus, sendBus, mix, hpF, lpF, trimG, mst = null, crushNode = null, vc = null;
 	let recTap, loopIn, recNode = null, workletReady = null; // loop bank: what gets recorded, where loops play
 	let tempo = 120;
 	const hooks = []; // run when the tempo changes
 	const WORKLET = `
-	class Comp extends AudioWorkletProcessor {
-		static get parameterDescriptors() { return ['thr', 'ratio', 'att', 'rel', 'makeup'].map(name => ({ name, defaultValue: 0 })); }
-		constructor() { super(); this.env = 0; }
-		process(I, O, p) {
-			const inp = I[0], out = O[0], len = out[0].length, knee = 6;
-			if (!inp.length) return true;
-			const thr = p.thr[0], slope = 1 / Math.max(1, p.ratio[0]) - 1, mk = 10 ** (p.makeup[0] / 20);
-			const aA = Math.exp(-1 / (Math.max(0.0001, p.att[0]) * sampleRate)), aR = Math.exp(-1 / (Math.max(0.001, p.rel[0]) * sampleRate));
-			for (let i = 0; i < len; i++) {
-				let x = 0;
-				for (let c = 0; c < inp.length; c++) x = Math.max(x, Math.abs(inp[c][i]));
-				const over = 20 * Math.log10(x + 1e-9) - thr;
-				const g = 2 * over < -knee ? 0 : 2 * Math.abs(over) <= knee ? slope * (over + knee / 2) ** 2 / (2 * knee) : slope * over;
-				const t = -g;
-				this.env = t > this.env ? aA * this.env + (1 - aA) * t : aR * this.env + (1 - aR) * t;
-				const gl = 10 ** (-this.env / 20) * mk;
-				for (let c = 0; c < out.length; c++) out[c][i] = (inp[c] || inp[0])[i] * gl;
-			}
-			return true;
-		}
-	}
 	class Crush extends AudioWorkletProcessor {
 		static get parameterDescriptors() { return [{ name: 'bits', defaultValue: 12 }, { name: 'rate', defaultValue: 26040 }]; }
 		constructor() { super(); this.ph = 1; this.h = [0, 0]; }
@@ -514,13 +516,14 @@
 	}
 	// Records between two audio-clock times, sample-accurate. The audio goes out in small batches as it comes in,
 	// so the audio thread never has to glue a long loop together in one go (that was a dropout on every loop stop).
+	// One recorder is made per recording and it retires itself when it is done, so nothing records while idle.
 	class Rec extends AudioWorkletProcessor {
 		constructor() {
-			super(); this.on = Infinity; this.off = Infinity; this.L = []; this.R = []; this.n = 0; this.total = 0;
+			super(); this.on = Infinity; this.off = Infinity; this.L = []; this.R = []; this.n = 0; this.total = 0; this.fin = false;
 			this.port.onmessage = ({ data: m }) => {
 				if (m.start !== undefined) { this.on = m.start; this.off = Infinity; this.L = []; this.R = []; this.n = 0; this.total = 0; }
 				if (m.stop !== undefined) this.off = m.stop;
-				if (m.cancel) { this.on = this.off = Infinity; this.L = []; this.R = []; this.n = 0; }
+				if (m.cancel) { this.fin = true; this.L = []; this.R = []; }
 			};
 		}
 		flush(done) {
@@ -528,6 +531,7 @@
 			this.L = []; this.R = []; this.n = 0;
 		}
 		process(I) {
+			if (this.fin) return false;
 			const inp = I[0], n = inp[0] ? inp[0].length : 128, t0 = currentTime, t1 = t0 + n / sampleRate;
 			if (t1 <= this.on) return true;
 			const a = Math.max(0, Math.round((this.on - t0) * sampleRate)), b = Math.min(n, Math.round((this.off - t0) * sampleRate));
@@ -536,18 +540,22 @@
 				this.L.push(l ? l.slice(a, b) : new Float32Array(b - a)); this.R.push(r ? r.slice(a, b) : new Float32Array(b - a));
 				this.n += b - a; this.total += b - a;
 			}
-			if (t1 >= this.off || this.total > sampleRate * 90) { this.flush(true); this.on = this.off = Infinity; }
-			else if (this.n >= 16384) this.flush(false);
+			if (t1 >= this.off || this.total > sampleRate * 90) { this.flush(true); this.fin = true; return false; }
+			if (this.n >= 16384) this.flush(false);
 			return true;
 		}
 	}
 	registerProcessor('nd-rec', Rec);
-	registerProcessor('nd-comp', Comp);
 	registerProcessor('nd-crush', Crush);`;
 
-	// ── Effects: four knobs. Filter is a DJ filter (left of centre = low-pass, right = high-pass); the rest are sends ──
+	// ── Effects: one section for the whole kit. Filter is a DJ filter (left of centre = low-pass, right = high-pass);
+	// Echo and Crush are sends; Duck is the kick pushing everything else down; Glue is the master glue, with a short
+	// room folded into the top of the knob ──
 	const ECHO_DIVS = [['1/8', 0.5], ['1/8D', 0.75], ['1/4', 1]]; // echo time, in beats, locked to the tempo
-	const FXP = { filter: 0, rev: 0.25, echo: 0, crush: 0, div: 1 };
+	const FXP = { filter: 0, echo: 0, duck: 0, glue: 0.25, crush: 0, div: 1 };
+	const ROOM_AT = 0.6, ROOM_MAX = 3.5; // the glue knob's top 40% brings in the room; at full it sits about 4 dB under the dry hit
+	const glueOf = v => Math.min(1, v / ROOM_AT), roomOf = v => NDAudio.prefs.lite ? 0 : Math.max(0, (v - ROOM_AT) / (1 - ROOM_AT));
+	const crushOf = () => NDAudio.prefs.lite ? 0 : FXP.crush;
 	const lpHz = a => 20000 * (90 / 20000) ** a, hpHz = a => 20 * (6000 / 20) ** a; // knob distance from centre → cutoff
 	const pct = v => Math.round(v * 100) + '%', khz = v => v < 1000 ? Math.round(v) + ' Hz' : (v / 1000).toFixed(1) + 'k';
 	// Each effect is built as a fresh little graph between its send and return, so "Cut FX" can throw the
@@ -555,11 +563,10 @@
 	const FX = {}, nodes = {};
 	const set = (param, v, tau = 0.02) => param.setTargetAtTime(v, ac.currentTime, tau);
 	const BUILD = {
-		rev() {
-			const pre = ac.createDelay(0.3), conv = ac.createConvolver(), hp = filt(ac, 'highpass', 400), lp = filt(ac, 'lowpass', 9000);
-			pre.delayTime.value = 0.02;
-			chain(pre, conv, hp, lp);
-			return { input: pre, output: lp, conv };
+		room() { // a small room, under a second, rolled off top and bottom
+			const conv = ac.createConvolver(), hp = filt(ac, 'highpass', 300), lp = filt(ac, 'lowpass', 7000);
+			chain(conv, hp, lp);
+			return { input: conv, output: lp, conv };
 		},
 		dly() { // tape echo: a little darker and dirtier every repeat
 			const dl = ac.createDelay(4), sat = shaper(ac, 1.3), tone = filt(ac, 'lowpass', 3200), fb = ac.createGain();
@@ -576,7 +583,7 @@
 			return { input: lo, output: trim, drive, trim };
 		},
 	};
-	function irFor(len = 2.4, dens = 0.85, spread = 0.7) { // decaying noise; spread = stereo width
+	function irFor(len = 0.8, dens = 0.85, spread = 0.7) { // decaying noise; spread = stereo width
 		const n = Math.ceil(ac.sampleRate * len), ir = ac.createBuffer(2, n, ac.sampleRate);
 		const L = ir.getChannelData(0), R = ir.getChannelData(1), p = 0.004 + dens * dens * 0.996, amp = 1 / Math.sqrt(p);
 		let e = 0;
@@ -589,6 +596,12 @@
 		for (let i = 0; i < n; i++) { L[i] *= k; R[i] *= k; }
 		return ir;
 	}
+	function plug(id, on) { // an effect at 0 is unplugged from the sends
+		const n = nodes[id];
+		if (n.on === on) return;
+		n.on = on;
+		if (on) sendBus.connect(n.send); else try { sendBus.disconnect(n.send); } catch {}
+	}
 	function apply(id) {
 		if (!ac) return;
 		if (id === 'filter') {
@@ -597,17 +610,21 @@
 			set(hpF.frequency, v > 0 ? hpHz(a) : 10, 0.03); set(hpF.Q, v > 0 ? q : 0.5, 0.03);
 			return;
 		}
+		if (id === 'glue' || id === 'room') {
+			mst.setGlue(glueOf(FXP.glue));
+			const r = roomOf(FXP.glue);
+			plug('room', r > 0); set(nodes.room.ret.gain, r * ROOM_MAX);
+			if (r > 0 && !FX.room.conv.buffer) FX.room.conv.buffer = irFor();
+			return;
+		}
 		const f = FX[id];
-		if (id === 'rev') {
-			set(nodes.rev.send.gain, FXP.rev > 0 ? 1 : 0); set(nodes.rev.ret.gain, FXP.rev * 2.4); // ConvolverNode normalizes to about -58 dB; 2.4 puts 100% about 2 dB under the dry hit
-			if (!f.conv.buffer) f.conv.buffer = irFor();
-		} else if (id === 'dly') {
+		if (id === 'dly') {
 			const e = FXP.echo;
-			set(nodes.dly.send.gain, e > 0 ? 1 : 0); set(f.dl.delayTime, ECHO_DIVS[FXP.div][1] * 60 / tempo, 0.05);
+			plug('dly', e > 0); set(f.dl.delayTime, ECHO_DIVS[FXP.div][1] * 60 / tempo, 0.05);
 			set(f.fb.gain, 0.25 + e * 0.5); set(nodes.dly.ret.gain, e * 0.9);
 		} else if (id === 'crush') {
-			const k = FXP.crush;
-			set(nodes.crush.send.gain, k > 0 ? 1 : 0); set(f.drive.gain, 30 ** (k * 0.6)); set(f.trim.gain, 1 / (1 + k * 0.9));
+			const k = crushOf();
+			plug('crush', k > 0); set(f.drive.gain, 30 ** (k * 0.6)); set(f.trim.gain, 1 / (1 + k * 0.9));
 			set(nodes.crush.ret.gain, k > 0 ? 0.35 + k * 0.5 : 0);
 			if (crushNode) { set(crushNode.parameters.get('bits'), 16 - 12 * k, 0.005); set(crushNode.parameters.get('rate'), Math.max(1500, ac.sampleRate * (1 - k * 0.9) ** 1.7), 0.005); }
 		}
@@ -619,38 +636,48 @@
 		FX[id].output.connect(nodes[id].ret);
 		apply(id);
 	}
+	// Sidechain: each kick pushes everything else down by the Duck amount and lets it swell back over about an 8th
+	let duckEnd = 0;
+	function duck(t) {
+		const depth = 1 - FXP.duck * 0.75, rel = 60 / tempo * 0.14;
+		for (const p of [duckBus.gain, duckSeq.gain]) {
+			if (t >= duckEnd) p.cancelScheduledValues(t); // never wipe a kick that is already booked later
+			p.setValueAtTime(depth, t); p.setTargetAtTime(1, t + 0.01, rel);
+		}
+		duckEnd = Math.max(duckEnd, t);
+	}
 
 	function audio() {
 		if (ac) return ac;
-		const AC = window.AudioContext || window.webkitAudioContext;
-		try { ac = new AC({ latencyHint: 0 }); } catch { ac = new AC({ latencyHint: 'interactive' }); } // 0 = the smallest buffer the device allows
+		if (NDAudio.prefs.lite && NDAudio.prefs.latency === 'tight') NDAudio.setPref('latency', 'safe');
+		ac = NDAudio.context('play'); // Safe (about 12 ms) or Tight (the smallest buffer the device allows)
 		SR = ac.sampleRate;
-		master = ac.createGain(); master.gain.value = 0.6; // the clipper adds ~4 dB on quiet signals; this evens it out
-		chain(master, shaper(ac, 1.4), ac.destination);
-		postComp = ac.createGain(); postComp.connect(master);
+		mst = NDAudio.master(ac, { gain: MVOL, glue: glueOf(FXP.glue) });
+		if (clipEl) NDAudio.clipLight(mst, clipEl);
+		NDAudio.keepAlive(ac, () => rig.open);
+		vc = NDAudio.voices(ac, NDAudio.prefs.lite ? 12 : 24);
+		trimG = ac.createGain(); trimG.gain.value = 0.7; // headroom: the whole kit sits a few dB under the old mix
+		chain(trimG, mst.input);
 		mix = ac.createGain(); hpF = filt(ac, 'highpass', 10, 0.5); lpF = filt(ac, 'lowpass', Math.min(22000, ac.sampleRate / 2), 0.5);
-		chain(mix, hpF, lpF, postComp);
-		bus = ac.createGain(); clickBus = ac.createGain(); sendBus = ac.createGain();
+		chain(mix, hpF, lpF, trimG);
+		bus = ac.createGain(); clickBus = ac.createGain(); sendBus = ac.createGain(); synthBus = ac.createGain();
 		seqBus = ac.createGain(); // patterns and the piano roll: heard, but kept out of loop recordings (they are on the grid already)
-		bus.connect(mix); bus.connect(sendBus); seqBus.connect(mix); seqBus.connect(sendBus); clickBus.connect(master);
+		duckBus = ac.createGain(); duckSeq = ac.createGain(); duckBus.connect(bus); duckSeq.connect(seqBus);
+		bus.connect(mix); seqBus.connect(mix); clickBus.connect(mst.input);
+		synthBus.connect(bus); synthBus.connect(sendBus);
 		recTap = ac.createGain(); bus.connect(recTap); // "Pads" source: pads + their FX, never the loops or click
 		loopIn = ac.createGain(); loopIn.connect(mix);
-		for (const id of ['rev', 'dly', 'crush']) {
-			nodes[id] = { send: ac.createGain(), ret: ac.createGain() };
-			sendBus.connect(nodes[id].send); nodes[id].ret.connect(mix); nodes[id].ret.connect(recTap);
+		for (const id of ['room', 'dly', 'crush']) {
+			nodes[id] = { send: ac.createGain(), ret: ac.createGain(), on: false };
+			nodes[id].ret.connect(mix); nodes[id].ret.connect(recTap);
 			build(id);
 		}
-		apply('filter');
+		apply('filter'); apply('glue');
 		workletReady = (ac.audioWorklet ? ac.audioWorklet.addModule(URL.createObjectURL(new Blob([WORKLET], { type: 'text/javascript' }))) : Promise.reject()).then(() => {
-			recNode = new AudioWorkletNode(ac, 'nd-rec', { outputChannelCount: [1] });
-			const sink = ac.createGain(); sink.gain.value = 0; // keeps the recorder running without making sound
-			chain(recTap, recNode, sink, ac.destination);
-			// gentle glue on the whole mix, in the spirit of an SSL bus compressor
-			compNode = new AudioWorkletNode(ac, 'nd-comp', { outputChannelCount: [2], parameterData: { thr: -14, ratio: 3, att: 0.01, rel: 0.2, makeup: 3 } });
-			lpF.disconnect(); chain(lpF, compNode, postComp);
 			crushNode = new AudioWorkletNode(ac, 'nd-crush', { outputChannelCount: [2] });
 			build('crush');
-		}).catch(() => {}); // no worklets (very old browsers): everything still plays, just without glue + crusher
+		});
+		workletReady.catch(() => {}); // no worklets (very old browsers): everything still plays, just without the crusher or loops
 		showLatency();
 		return ac;
 	}
@@ -663,20 +690,64 @@
 		latOut.title = `Browser buffer ${((ac.baseLatency || 0) * 1000).toFixed(1)} ms + output ${((ac.outputLatency || 0) * 1000).toFixed(1)} ms at ${ac.sampleRate} Hz`;
 	}
 	// Cut FX: throw away every effect's tail (rebuild them clean); your settings stay.
-	pad.querySelector('.pad__cut').addEventListener('click', () => { if (ac) for (const id of ['rev', 'dly', 'crush']) build(id); });
+	pad.querySelector('.pad__cut').addEventListener('click', () => { if (ac) for (const id of ['room', 'dly', 'crush']) build(id); });
 	hooks.push(() => { if (ac) apply('dly'); });
 
-	// ── The effects row: Filter, Reverb, Echo (with its time chip) and Crush ──
+	// ── Master: volume, clip light, Safe/Tight latency and Lite mode, at the top of the pad ──
+	let MVOL = 0.85;
+	const tools = pad.querySelector('.pad__tools');
+	const masterEl = document.createElement('span');
+	masterEl.className = 'pad__master';
+	masterEl.innerHTML = `<input class="pad__vol" type="range" min="0" max="1" step="0.01" aria-label="Master volume" title="Master volume">`
+		+ `<i class="pad__clip" title="Clip light: red when the master is pushed too hard"></i>`
+		+ `<button class="chip pad__latmode" type="button"></button><button class="chip pad__lite" type="button" aria-pressed="false">Lite</button>`;
+	tools?.prepend(masterEl);
+	const volEl = masterEl.querySelector('.pad__vol'), clipEl = masterEl.querySelector('.pad__clip');
+	const latBtn = masterEl.querySelector('.pad__latmode'), liteBtn = masterEl.querySelector('.pad__lite');
+	volEl.value = MVOL;
+	volEl.addEventListener('input', () => { MVOL = +volEl.value; mst?.setGain(MVOL); saveSoon(); });
+	ctl['master.vol'] = { get: () => MVOL, set: v => { MVOL = v; volEl.value = v; mst?.setGain(v); } };
+	function modeUi() {
+		const tight = NDAudio.prefs.latency === 'tight', lite = NDAudio.prefs.lite;
+		latBtn.textContent = tight ? 'Tight' : 'Safe';
+		latBtn.disabled = lite;
+		latBtn.title = lite ? 'Lite mode keeps the safe buffer' : tight ? 'Tight: the smallest buffer, for playing live on a quiet computer. Tap for Safe.' : 'Safe: a slightly bigger buffer (about 12 ms) that does not crackle. Tap for Tight.';
+		liteBtn.setAttribute('aria-pressed', String(lite));
+		liteBtn.title = 'Lite: safe buffer, no room, no crush, fewer overlapping sounds and calmer lights, for phones and busy computers';
+	}
+	// A new buffer size needs a new audio engine: save everything, reload, and open the pad again
+	async function relaunch() {
+		commit();
+		await saveAll();
+		try { sessionStorage.setItem('bp-reopen', '1'); } catch {}
+		location.reload();
+	}
+	latBtn.addEventListener('click', () => { NDAudio.setPref('latency', NDAudio.prefs.latency === 'tight' ? 'safe' : 'tight'); modeUi(); if (ac) relaunch(); });
+	liteBtn.addEventListener('click', () => {
+		const on = !NDAudio.prefs.lite, wasTight = NDAudio.prefs.latency === 'tight';
+		NDAudio.setPref('lite', on);
+		if (on && wasTight) NDAudio.setPref('latency', 'safe');
+		modeUi();
+		if (on && wasTight && ac) { relaunch(); return; }
+		if (vc) vc.max = on ? 12 : 24;
+		apply('glue'); apply('crush');
+	});
+	modeUi();
+
+	// ── The effects row: Filter, Echo (with its time chip), Duck, Glue (+ room) and Crush ──
 	const rackEl = pad.querySelector('.rack');
 	if (rackEl) {
 		rackEl.innerHTML = '<div class="rack__knobs fxrow"></div>';
 		const row = rackEl.firstChild;
 		const KN = [['filter', 'Filter', -1, v => Math.abs(v) < 0.02 ? 'Off' : v < 0 ? 'LP ' + khz(lpHz(-v)) : 'HP ' + khz(hpHz(v))],
-			['rev', 'Reverb', 0, pct], ['echo', 'Echo', 0, pct], ['crush', 'Crush', 0, pct]];
+			['echo', 'Echo', 0, pct], ['duck', 'Duck', 0, pct],
+			['glue', 'Glue', 0, v => v <= ROOM_AT ? pct(glueOf(v)) : 'Room ' + pct((v - ROOM_AT) / (1 - ROOM_AT))], ['crush', 'Crush', 0, pct]];
+		const TIPS = { filter: 'Turn left for low-pass, right for high-pass. Double-click to reset.', echo: 'Tape echo on the pads that send to it (Send mode sets each pad)',
+			duck: 'The kick pushes everything else down, then it swells back', glue: 'Glues the whole kit together; the top of the knob adds a short room', crush: 'Bit crush and grit' };
 		for (const [key, lab, min, fmt] of KN) {
 			const target = key === 'echo' ? 'dly' : key;
 			const el = document.createElement('div');
-			el.className = 'kn';
+			el.className = 'kn'; el.title = TIPS[key];
 			el.innerHTML = `<span class="knob" aria-label="${lab}"></span><b class="kn__v"></b><small>${lab}</small>`;
 			row.append(el);
 			const out = el.querySelector('.kn__v'), show = () => { out.textContent = fmt(FXP[key]); };
@@ -686,7 +757,6 @@
 			});
 			ctl['fx.' + key] = { get: () => FXP[key], set: v => { FXP[key] = v; kn.set(v, false); show(); apply(target); } };
 			show();
-			if (key === 'filter') el.title = 'Turn left for low-pass, right for high-pass. Double-click to reset.';
 			if (key === 'echo') {
 				const b = document.createElement('button');
 				b.type = 'button'; b.className = 'rack__opt fxrow__time'; b.title = 'Echo time, locked to the tempo';
@@ -700,29 +770,67 @@
 
 	// ── Pads ──
 	let kit = 'soul';
-	const voices = {}; // mute group → playing voice
+	const groups = {}; // mute group → playing voice
+	// Pad modes: Play (tap to play), Rec Pads (tap a pad to record your mic into it), Vol and Send (drag a pad up or down)
+	let padMode = 'play';
+	const padMix = {}; // kit → { v: each pad's volume, s: each pad's send to the echo, room and crush } (1 = as rendered)
+	const mixOf = k => padMix[k] ||= { v: Array(PADS).fill(1), s: Array(PADS).fill(1) };
+	const VOL_MAX = 1.5;
 	const els = KEY_LABELS.map((k, i) => {
 		const b = document.createElement('button');
 		b.type = 'button'; b.className = 'pad__btn';
-		b.innerHTML = `<i class="pad__glow"></i><span class="pad__key">${k}</span><span class="pad__name"></span>`;
+		b.innerHTML = `<i class="pad__glow"></i><span class="pad__key">${k}</span><span class="pad__name"></span><span class="pad__val"></span>`;
 		grid.append(b);
-		b.addEventListener('pointerdown', e => { if (e.button === 0) { e.preventDefault(); hit(i); } });
+		b.addEventListener('pointerdown', e => {
+			if (e.button !== 0) return;
+			e.preventDefault();
+			if (padMode === 'play') hit(i);
+			else if (padMode === 'rec') padRecTap(i);
+			else dragStart(i, b, e);
+		});
 		b.addEventListener('click', e => { if (e.detail === 0) hit(i); }); // Enter/Space when tabbed to
 		b.addEventListener('contextmenu', e => { e.preventDefault(); loadInto = i; audio(); fileIn.click(); });
 		return b;
 	});
+	const vals = els.map(b => b.querySelector('.pad__val'));
+	function showVals() {
+		if (padMode !== 'vol' && padMode !== 'send') return;
+		const m = mixOf(kit), arr = padMode === 'vol' ? m.v : m.s;
+		vals.forEach((el, i) => { el.textContent = pct(arr[i]); });
+	}
+	// Vol / Send: drag up or down (Shift = fine); a tap without a drag plays the pad
+	function dragStart(i, b, e) {
+		b.setPointerCapture(e.pointerId);
+		const m = mixOf(kit), arr = padMode === 'vol' ? m.v : m.s, top = padMode === 'vol' ? VOL_MAX : 1;
+		const y0 = e.clientY, v0 = arr[i], before = ctl['pads.mix'].get();
+		let moved = false;
+		const move = ev => {
+			if (!moved && Math.abs(ev.clientY - y0) < 4) return;
+			moved = true;
+			arr[i] = +Math.min(top, Math.max(0, v0 + (y0 - ev.clientY) / (ev.shiftKey ? 600 : 150))).toFixed(2);
+			vals[i].textContent = pct(arr[i]);
+		};
+		const up = () => {
+			b.removeEventListener('pointermove', move); b.removeEventListener('pointerup', up); b.removeEventListener('pointercancel', up);
+			if (moved) touch('pads.mix', before); else hit(i);
+		};
+		b.addEventListener('pointermove', move); b.addEventListener('pointerup', up); b.addEventListener('pointercancel', up);
+	}
+	ctl['pads.mix'] = { get: () => JSON.stringify(padMix), set: v => { for (const k in padMix) delete padMix[k]; Object.assign(padMix, JSON.parse(v || '{}')); showVals(); } };
 	function label() {
 		KITS[kit].pads.forEach((p, i) => {
 			const own = custom[kit][i];
 			els[i].querySelector('.pad__name').textContent = own ? own.name : p[0];
 			els[i].dataset.c = own ? 'u' : p[3];
 		});
+		showVals();
 		if (kitSel) { kitSel.value = kit; kitSel.classList.toggle('is-on', mode === 'pads'); }
 		pad.querySelector('[data-mode="synth"]')?.classList.toggle('is-on', mode === 'synth');
 	}
 	function setMode(m) {
 		mode = m;
 		grid.hidden = m !== 'pads';
+		if (modeBar) modeBar.hidden = m !== 'pads';
 		const sy = pad.querySelector('.synth');
 		if (sy) sy.hidden = m !== 'synth';
 		if (m !== 'synth') synthUi?.panic();
@@ -735,6 +843,7 @@
 		kitSel.addEventListener('pointerdown', () => { if (mode !== 'pads') setMode('pads'); });
 	}
 	pad.querySelector('[data-mode="synth"]')?.addEventListener('click', () => setMode('synth'));
+	let modeBar = null;
 	label();
 	// Pad lights: only the overlay's opacity animates (the compositor does it, the page never repaints), and a new
 	// flash replaces the last one on that pad instead of piling up.
@@ -751,28 +860,36 @@
 		if (!own && !buffers[kit]) await renderKit(kit);
 		playPad(kit, i, c.currentTime);            // sound first; every visual waits until it's scheduled
 		flash(i, 260);
-		pressing[i]?.cancel();
-		pressing[i] = els[i].animate([{ transform: 'scale(0.93)' }, { transform: 'scale(1)' }], { duration: 220, easing: 'cubic-bezier(0.2, 0.9, 0.3, 1.2)' });
+		if (!NDAudio.prefs.lite) {
+			pressing[i]?.cancel();
+			pressing[i] = els[i].animate([{ transform: 'scale(0.93)' }, { transform: 'scale(1)' }], { duration: 220, easing: 'cubic-bezier(0.2, 0.9, 0.3, 1.2)' });
+		}
 		window.wiggler?.hit(own ? 'u' : KITS[kit].pads[i][3], i === 0 || /kick/i.test(KITS[kit].pads[i][0]) ? 1.2 : 0.8);
 		roll?.capture(kit, i, 1);
 		league?.score('p' + i);
 	}
-	// The sound itself, now or at a scheduled time (the piano roll books hits slightly ahead)
+	// The sound itself, now or at a scheduled time (the piano roll books hits slightly ahead). Every pad is mono:
+	// a new hit of the same pad cuts the last one, and the whole kit is capped (24 sounds, 12 in Lite) so a pile-up
+	// never overloads the audio.
 	function playPad(k, i, at, vel = 1, out = bus) {
 		const own = custom[k]?.[i], def = KITS[k]?.pads[i];
 		const buf = own ? own.buffer : buffers[k]?.[i];
 		if (!buf || !def) return;
-		const group = own ? null : def[4], t = Math.max(ac.currentTime, at);
-		if (group && voices[group]) { // choke: closed hat cuts open hat, a new 808 note cuts the last
-			const v = voices[group];
+		const group = own ? null : def[4], t = Math.max(ac.currentTime, at), m = mixOf(k);
+		if (group && groups[group]) { // choke: closed hat cuts open hat, a new 808 note cuts the last
+			const v = groups[group];
 			v.g.gain.setTargetAtTime(0, t, 0.008);
 			v.src.stop(t + 0.05);
 		}
 		const src = ac.createBufferSource(), g = ac.createGain();
-		src.buffer = buf; g.gain.value = vel;
-		chain(src, g, out);
+		src.buffer = buf; g.gain.value = vel * levelTrim(buf) * m.v[i];
+		chain(src, g, i === 0 ? out : out === seqBus ? duckSeq : duckBus); // the kick is the sidechain, never ducked itself
+		if (m.s[i] === 1) g.connect(sendBus);
+		else if (m.s[i] > 0) { const sg = ac.createGain(); sg.gain.value = m.s[i]; chain(g, sg, sendBus); }
 		src.start(t);
-		if (group) { voices[group] = { src, g }; src.onended = () => { if (voices[group]?.src === src) delete voices[group]; }; }
+		vc.play(src, g, i, t);
+		if (i === 0 && FXP.duck > 0) duck(t);
+		if (group) { groups[group] = { src, g }; src.onended = () => { if (groups[group]?.src === src) delete groups[group]; }; }
 	}
 
 	// ── Patterns: MIDI patterns for the kits, each with a Part A and a Part B of 32 bars ──
@@ -971,33 +1088,47 @@
 	recBtn.title = 'Record hits from your mic (beatbox, claps, anything); each one gets its own pad';
 	beatBar.append(recBtn);
 	recBtn.addEventListener('click', () => micRec ? micRec.stop() : micStart());
-	async function micStart() { // raw samples straight off the mic: nothing to encode or decode, works the same on every phone
+	// Raw samples straight off the mic: nothing to encode or decode, works the same on every phone.
+	// → { secs(), stop() → AudioBuffer, or null when it was too short }, or null when the mic is blocked
+	async function micOpen(max) {
 		const c = audio();
 		if (c.state === 'suspended') c.resume();
 		let stream;
 		try { stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } }); }
-		catch { alert('Could not open your microphone. Check the browser permission for this site.'); return; }
+		catch { alert('Could not open your microphone. Check the browser permission for this site.'); return null; }
 		const src = c.createMediaStreamSource(stream), tap = c.createScriptProcessor(4096, 1, 1), mute = c.createGain();
 		const parts = [], t0 = performance.now();
 		let got = 0;
 		mute.gain.value = 0; // the tap has to reach the speakers to keep running; silent so you never hear yourself
-		tap.onaudioprocess = e => { if (got < c.sampleRate * MIC_MAX) { const d = e.inputBuffer.getChannelData(0); parts.push(new Float32Array(d)); got += d.length; } };
+		tap.onaudioprocess = e => { if (got < c.sampleRate * max) { const d = e.inputBuffer.getChannelData(0); parts.push(new Float32Array(d)); got += d.length; } };
 		chain(src, tap, mute, c.destination);
+		return {
+			secs: () => (performance.now() - t0) / 1000,
+			stop() {
+				src.disconnect(); tap.disconnect(); stream.getTracks().forEach(t => t.stop());
+				if (got < c.sampleRate * 0.1) return null;
+				const rec = c.createBuffer(1, got, c.sampleRate);
+				let at = 0; for (const d of parts) { rec.copyToChannel(d, 0, at); at += d.length; }
+				return rec;
+			},
+		};
+	}
+	async function micStart() {
+		const m = await micOpen(MIC_MAX);
+		if (!m) return;
 		const tick = setInterval(() => {
-			const sec = (performance.now() - t0) / 1000;
+			const sec = m.secs();
 			recBtn.textContent = `■ Stop ${sec.toFixed(1)}s`;
 			if (sec >= MIC_MAX) micRec.stop();
 		}, 100);
 		micRec = { stop: async () => {
 			if (!micRec) return;
 			clearInterval(tick); micRec = null;
-			src.disconnect(); tap.disconnect(); stream.getTracks().forEach(t => t.stop());
+			const rec = m.stop();
 			recBtn.classList.remove('is-rec'); recBtn.textContent = 'Cutting…';
 			let msg = '● Rec kit';
 			try {
-				if (got < c.sampleRate * 0.1) throw new Error('too short');
-				const rec = c.createBuffer(1, got, c.sampleRate);
-				let at = 0; for (const d of parts) { rec.copyToChannel(d, 0, at); at += d.length; }
+				if (!rec) throw new Error('too short');
 				const n = await micKit(rec);
 				if (n) msg = `✓ ${n} hit${n > 1 ? 's' : ''} on pads`;
 			} catch (e) { console.warn(e); alert('Could not use that recording. Try again, a little longer.'); }
@@ -1005,6 +1136,45 @@
 			setTimeout(() => { if (!micRec) recBtn.textContent = '● Rec kit'; }, 2500);
 		} };
 		recBtn.classList.add('is-rec'); recBtn.textContent = '■ Stop 0.0s';
+	}
+
+	// ── Pad modes, under the patterns: Play, Rec Pads, Vol, Send ──
+	const MODES = [['play', 'Play', 'Tap a pad to play it'], ['rec', 'Rec Pads', 'Tap a pad to record your mic into it, tap again to stop (4 seconds at most)'],
+		['vol', 'Vol', 'Drag a pad up or down to set its volume'], ['send', 'Send', 'Drag a pad up or down to set how much of it goes to the echo, the room and the crush']];
+	modeBar = document.createElement('div');
+	modeBar.className = 'padmodes'; modeBar.setAttribute('role', 'group'); modeBar.setAttribute('aria-label', 'What a pad tap does');
+	modeBar.innerHTML = MODES.map(([id, lab, tip]) => `<button type="button" class="chip padmodes__b" data-pm="${id}" aria-pressed="${id === padMode}" title="${tip}">${lab}</button>`).join('');
+	grid.before(modeBar);
+	function setPadMode(id) {
+		if (padRec) padRecTap(padRec.i); // leaving Rec Pads finishes a take that is still running
+		padMode = id;
+		modeBar.querySelectorAll('[data-pm]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.pm === id)));
+		grid.dataset.pm = id;
+		showVals();
+	}
+	modeBar.addEventListener('click', e => { const b = e.target.closest('[data-pm]'); if (b) setPadMode(b.dataset.pm); });
+	grid.dataset.pm = padMode;
+	// Rec Pads: the mic goes straight into one pad (this kit, this visit), trimmed and brought up to a playable level
+	const PAD_REC_MAX = 4;
+	let padRec = null;
+	async function padRecTap(i) {
+		if (padRec) { const r = padRec; padRec = null; r.end(); return; }
+		padRec = { i, end: () => {} }; // claimed at once, so a second tap while the mic opens cannot start another take
+		const m = await micOpen(PAD_REC_MAX);
+		if (!m) { padRec = null; return; }
+		els[i].classList.add('is-rec');
+		const auto = setInterval(() => { if (m.secs() >= PAD_REC_MAX && padRec?.i === i) padRecTap(i); }, 100);
+		const end = () => {
+			clearInterval(auto); els[i].classList.remove('is-rec');
+			const rec = m.stop();
+			if (!rec) return;
+			const buffer = trim(rec), d = buffer.getChannelData(0);
+			let pk = 0; for (const v of d) pk = Math.max(pk, Math.abs(v));
+			if (pk > 1e-4) for (let k = 0; k < d.length; k++) d[k] *= 0.9 / pk;
+			custom[kit][i] = { buffer, name: 'Rec ' + KEY_LABELS[i] };
+			levelTrim(buffer); label(); hit(i);
+		};
+		if (padRec) padRec.end = end; else end(); // the take was stopped while the mic was still opening
 	}
 	function sliceHits(buf) { // → up to 12 { data, name }, low sounds first
 		const sr = buf.sampleRate, n = buf.length, x = new Float32Array(n);
@@ -1064,7 +1234,7 @@
 			} else { pads.push(KITS[fill].pads[i]); bufs.push(buffers[fill][i]); } // the rest of the kit you had on
 		}
 		KITS[MIC] = { name: '🎙 My mic kit', dusty: false, harm: KITS[fill].harm, pads };
-		buffers[MIC] = bufs; renders[MIC] = Promise.resolve(); custom[MIC] ||= []; micFill = fill;
+		bufs.forEach(levelTrim); buffers[MIC] = bufs; renders[MIC] = Promise.resolve(); custom[MIC] ||= []; micFill = fill;
 		if (!KIT_ORDER.includes(MIC)) { KIT_ORDER.push(MIC); kitSel?.insertAdjacentHTML('beforeend', `<option value="${MIC}">${KITS[MIC].name}</option>`); }
 	}
 	async function micKit(rec) {
@@ -1104,6 +1274,7 @@
 		try {
 			const buffer = trim(await audio().decodeAudioData(await f.arrayBuffer()));
 			custom[kit][loadInto] = { buffer, name: f.name.replace(/\.[^.]+$/, '').slice(0, 14) };
+			levelTrim(buffer);
 			label();
 			hit(loadInto);
 		} catch {
@@ -1272,6 +1443,14 @@
 			try { micSrc?.disconnect(recNode); } catch {}
 			(opt.mic && micSrc ? micSrc : recTap).connect(recNode);
 		}
+		// The recorder only exists while a loop is recording: made at the tap, unplugged and dropped once it is done
+		function retire(node) {
+			try { recTap.disconnect(node); } catch {}
+			try { micSrc?.disconnect(node); } catch {}
+			node.disconnect();
+			if (recNode === node) recNode = null;
+		}
+		function cancelRec() { if (recNode) { recNode.port.postMessage({ cancel: true }); retire(recNode); } }
 		// You play to what you hear, and you hear the click late by the output latency, so whatever you play lands that
 		// late on the audio clock. The recording window shifts by the same amount (the mic adds a little of its own),
 		// so the loop sits on the grid instead of dragging behind it.
@@ -1280,10 +1459,15 @@
 			audio(); if (ac.state === 'suspended') await ac.resume();
 			try { await workletReady; } catch { alert('Recording needs a newer browser (AudioWorklet).'); return; }
 			if (opt.mic && !(await ensureMic())) return;
+			if (recNode) cancelRec();
+			const node = recNode = new AudioWorkletNode(ac, 'nd-rec', { outputChannelCount: [1] });
+			const sink = ac.createGain(); sink.gain.value = 0; // keeps the recorder running without making sound
+			chain(node, sink, ac.destination);
 			let got = { L: [], R: [] }; // the recorder sends the audio in batches; join them once it says done
-			recNode.port.onmessage = ({ data: m }) => {
+			node.port.onmessage = ({ data: m }) => {
 				got.L.push(...m.L); got.R.push(...m.R);
 				if (!m.done) return;
+				retire(node); sink.disconnect();
 				const join = parts => { const out = new Float32Array(parts.reduce((n, a) => n + a.length, 0)); let o = 0; for (const a of parts) { out.set(a, o); o += a.length; } return out; };
 				const L = join(got.L), R = join(got.R); got = { L: [], R: [] };
 				onRecorded({ L, R });
@@ -1296,17 +1480,17 @@
 			} else at = ac.currentTime + 0.01;
 			Object.assign(S[i], { state: 'armed', startAt: at });
 			recSlot = i; kick();
-			recNode.port.postMessage({ start: at + recLag() });
+			node.port.postMessage({ start: at + recLag() });
 			setTimeout(() => { if (recSlot === i) window.wiggler?.hit('h', 1); }, Math.max(0, (at - ac.currentTime) * 1000));
 		}
 		function stopRec(i) {
 			const s = S[i], t = ac.currentTime;
-			if (t < s.startAt) { recNode.port.postMessage({ cancel: true }); s.state = 'empty'; recSlot = -1; return; } // still counting in
+			if (t < s.startAt) { cancelRec(); s.state = 'empty'; recSlot = -1; return; } // still counting in
 			let end = t;
 			if (opt.count && metro.running) end = s.startAt + Math.max(1, Math.round((t - s.startAt) / spb())) * spb();
 			pending = { i, len: Math.round((end - s.startAt) * ac.sampleRate), end };
 			s.state = 'finishing';
-			recNode.port.postMessage({ stop: Math.max(end + recLag(), t) });
+			recNode?.port.postMessage({ stop: Math.max(end + recLag(), t) });
 		}
 		function onRecorded({ L, R }) {
 			const p = pending || { i: recSlot, len: L.length, end: ac.currentTime };
@@ -1358,7 +1542,7 @@
 		function pause(i) { stopVoice(S[i]); S[i].state = 'stopped'; }
 		function clear(i) {
 			const s = S[i];
-			if (recSlot === i) { recNode?.port.postMessage({ cancel: true }); recSlot = -1; pending = null; }
+			if (recSlot === i) { cancelRec(); recSlot = -1; pending = null; }
 			stopVoice(s);
 			const had = !!s.buf;
 			Object.assign(s, { state: 'empty', buf: null, rbuf: null });
@@ -1467,7 +1651,7 @@
 		function ui(now) {
 			raf = 0;
 			if (!ac || !rig.open) return;
-			const t = ac.currentTime, ring = now - lastP > 50;
+			const t = ac.currentTime, ring = now - lastP > (NDAudio.prefs.lite ? 100 : 50); // the ring: about 20 updates a second, 10 in Lite
 			if (ring) lastP = now;
 			let busy = false;
 			S.forEach((s, i) => {
@@ -1509,7 +1693,7 @@
 		const bankB = Array(128).fill(null);     // your own patches: { name, p }
 		let patch = 'A:0', dirty = false, eng = null, octave = 0;
 		const engine = () => {
-			if (!eng) { audio(); eng = PS.createEngine(ac, bus); eng.load(SP); }
+			if (!eng) { audio(); eng = PS.createEngine(ac, synthBus); eng.load(SP); }
 			return eng;
 		};
 		const pct = v => Math.round(v * 100) + '%', hzf = v => v < 1000 ? Math.round(v) + ' Hz' : (v / 1000).toFixed(1) + ' kHz';
@@ -1992,10 +2176,12 @@
 			else playPad(nt.k, nt.n, t, nt.v, seqBus);
 		}
 		hooks.push(() => { if (playing) { const now = ac.currentTime; anchorBeat = beatAt(now); anchorTime = now; schedTo = Math.min(schedTo, beatAt(now)); } rspb = 60 / tempo; });
-		function loop() {
+		let lastFrame = 0;
+		function loop(now = 0) {
 			if (!playing) { raf = 0; return; }
-			raf = requestAnimationFrame(loop);
-			if (box.hidden) return;
+			cancelAnimationFrame(raf); raf = requestAnimationFrame(loop); // one chain only, however often it is kicked
+			if (box.hidden || document.hidden || now - lastFrame < (NDAudio.prefs.lite ? 66 : 33)) return; // 30 frames a second is plenty, 15 in Lite
+			lastFrame = now;
 			const L = len(), pb = ((beatAt(ac.currentTime - lat()) % L) + L) % L, x = pb * BW;
 			if (!drag && (x < sx || x > sx + W - GUT - 20)) { sx = x - 10; clampScroll(); } // follow the playhead
 			draw();
@@ -2175,6 +2361,7 @@
 		loops?.wake();
 		setTimeout(showLatency, 400); // outputLatency is only known once audio is actually flowing
 	}));
+	try { if (sessionStorage.getItem('bp-reopen')) { sessionStorage.removeItem('bp-reopen'); document.querySelector('.rig-open')?.click(); } } catch {} // back from a Safe/Tight switch
 	rig.querySelector('.rig__close').addEventListener('click', () => rig.close());
 	rig.querySelector('.pad__fx')?.addEventListener('click', e => { // phones: the effects rack folds away so the pads get the room
 		const on = rig.classList.toggle('show-fx'); e.currentTarget.setAttribute('aria-pressed', String(on));

@@ -294,10 +294,22 @@ html:has(.rig[open]) { overflow: hidden; }
 .rig__close:hover { border-color: #ff3b5c; }
 .pad__grid { touch-action: none; }
 .pad__grid[hidden] { display: none; }
-.rig .pad__grid { width: min(100%, calc((100dvh - 560px) * 1.5), 640px); min-width: min(100%, 300px); margin: 0 auto; }
+.rig .pad__grid { width: min(100%, calc((100dvh - 600px) * 1.5), 640px); min-width: min(100%, 300px); margin: 0 auto; }
 .pad__tools { display: flex; align-items: center; gap: 8px; }
-.pad__cut { padding: 7px 12px; font-size: 0.78rem; }
+.pad__cut { padding: 7px 12px; font-size: 0.78rem; white-space: nowrap; }
 .pad__lat { color: var(--muted); font: 600 0.72rem/1 var(--body); font-variant-numeric: tabular-nums; }
+.pad__master { display: flex; align-items: center; gap: 5px; }
+.pad__vol { width: 72px; accent-color: #7dffb0; }
+.pad__clip { width: 9px; height: 9px; border-radius: 50%; background: #3a1010; transition: background 0.15s, box-shadow 0.15s; }
+.pad__clip.is-clip { background: #ff2a2a; box-shadow: 0 0 9px #ff2a2a; }
+.pad__latmode:disabled { opacity: 0.45; cursor: default; }
+.padmodes { display: flex; justify-content: center; gap: 5px; margin: 0 0 8px; }
+.padmodes[hidden] { display: none; }
+.padmodes .padmodes__b[aria-pressed="true"] { color: var(--text); border-color: var(--orange); box-shadow: inset 0 0 8px -2px var(--orange); }
+.pad__val { display: none; position: absolute; left: 0; right: 0; top: 38%; color: #7dffb0; font: 700 0.72rem/1 ui-monospace, Consolas, monospace; pointer-events: none; }
+.pad__grid[data-pm="vol"] .pad__val, .pad__grid[data-pm="send"] .pad__val { display: block; }
+.pad__grid[data-pm="vol"] .pad__btn, .pad__grid[data-pm="send"] .pad__btn { cursor: ns-resize; }
+.pad__btn.is-rec { box-shadow: inset 0 0 0 2px #ff2a2a, 0 0 16px -2px #ff2a2a; animation: blink 0.6s steps(2) infinite; }
 
 /* ── Metronome + knobs ── */
 .metro { display: flex; align-items: center; gap: 8px; padding: 4px 8px; border-radius: 999px; background: rgba(0, 0, 0, 0.35); border: 1px solid var(--glass-line); }
@@ -1129,8 +1141,9 @@ footer img { vertical-align: middle; }
 	}
 })();
 </script>
-<script src="bot.js?v=20261018c" defer></script>
+<script src="audio-core.js?v=20261019a" defer></script>
+<script src="bot.js?v=20261019a" defer></script>
 <script src="synth.js?v=20261018" defer></script>
-<script src="beatpad.js?v=20261019b" defer></script>
+<script src="beatpad.js?v=20261019c" defer></script>
 </body>
 </html>

@@ -232,7 +232,7 @@
 		raf = requestAnimationFrame(loop);
 		const dt = Math.min(0.1, (now - (last || now)) / 1000);
 		last = now; acc += dt;
-		if (acc < 1 / FPS - 0.004) return;
+		if (acc < 1 / (window.NDAudio?.prefs.lite ? FPS / 2 : FPS) - 0.004) return; // Lite mode: half the frames
 		frame(acc); acc = 0;
 	}
 
