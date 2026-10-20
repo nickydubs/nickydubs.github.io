@@ -1,7 +1,7 @@
 // Synesthesia: a light show that is the sound. One canvas over the page (pointer-events: none):
 //   - every note blooms in its own colour: pitch class → hue round the wheel, octave → lightness, low notes on the
 //     left and high notes on the right; drums by brightness (low thuds deep red, airy hats violet)
-//   - touch a lot (a 6-second average of taps) and the whole screen slowly melts into a rotating rainbow kaleidoscope
+//   - touch a lot (a 6-second average of taps) and a see-through rainbow kaleidoscope slowly melts over the screen
 //     made from the recent blooms; it melts back as the average drops
 //   - ornaments: a fractal rainbow, a golden glow, a flowing ribbon
 // Light by design: colour sprites rendered once, a fixed pool of blooms, and no work at all when off, hidden or idle
@@ -9,7 +9,7 @@
 // eased (nothing strobes), and prefers-reduced-motion keeps it to the calm layer.
 window.NDSyn = window.NDSyn || (() => {
 	'use strict';
-	const KEY = 'nd-syn', TAU = 6, MAXB = 60, HUES = 24, LIGHTS = [30, 45, 60, 75], SPR = 64, SEG = 10, SLICE = 256, A = 2 * Math.PI / SEG;
+	const KEY = 'nd-syn' + location.pathname, TAU = 6, MAXB = 60, HUES = 24, LIGHTS = [30, 45, 60, 75], SPR = 64, SEG = 10, SLICE = 256, A = 2 * Math.PI / SEG;
 	const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 	let enabled = false;
 	try { enabled = localStorage.getItem(KEY) === '1'; } catch {}
@@ -43,7 +43,8 @@ window.NDSyn = window.NDSyn || (() => {
 		if (cv) return;
 		cv = document.createElement('canvas'); cv.className = 'nd-syn';
 		cv.setAttribute('aria-hidden', 'true');
-		Object.assign(cv.style, { position: 'fixed', inset: '0', width: '100%', height: '100%', pointerEvents: 'none', zIndex: '40', display: enabled ? 'block' : 'none' });
+		Object.assign(cv.style, { position: 'fixed', inset: '0', width: '100%', height: '100%', pointerEvents: 'none', zIndex: '40', background: 'transparent', border: '0', margin: '0', padding: '0', borderRadius: '0', display: enabled ? 'block' : 'none' });
+		// (host pages style every canvas with a solid background, which would cover the whole page)
 		document.body.append(cv); cx = cv.getContext('2d');
 	}
 	function fit() {
@@ -84,8 +85,8 @@ window.NDSyn = window.NDSyn || (() => {
 		}
 		fit(); cx.clearRect(0, 0, W, H);
 		let alive = K > 0.002 || E > 0.05 || (analyser && lev > 0.01);
-		// the dark veil that lets the kaleidoscope take the whole screen
-		if (K > 0.002) { cx.globalCompositeOperation = 'source-over'; cx.globalAlpha = K * 0.55; cx.fillStyle = '#05031a'; cx.fillRect(0, 0, W, H); }
+		// a light veil under the kaleidoscope: it never hides the page, so the controls stay readable
+		if (K > 0.002) { cx.globalCompositeOperation = 'source-over'; cx.globalAlpha = K * 0.18; cx.fillStyle = '#05031a'; cx.fillRect(0, 0, W, H); }
 		cx.globalCompositeOperation = 'lighter';
 		// calm layer: the blooms
 		for (const b of pool) {
@@ -118,7 +119,7 @@ window.NDSyn = window.NDSyn || (() => {
 			sx.globalAlpha = 0.22; sx.drawImage(sprites[(shift + i * 8) % HUES][2], SLICE * (0.45 + 0.3 * Math.cos(a)) - s / 2, SLICE * (0.45 + 0.3 * Math.sin(a * 1.3)) - s / 2, s, s);
 		}
 		const R = Math.hypot(W, H) / 2, rot = t * 0.05 * (1 + lev);
-		cx.save(); cx.translate(W / 2, H / 2); cx.globalAlpha = K * 0.9;
+		cx.save(); cx.translate(W / 2, H / 2); cx.globalAlpha = K * 0.45;
 		for (let i = 0; i < SEG; i++) {
 			cx.save(); cx.rotate(rot + i * A + (i & 1 ? A : 0)); if (i & 1) cx.scale(1, -1);
 			cx.clip(wedge); cx.drawImage(slice, 0, 0, R, R); cx.restore();
