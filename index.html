@@ -387,28 +387,6 @@ html:has(.rig[open]) { overflow: hidden; }
 .key.is-down { background: linear-gradient(#ffb48a, var(--orange)); }
 .key--b.is-down { background: linear-gradient(#ff9a5c, #c14d12); }
 
-/* ── Piano roll + Wiggle League (they take the robot's place) ── */
-.stage[hidden], .roll[hidden], .league[hidden] { display: none; }
-.roll { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; }
-.roll__bar { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; }
-.roll__rec[aria-pressed="true"] { background: #ff2a2a; color: #fff; }
-.roll__play[aria-pressed="true"] { color: #7dffb0; border-color: #22c55e; box-shadow: inset 0 0 8px -2px #22c55e; }
-.roll__sel { height: 26px; padding: 0 4px; border-radius: 999px; border: 1px solid var(--glass-line); background: #10132b; color: var(--text); font: 700 0.66rem/1 var(--body); }
-.roll__cv { flex: 1; min-height: 120px; width: 100%; border-radius: 12px; border: 1px solid var(--glass-line); touch-action: none; }
-.league { overflow: auto; margin-bottom: 10px; text-align: left; padding: 10px 12px; border-radius: 16px; background: rgba(0, 0, 0, 0.3); border: 1px solid var(--glass-line); font-size: 0.78rem; }
-.league__head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; }
-.league__head b { font-family: var(--display); font-size: 1rem; }
-.league__head span { flex: 1; color: var(--muted); }
-.league__how { margin: 6px 0 8px; color: var(--muted); font-size: 0.68rem; }
-.league__list { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
-.league__list li { display: grid; grid-template-columns: 26px 1fr auto; gap: 0 8px; padding: 6px 8px; border-radius: 10px; background: #10132b; }
-.league__list li.is-me { outline: 1px solid var(--orange); box-shadow: 0 0 12px -4px var(--orange); }
-.league__rank { grid-row: span 2; align-self: center; color: var(--muted); font-weight: 700; }
-.league__name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.league__pts { color: #7dffb0; font: 700 0.8rem/1.2 ui-monospace, Consolas, monospace; }
-.league__meta { grid-column: 2 / 4; color: var(--muted); font-size: 0.64rem; }
-.league__empty { color: var(--muted); }
-.chip--view[aria-pressed="true"] { color: var(--text); border-color: var(--orange); box-shadow: inset 0 0 8px -2px var(--orange); }
 
 /* ── Loop bank ── */
 .loops { margin-top: 10px; }
@@ -682,8 +660,6 @@ footer img { vertical-align: middle; }
 				<pre class="bot" aria-hidden="true"></pre>
 				<div class="rack more-only" aria-label="Master effects"></div>
 			</div>
-			<div class="roll" hidden></div>
-			<div class="league" hidden></div>
 			<div class="pad__grid"></div>
 			<div class="synth" hidden></div>
 			<div class="loops" aria-label="Loop bank: 8 slots you record yourself"></div>
