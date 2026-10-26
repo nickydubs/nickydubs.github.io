@@ -51,6 +51,16 @@ h1 { margin: 0 0 14px; font: 800 clamp(2.2rem, 7vw, 3.6rem)/1.05 var(--display);
 .chip:hover, .chip:focus-visible { border-color: rgba(52, 214, 255, 0.5); outline: none; }
 .chip[aria-pressed="true"] { border-color: var(--orange); background: rgba(255, 122, 61, 0.12); }
 
+.cat { margin: 0 0 46px; scroll-margin-top: 20px; }
+.cat__head { max-width: 680px; margin: 0 0 20px; }
+.cat__head h2 { margin: 0 0 8px; font: 800 clamp(1.6rem, 5vw, 2.2rem)/1.1 var(--display); }
+.cat__head p { margin: 0; color: var(--muted); }
+.cat__head strong { color: var(--text); font-weight: 600; }
+.steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(200px, 100%), 1fr)); gap: 12px; margin: 16px 0 0; padding: 0; list-style: none; counter-reset: step; }
+.steps li { position: relative; padding: 14px 16px 14px 46px; border-radius: 14px; border: 1px solid var(--glass-line); background: rgba(255, 255, 255, 0.035); color: var(--muted); font-size: 0.9rem; counter-increment: step; }
+.steps li::before { content: counter(step); position: absolute; left: 14px; top: 13px; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; background: var(--orange); color: #fff; font: 700 0.75rem/1 var(--body); }
+.steps strong { color: var(--text); }
+
 /* Products */
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(300px, 100%), 1fr)); gap: 18px; }
 .item { position: relative; display: flex; flex-direction: column; gap: 10px; padding: 24px; border-radius: 22px;
@@ -100,14 +110,29 @@ footer { margin-top: 48px; text-align: center; color: var(--muted); font-size: 0
 		<p class="lead">Drums recorded live on a real kit, chopped and ready to drop in your DAW. <strong>Instant download</strong> after checkout, royalty-free in your own tracks.</p>
 	</header>
 
-	<ul class="filters" aria-label="Filter products">
-		<li><button class="chip" type="button" data-filter="all" aria-pressed="true">Everything</button></li>
-		<li><button class="chip" type="button" data-filter="samples" aria-pressed="false">Sample packs</button></li>
-		<li><button class="chip" type="button" data-filter="stems" aria-pressed="false">Stems</button></li>
-		<li><button class="chip" type="button" data-filter="beats" aria-pressed="false">Beats</button></li>
-	</ul>
+	<section class="cat" id="originals" aria-labelledby="originals-h">
+		<div class="cat__head">
+			<p class="eyebrow">01 · Played by me</p>
+			<h2 id="originals-h">Original stems &amp; samples</h2>
+			<p>Recorded by me, on my own kit, straight out of my own songs. <strong>Real drums, real room, no drum machine.</strong></p>
+		</div>
+		<div class="grid" id="grid-original" aria-live="polite"></div>
+	</section>
 
-	<section class="grid" id="products" aria-live="polite"></section>
+	<section class="cat" id="vintage" aria-labelledby="vintage-h">
+		<div class="cat__head">
+			<p class="eyebrow">02 · Dug from the archives</p>
+			<h2 id="vintage-h">Vintage packs</h2>
+			<p>Crackly 78s from the 1920s, the birth of jazz, swing and dance-band drumming, brought back to life as fresh loops and one-shots. <strong>Every source record is old enough to be in the public domain, so there is nothing to clear and no royalties to pay: use these sounds anywhere, commercial releases included.</strong></p>
+			<ol class="steps">
+				<li><strong>Dig.</strong> I pull original transfers of 1920s records from public archives.</li>
+				<li><strong>Check.</strong> Each record's rights are checked one by one before it goes in a pack.</li>
+				<li><strong>Split.</strong> AI pulls the drums, bass, horns and vocal hooks apart into clean stems.</li>
+				<li><strong>Cut.</strong> I chop the best breaks, hits and hooks by ear and tag them with tempo.</li>
+			</ol>
+		</div>
+		<div class="grid" id="grid-vintage" aria-live="polite"></div>
+	</section>
 
 	<section class="notes" aria-label="How buying works">
 		<div class="note">
@@ -120,7 +145,7 @@ footer { margin-top: 48px; text-align: center; color: var(--muted); font-size: 0
 		</div>
 		<div class="note">
 			<h3>Want something custom?</h3>
-			<p>Custom drum tracks, stem splitting and mastering are on the <a href="./#services">services</a> list.</p>
+			<p>Custom drum tracks and mastering are on the <a href="./#services">services</a> list.</p>
 		</div>
 	</section>
 
@@ -134,12 +159,13 @@ footer { margin-top: 48px; text-align: center; color: var(--muted); font-size: 0
  *      (looks like https://nickydubs.lemonsqueezy.com/buy/xxxxxxxx).
  *   2. Paste it into that product's `checkout` below. The button flips from
  *      "Coming soon" to "Buy" by itself.
+ * `group` picks the section: "original" (played by me) or "vintage" (public-domain packs).
  * Optional: `preview` = an mp3 in /audio (e.g. "audio/breaks-vol1.mp3") adds a little player.
  * Gear: Lemon Squeezy only sells downloads, so physical stuff uses `order` (an email subject) instead.
  */
 const PRODUCTS = [
 	{
-		kind: "samples", label: "Sample pack", icon: "fa-bolt",
+		group: "original", kind: "samples", label: "Sample pack", icon: "fa-bolt",
 		name: "Not So Far Away Drum Pack",
 		about: "The live drums from my song \"Not So Far Away\": DnB and jungle beats, hip-hop and latin grooves, fills, hats, cymbals and tambourine, all played on a real kit at 170 BPM.",
 		specs: ["WAV, 44.1 kHz", "170 BPM loops + fills", "Royalty-free"],
@@ -186,7 +212,7 @@ const PRODUCTS = [
 // Booking email, stored reversed like on the main site, built only on click.
 const MAIL = "moc.sbudykcin@sbudykcin";
 
-const grid = document.getElementById("products");
+const grids = { original: document.getElementById("grid-original"), vintage: document.getElementById("grid-vintage") };
 function el(tag, cls, text) { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; }
 
 function card(p) {
@@ -220,12 +246,22 @@ function card(p) {
 	foot.append(price, btn); a.append(foot);
 	return a;
 }
-PRODUCTS.forEach(p => { const c = card(p); if (c) grid.append(c); });
-// hide filter chips for kinds with nothing on sale yet
-document.querySelectorAll("[data-filter]").forEach(chip => {
-	const f = chip.dataset.filter;
-	if (f !== "all" && !grid.querySelector(`.item[data-kind="${f}"]`)) chip.closest("li").hidden = true;
-});
+PRODUCTS.forEach(p => { const c = card(p); if (c) (grids[p.group] || grids.original).append(c); });
+// a section with nothing on sale yet gets a "first dibs" card instead of sitting empty
+for (const [group, g] of Object.entries(grids)) {
+	if (g.children.length) continue;
+	const a = el("article", "item");
+	const head = el("div", "item__head");
+	const icon = el("span", "item__icon"); icon.innerHTML = '<i class="fa fa-hourglass-half" aria-hidden="true"></i>';
+	const t = el("div"); t.append(el("div", "item__kind", "Coming soon"), el("h2", null, group === "vintage" ? "Vintage Breaks Vol. 1" : "More packs on the way"));
+	head.append(icon, t);
+	a.append(head, el("p", null, group === "vintage" ? "The first vintage pack is being cut right now. Email me and you get it first, at the launch price." : "New packs land here as they are finished."));
+	const btn = el("a", "btn btn--ghost"); btn.href = "#";
+	btn.innerHTML = '<i class="fa fa-envelope" aria-hidden="true"></i>Get first dibs';
+	btn.addEventListener("click", e => { e.preventDefault(); location.href = "mailto:" + [...MAIL].reverse().join("") + "?subject=" + encodeURIComponent(group === "vintage" ? "Vintage packs: first dibs" : "New packs: first dibs"); });
+	const foot = el("div", "item__foot"); foot.append(el("div"), btn); a.append(foot);
+	g.append(a);
+}
 
 // Load Lemon Squeezy's overlay checkout only once something is actually for sale.
 if (PRODUCTS.some(p => p.checkout)) {
@@ -233,11 +269,6 @@ if (PRODUCTS.some(p => p.checkout)) {
 	document.head.append(s);
 }
 
-document.querySelectorAll("[data-filter]").forEach(chip => chip.addEventListener("click", () => {
-	document.querySelectorAll("[data-filter]").forEach(c => c.setAttribute("aria-pressed", String(c === chip)));
-	const f = chip.dataset.filter;
-	grid.querySelectorAll(".item").forEach(it => { it.hidden = f !== "all" && it.dataset.kind !== f; });
-}));
 </script>
 </body>
 </html>
