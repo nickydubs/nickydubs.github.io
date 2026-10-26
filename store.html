@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Store | Nicky Dubs</title>
-<meta name="description" content="Handmade gear and sample packs from Edmonton drummer Nicky Dubs, including the Kick Drum Light Rig.">
+<meta name="description" content="Sample packs, stems and beats from Edmonton drummer Nicky Dubs.">
 <link rel="canonical" href="https://nickydubs.github.io/store.html">
 <link rel="icon" href="favicon.ico">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -105,7 +105,6 @@ footer { margin-top: 48px; text-align: center; color: var(--muted); font-size: 0
 		<li><button class="chip" type="button" data-filter="samples" aria-pressed="false">Sample packs</button></li>
 		<li><button class="chip" type="button" data-filter="stems" aria-pressed="false">Stems</button></li>
 		<li><button class="chip" type="button" data-filter="beats" aria-pressed="false">Beats</button></li>
-		<li><button class="chip" type="button" data-filter="gear" aria-pressed="false">Gear</button></li>
 	</ul>
 
 	<section class="grid" id="products" aria-live="polite"></section>
@@ -113,7 +112,7 @@ footer { margin-top: 48px; text-align: center; color: var(--muted); font-size: 0
 	<section class="notes" aria-label="How buying works">
 		<div class="note">
 			<h3>How downloads work</h3>
-			<p>Tracks and albums are on <a href="https://nickydubs.bandcamp.com" target="_blank" rel="noopener">Bandcamp</a>. Sample packs land here as they are finished. Until instant checkout is switched on, sample packs and handmade gear are paid by PayPal or Interac e-Transfer and the download link comes by email.</p>
+			<p>Tracks and albums are on <a href="https://nickydubs.bandcamp.com" target="_blank" rel="noopener">Bandcamp</a>. Sample packs land here as they are finished. Until instant checkout is switched on, sample packs are paid by PayPal or Interac e-Transfer and the download link comes by email.</p>
 		</div>
 		<div class="note">
 			<h3>What you can do with them</h3>
@@ -181,13 +180,6 @@ const PRODUCTS = [
 		about: "Juicy, dancey, ready-to-wiggle beats to lease for your own songs. Exclusive rights by request.",
 		specs: ["WAV + stems", "Lease or own"],
 		price: 30, checkout: "", preview: ""
-	},
-	{
-		kind: "gear", label: "Handmade gear", icon: "fa-lightbulb-o",
-		name: "Kick Drum Light Rig",
-		about: "An infinity mirror that clips into almost any kick drum, with sound-reactive LEDs that hit when you hit. Each piece is handcrafted to order, one at a time.",
-		specs: ["Fits most kicks", "Sound-reactive"],
-		price: 1360, checkout: "", order: "Kick Drum Light Rig order", preview: ""
 	}
 ];
 
