@@ -113,7 +113,7 @@ footer { margin-top: 48px; text-align: center; color: var(--muted); font-size: 0
 	<section class="notes" aria-label="How buying works">
 		<div class="note">
 			<h3>How downloads work</h3>
-			<p>Tracks and albums are on <a href="https://nickydubs.bandcamp.com" target="_blank" rel="noopener">Bandcamp</a>. Sample packs land here as they are finished. Handmade gear is paid by PayPal or Interac e-Transfer.</p>
+			<p>Tracks and albums are on <a href="https://nickydubs.bandcamp.com" target="_blank" rel="noopener">Bandcamp</a>. Sample packs land here as they are finished. Until instant checkout is switched on, sample packs and handmade gear are paid by PayPal or Interac e-Transfer and the download link comes by email.</p>
 		</div>
 		<div class="note">
 			<h3>What you can do with them</h3>
@@ -139,6 +139,14 @@ footer { margin-top: 48px; text-align: center; color: var(--muted); font-size: 0
  * Gear: Lemon Squeezy only sells downloads, so physical stuff uses `order` (an email subject) instead.
  */
 const PRODUCTS = [
+	{
+		kind: "samples", label: "Sample pack", icon: "fa-bolt",
+		name: "Not So Far Away Drum Pack",
+		about: "The live drums from my song \"Not So Far Away\": DnB and jungle beats, hip-hop and latin grooves, fills, hats, cymbals and tambourine, all played on a real kit at 170 BPM.",
+		specs: ["63 WAVs, 44.1 kHz", "170 BPM loops + fills", "Royalty-free"],
+		price: 12, checkout: "", order: "Not So Far Away Drum Pack ($12)", digital: true,
+		preview: "audio/not-so-far-away-preview.mp3"
+	},
 	{
 		kind: "samples", label: "Sample pack", icon: "fa-bolt",
 		name: "Live Looping Breaks Vol. 1",
@@ -202,14 +210,14 @@ function card(p) {
 	const foot = el("div", "item__foot");
 	const price = el("div", "price", `$${p.price}`);
 	const live = Boolean(p.checkout);
-	price.append(el("small", null, live ? "instant download" : "handcrafted to order"));
+	price.append(el("small", null, live ? "instant download" : p.digital ? "PayPal or e-Transfer, download link by email" : "handcrafted to order"));
 	let btn;
 	if (live) {
 		btn = el("a", "btn lemonsqueezy-button"); btn.href = p.checkout;
 		btn.innerHTML = '<i class="fa fa-download" aria-hidden="true"></i>Buy';
 	} else if (p.order) {
 		btn = el("a", "btn btn--ghost"); btn.href = "#";
-		btn.innerHTML = '<i class="fa fa-envelope" aria-hidden="true"></i>Email to order';
+		btn.innerHTML = `<i class="fa fa-envelope" aria-hidden="true"></i>${p.digital ? "Email to buy" : "Email to order"}`;
 		btn.addEventListener("click", e => {
 			e.preventDefault();
 			location.href = "mailto:" + [...MAIL].reverse().join("") + "?subject=" + encodeURIComponent(p.order);
