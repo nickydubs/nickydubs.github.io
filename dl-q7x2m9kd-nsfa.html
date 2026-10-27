@@ -9,6 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,800&family=Inter:wght@400;600&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" defer></script>
 <style>
 /* Same palette as the store. Reached from the Stripe thank-you redirect, with ?session_id=cs_... */
 :root { --ink: #070915; --text: #eef0ff; --muted: #9aa0c3; --blue: #3d5afe; --orange: #ff7a3d; --glass-line: rgba(255,255,255,0.09); color-scheme: dark; }
@@ -22,27 +23,31 @@ p { margin: 0 0 22px; color: var(--muted); }
 .btn[disabled] { opacity: 0.6; cursor: wait; }
 small { display: block; margin-top: 18px; color: var(--muted); font-size: 0.8rem; }
 #msg { min-height: 1.4em; margin-top: 14px; color: var(--muted); font-size: 0.9rem; }
-#links { display: flex; flex-wrap: wrap; justify-content: center; }
+#bar { height: 6px; border-radius: 999px; background: rgba(255,255,255,0.08); margin-top: 12px; overflow: hidden; display: none; }
+#bar i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--blue), var(--orange)); transition: width 0.3s; }
+#parts a { color: var(--muted); font-size: 0.85rem; margin: 0 6px; }
 </style>
 </head>
 <body>
 <div class="card">
 	<h1>Thanks, it's yours.</h1>
-	<p>Not So Far Away Drum Pack: 81 WAV files, 153 MB. Royalty-free in your own music; please don't resell or repackage the files.</p>
-	<button class="btn" id="dl" type="button">Get my download links</button>
-	<div id="links"></div>
+	<p id="what">Royalty-free in your own music; please don't resell or repackage the files.</p>
+	<button class="btn" id="dl" type="button">Download the pack (one zip)</button>
+	<div id="bar"><i></i></div>
 	<div id="msg"></div>
-	<small>The pack comes as 5 zips (whole files, nothing split). The links work for an hour; come back any time from the link in your Stripe receipt email for fresh ones.</small>
+	<div id="parts"></div>
+	<small>Come back any time from the link in your Stripe receipt email: it always gives you a fresh download.</small>
 </div>
 <script>
-// The download gate checks the Stripe order and hands back a signed link that expires in an hour.
+// The gate checks the Stripe order and hands back signed links (1 hour). The page pulls them all and
+// packs them into ONE zip in the browser, so the buyer gets a single file whatever the vault's size cap.
 const GATE = "https://rkrsqijdhwdmrfdrfwhw.supabase.co/functions/v1/download";
 const sid = new URLSearchParams(location.search).get("session_id") || "";
-const btn = document.getElementById("dl"), msg = document.getElementById("msg");
+const btn = document.getElementById("dl"), msg = document.getElementById("msg"), bar = document.getElementById("bar"), fill = bar.firstElementChild, parts = document.getElementById("parts");
 const MAIL = "moc.sbudykcin@sbudykcin";
 function fail(text) {
 	msg.innerHTML = text + ' If this keeps happening, <a href="#" id="m" style="color:#fff">email me</a> with your receipt.';
-	document.getElementById("m").onclick = e => { e.preventDefault(); location.href = "mailto:" + [...MAIL].reverse().join("") + "?subject=" + encodeURIComponent("Drum pack download problem"); };
+	document.getElementById("m").onclick = e => { e.preventDefault(); location.href = "mailto:" + [...MAIL].reverse().join("") + "?subject=" + encodeURIComponent("Sample pack download problem"); };
 }
 if (!sid) { btn.hidden = true; fail("This page needs the link from your Stripe receipt."); }
 btn.addEventListener("click", async () => {
@@ -51,12 +56,22 @@ btn.addEventListener("click", async () => {
 		const r = await fetch(GATE + "?session_id=" + encodeURIComponent(sid));
 		const j = await r.json();
 		if (!r.ok || !j.files || !j.files.length) throw new Error(j.error || "no links");
-		const box = document.getElementById("links"); box.innerHTML = "";
-		j.files.forEach((f, i) => {
-			const a = document.createElement("a"); a.className = "btn"; a.href = f.url; a.textContent = "Part " + (i + 1) + " of " + j.files.length;
-			a.style.margin = "6px"; box.append(a);
-		});
-		btn.hidden = true; msg.textContent = "Links ready for the next hour. Click each part.";
+		document.getElementById("what").textContent = j.pack + ". Royalty-free in your own music; please don't resell or repackage the files.";
+		// fallback links, in case the one-zip build fails on a small device
+		parts.innerHTML = "";
+		if (j.files.length > 1) j.files.forEach((f, i) => { const a = document.createElement("a"); a.href = f.url; a.textContent = "part " + (i + 1); parts.append(a); });
+		if (j.files.length === 1) { location.href = j.files[0].url; msg.textContent = "Starting your download."; return; }
+		bar.style.display = "block"; const zip = new JSZip(); let done = 0;
+		for (const f of j.files) {
+			msg.textContent = "Fetching " + (done + 1) + " of " + j.files.length + "…";
+			const blob = await (await fetch(f.url)).blob();
+			zip.file(f.path.includes("/") ? f.path.split("/").slice(1).join("/") : f.name, blob);
+			done++; fill.style.width = (done / j.files.length * 90) + "%";
+		}
+		msg.textContent = "Packing one zip…";
+		const out = await zip.generateAsync({ type: "blob", compression: "STORE" }, m => { fill.style.width = (90 + m.percent / 10) + "%"; });
+		const a = document.createElement("a"); a.href = URL.createObjectURL(out); a.download = (j.pack || "pack").replace(/[^\w ]+/g, "").trim().replace(/\s+/g, "_") + ".zip"; a.click();
+		msg.textContent = "Done. Your zip is downloading. Links below work for an hour if you need a part again.";
 	} catch (e) {
 		fail("Couldn't get your download (" + e.message + ").");
 	} finally { btn.disabled = false; }
