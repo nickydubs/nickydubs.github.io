@@ -22,15 +22,17 @@ p { margin: 0 0 22px; color: var(--muted); }
 .btn[disabled] { opacity: 0.6; cursor: wait; }
 small { display: block; margin-top: 18px; color: var(--muted); font-size: 0.8rem; }
 #msg { min-height: 1.4em; margin-top: 14px; color: var(--muted); font-size: 0.9rem; }
+#links { display: flex; flex-wrap: wrap; justify-content: center; }
 </style>
 </head>
 <body>
 <div class="card">
 	<h1>Thanks, it's yours.</h1>
 	<p>Not So Far Away Drum Pack: 81 WAV files, 153 MB. Royalty-free in your own music; please don't resell or repackage the files.</p>
-	<button class="btn" id="dl" type="button">Download the pack (zip)</button>
+	<button class="btn" id="dl" type="button">Get my download links</button>
+	<div id="links"></div>
 	<div id="msg"></div>
-	<small>Each click makes a fresh link that works for an hour. Lost it? Open this page again from the link in your Stripe receipt email, any time.</small>
+	<small>The pack comes as 5 zips (whole files, nothing split). The links work for an hour; come back any time from the link in your Stripe receipt email for fresh ones.</small>
 </div>
 <script>
 // The download gate checks the Stripe order and hands back a signed link that expires in an hour.
@@ -48,9 +50,13 @@ btn.addEventListener("click", async () => {
 	try {
 		const r = await fetch(GATE + "?session_id=" + encodeURIComponent(sid));
 		const j = await r.json();
-		if (!r.ok || !j.url) throw new Error(j.error || "no link");
-		msg.textContent = "Starting your download.";
-		location.href = j.url;
+		if (!r.ok || !j.files || !j.files.length) throw new Error(j.error || "no links");
+		const box = document.getElementById("links"); box.innerHTML = "";
+		j.files.forEach((f, i) => {
+			const a = document.createElement("a"); a.className = "btn"; a.href = f.url; a.textContent = "Part " + (i + 1) + " of " + j.files.length;
+			a.style.margin = "6px"; box.append(a);
+		});
+		btn.hidden = true; msg.textContent = "Links ready for the next hour. Click each part.";
 	} catch (e) {
 		fail("Couldn't get your download (" + e.message + ").");
 	} finally { btn.disabled = false; }

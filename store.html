@@ -108,7 +108,14 @@ footer { margin-top: 48px; text-align: center; color: var(--muted); font-size: 0
 		<p class="eyebrow">Store</p>
 		<h1>Breaks, stems &amp; beats</h1>
 		<p class="lead">Drums recorded live on a real kit, chopped and ready to drop in your DAW. <strong>Instant download</strong> after checkout, royalty-free in your own tracks.</p>
+		<p class="lead" id="orders" hidden></p>
 	</header>
+	<script>
+	// Real paid-order count from Stripe (via the download gate); shown once there are a few.
+	fetch("https://rkrsqijdhwdmrfdrfwhw.supabase.co/functions/v1/download?count=1").then(r => r.json()).then(j => {
+		if (j.orders >= 5) { const o = document.getElementById("orders"); o.innerHTML = `<strong>${j.orders}</strong> packs sold so far`; o.hidden = false; }
+	}).catch(() => {});
+	</script>
 
 	<section class="cat" id="originals" aria-labelledby="originals-h">
 		<div class="cat__head">
