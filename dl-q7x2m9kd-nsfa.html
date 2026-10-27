@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,800&family=Inter:wght@400;600&display=swap">
 <style>
-/* Same palette as the store. Reached only from the Stripe thank-you redirect. */
+/* Same palette as the store. Reached from the Stripe thank-you redirect, with ?session_id=cs_... */
 :root { --ink: #070915; --text: #eef0ff; --muted: #9aa0c3; --blue: #3d5afe; --orange: #ff7a3d; --glass-line: rgba(255,255,255,0.09); color-scheme: dark; }
 * { box-sizing: border-box; }
 body { margin: 0; min-height: 100svh; display: grid; place-items: center; padding: 24px; color: var(--text); font: 16px/1.6 "Inter", system-ui, sans-serif;
@@ -18,16 +18,43 @@ body { margin: 0; min-height: 100svh; display: grid; place-items: center; paddin
 .card { max-width: 520px; width: 100%; padding: 36px 32px; border-radius: 22px; background: rgba(16,20,52,0.72); border: 1px solid var(--glass-line); text-align: center; }
 h1 { margin: 0 0 10px; font: 800 2rem/1.1 "Bricolage Grotesque", system-ui, sans-serif; }
 p { margin: 0 0 22px; color: var(--muted); }
-.btn { display: inline-flex; align-items: center; gap: 8px; padding: 14px 26px; border-radius: 999px; background: linear-gradient(135deg, var(--orange), #ff4f7b); color: #fff; font-weight: 600; text-decoration: none; box-shadow: 0 10px 24px -10px var(--orange); }
+.btn { display: inline-flex; align-items: center; gap: 8px; padding: 14px 26px; border-radius: 999px; background: linear-gradient(135deg, var(--orange), #ff4f7b); color: #fff; font-weight: 600; text-decoration: none; box-shadow: 0 10px 24px -10px var(--orange); border: 0; cursor: pointer; font-size: 1rem; }
+.btn[disabled] { opacity: 0.6; cursor: wait; }
 small { display: block; margin-top: 18px; color: var(--muted); font-size: 0.8rem; }
+#msg { min-height: 1.4em; margin-top: 14px; color: var(--muted); font-size: 0.9rem; }
 </style>
 </head>
 <body>
 <div class="card">
 	<h1>Thanks, it's yours.</h1>
 	<p>Not So Far Away Drum Pack: 81 WAV files, 153 MB. Royalty-free in your own music; please don't resell or repackage the files.</p>
-	<a class="btn" href="mailto:nickydubs@nickydubs.com?subject=Not%20So%20Far%20Away%20Drum%20Pack%20download">Your download link is emailed within 24 hours</a>
-	<small>Keep this page or your Stripe receipt; the link works any time. Problems? Reply to your receipt email.</small>
+	<button class="btn" id="dl" type="button">Download the pack (zip)</button>
+	<div id="msg"></div>
+	<small>Each click makes a fresh link that works for an hour. Lost it? Open this page again from the link in your Stripe receipt email, any time.</small>
 </div>
+<script>
+// The download gate checks the Stripe order and hands back a signed link that expires in an hour.
+const GATE = "https://rkrsqijdhwdmrfdrfwhw.supabase.co/functions/v1/download";
+const sid = new URLSearchParams(location.search).get("session_id") || "";
+const btn = document.getElementById("dl"), msg = document.getElementById("msg");
+const MAIL = "moc.sbudykcin@sbudykcin";
+function fail(text) {
+	msg.innerHTML = text + ' If this keeps happening, <a href="#" id="m" style="color:#fff">email me</a> with your receipt.';
+	document.getElementById("m").onclick = e => { e.preventDefault(); location.href = "mailto:" + [...MAIL].reverse().join("") + "?subject=" + encodeURIComponent("Drum pack download problem"); };
+}
+if (!sid) { btn.hidden = true; fail("This page needs the link from your Stripe receipt."); }
+btn.addEventListener("click", async () => {
+	btn.disabled = true; msg.textContent = "Checking your order…";
+	try {
+		const r = await fetch(GATE + "?session_id=" + encodeURIComponent(sid));
+		const j = await r.json();
+		if (!r.ok || !j.url) throw new Error(j.error || "no link");
+		msg.textContent = "Starting your download.";
+		location.href = j.url;
+	} catch (e) {
+		fail("Couldn't get your download (" + e.message + ").");
+	} finally { btn.disabled = false; }
+});
+</script>
 </body>
 </html>
