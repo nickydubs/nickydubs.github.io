@@ -137,7 +137,7 @@ footer { margin-top: 48px; text-align: center; color: var(--muted); font-size: 0
 	<section class="notes" aria-label="How buying works">
 		<div class="note">
 			<h3>How downloads work</h3>
-			<p>Tracks and albums are on <a href="https://nickydubs.bandcamp.com" target="_blank" rel="noopener">Bandcamp</a>. Sample packs land here as they are finished. Until instant checkout is switched on, sample packs are paid by PayPal or Interac e-Transfer and the download link comes by email.</p>
+			<p>Tracks and albums are on <a href="https://nickydubs.bandcamp.com" target="_blank" rel="noopener">Bandcamp</a>. Sample packs are paid by card through Stripe (Apple Pay and Google Pay too) and the download starts right after checkout.</p>
 		</div>
 		<div class="note">
 			<h3>What you can do with them</h3>
@@ -155,13 +155,14 @@ footer { margin-top: 48px; text-align: center; color: var(--muted); font-size: 0
 <script>
 /*
  * THE PRODUCT LIST. To put something on sale:
- *   1. Make the product in Lemon Squeezy and copy its checkout link
- *      (looks like https://nickydubs.lemonsqueezy.com/buy/xxxxxxxx).
- *   2. Paste it into that product's `checkout` below. The button flips from
- *      "Coming soon" to "Buy" by itself.
+ *   1. Make the product in Stripe (Product catalog) and create a Payment Link for it
+ *      (looks like https://buy.stripe.com/xxxxxxxx), with "after payment" redirecting to
+ *      a thank-you page on this site that holds the download button (see thanks-nsfa.html).
+ *   2. Paste the link into that product's `checkout` below. The button flips from
+ *      "Email to buy" to "Buy" by itself.
  * `group` picks the section: "original" (played by me) or "vintage" (public-domain packs).
  * Optional: `preview` = an mp3 in /audio (e.g. "audio/breaks-vol1.mp3") adds a little player.
- * Gear: Lemon Squeezy only sells downloads, so physical stuff uses `order` (an email subject) instead.
+ * Gear: physical stuff uses `order` (an email subject) instead of a checkout link.
  */
 const PRODUCTS = [
 	{
@@ -169,7 +170,7 @@ const PRODUCTS = [
 		name: "Not So Far Away Drum Pack",
 		about: "The live drums from my song \"Not So Far Away\": DnB and jungle beats, hip-hop and latin grooves, fills, hats, cymbals and tambourine, all played on a real kit at 170 BPM.",
 		specs: ["WAV, 44.1 kHz", "170 BPM loops + fills", "Royalty-free"],
-		price: 12, checkout: "", order: "Not So Far Away Drum Pack ($12)", digital: true,
+		price: 12, checkout: "https://buy.stripe.com/00w9ATfoUfsx8l72o1fbq00", order: "Not So Far Away Drum Pack ($12)", digital: true,
 		preview: "audio/not-so-far-away-preview.mp3"
 	},
 	{
@@ -231,7 +232,7 @@ function card(p) {
 	price.append(el("small", null, live ? "instant download" : p.digital ? "PayPal or e-Transfer, download link by email" : "handcrafted to order"));
 	let btn;
 	if (live) {
-		btn = el("a", "btn lemonsqueezy-button"); btn.href = p.checkout;
+		btn = el("a", "btn"); btn.href = p.checkout; btn.rel = "noopener";
 		btn.innerHTML = '<i class="fa fa-download" aria-hidden="true"></i>Buy';
 	} else if (p.order) {
 		btn = el("a", "btn btn--ghost"); btn.href = "#";
@@ -261,12 +262,6 @@ for (const [group, g] of Object.entries(grids)) {
 	btn.addEventListener("click", e => { e.preventDefault(); location.href = "mailto:" + [...MAIL].reverse().join("") + "?subject=" + encodeURIComponent(group === "vintage" ? "Vintage packs: first dibs" : "New packs: first dibs"); });
 	const foot = el("div", "item__foot"); foot.append(el("div"), btn); a.append(foot);
 	g.append(a);
-}
-
-// Load Lemon Squeezy's overlay checkout only once something is actually for sale.
-if (PRODUCTS.some(p => p.checkout)) {
-	const s = document.createElement("script"); s.src = "https://app.lemonsqueezy.com/js/lemon.js"; s.defer = true;
-	document.head.append(s);
 }
 
 </script>
