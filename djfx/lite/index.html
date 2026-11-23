@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>DJFX Lite</title>
+<meta name="description" content="DJFX Lite: the one-thumb DJ. Load a folder of songs, tap one to play next, hit 1-4 to mix it in on the beat. Songs play from your own device; nothing is uploaded.">
+<meta name="theme-color" content="#0b0d10">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="DJFX Lite">
+<style>
+:root{
+  --bg:#0b0d10; --panel:#14181d; --panel2:#1b2027; --line:#2a313a; --fg:#e8edf2; --muted:#8a96a3;
+  --a:#3fb6ff; --b:#ff8a3d; --accent:#ffd23f; --red:#ff3b47; --green:#33d17a; --amber:#ffb020; --violet:#d06bff;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--fg);font:15px/1.3 system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-user-select:none;user-select:none;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+body{display:flex;flex-direction:column;gap:8px;height:100vh;height:100dvh;max-width:560px;margin:0 auto;overflow:hidden;
+  padding:8px max(12px,env(safe-area-inset-right)) max(8px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left))}
+button{font:inherit;color:var(--fg);background:var(--panel2);border:1px solid var(--line);border-radius:12px;cursor:pointer;touch-action:manipulation;padding:0}
+button:active{transform:translateY(1px);filter:brightness(1.3)}
+button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+header{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+h1{margin:0;font-size:20px;letter-spacing:.04em} h1 b{color:var(--accent)}
+h1 small{font:700 11px var(--mono);color:var(--muted);letter-spacing:.12em;text-transform:uppercase;margin-left:4px}
+header a{color:var(--muted);font-size:13px;text-decoration:none;padding:6px 0}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:8px 10px;display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:6px 8px;align-items:center}
+.card.now{border-color:#1f6b40}
+.role{font:800 12px/1 var(--mono);letter-spacing:.1em;padding:5px 7px;border-radius:6px}
+.now .role{background:var(--green);color:#06210f} .next .role{background:var(--accent);color:#111}
+.t{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.now .t{font-size:17px}
+.bpm{font:700 14px var(--mono)}
+.sub{grid-column:2/-1;font:12px var(--mono);color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-height:15px}
+.meter{grid-column:1/-1;display:flex;gap:8px;align-items:center}
+.prog{flex:1;height:6px;background:#07090b;border-radius:3px;overflow:hidden} .prog i{display:block;height:100%;width:0;background:var(--green)}
+.dots{display:flex;gap:4px} .dots i{width:11px;height:11px;border-radius:50%;background:#2b1013}
+.dots i.on{background:#ff6a6a;box-shadow:0 0 8px var(--red)} .dots i.on:first-child{background:var(--red);box-shadow:0 0 12px var(--red)}
+.phr{display:flex;gap:2px} .phr i{width:6px;height:11px;border-radius:2px;background:#20262e} .phr i.on{background:var(--accent)}
+#play{width:52px;height:40px;font-size:17px;font-weight:800}
+#play.on{background:var(--green);color:#06210f;border-color:var(--green)}
+.tx{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.tx button{min-height:clamp(62px,10dvh,104px);display:grid;grid-template-columns:auto 1fr;grid-template-rows:auto auto;column-gap:10px;align-items:center;justify-items:start;padding:8px 12px;text-align:left}
+.tx b{grid-row:1/3;font:800 38px/1 var(--mono)}
+.tx span{font-weight:800;font-size:16px;letter-spacing:.05em;text-transform:uppercase}
+.tx small{font-size:11px;color:var(--muted);line-height:1.2}
+.tx [data-l="1"]{background:#10291b;border-color:#2c7a4c} .tx [data-l="1"] b{color:var(--green)}
+.tx [data-l="2"]{background:#0e2433;border-color:#2b6f9a} .tx [data-l="2"] b{color:var(--a)}
+.tx [data-l="3"]{background:#2a1430;border-color:#7b3f8c} .tx [data-l="3"] b{color:var(--violet)}
+.tx [data-l="4"]{background:#33140c;border-color:#a3461f} .tx [data-l="4"] b{color:var(--b)}
+.tx button.live{border-color:var(--accent);box-shadow:inset 0 0 0 2px var(--accent);animation:pulse .5s infinite alternate}
+.tx button.live small{color:var(--accent);font-weight:700}
+@keyframes pulse{to{filter:brightness(1.35)}}
+#cut{min-height:clamp(58px,9dvh,86px);font:800 24px var(--mono);letter-spacing:.08em;background:#5c0f16;border-color:var(--red)}
+#cut small{display:block;font:600 11px system-ui,sans-serif;letter-spacing:0;color:#ffb3b8}
+#cut.pending{background:var(--red);animation:pulse .2s infinite alternate}
+.loop{display:grid;grid-template-columns:1.25fr repeat(3,1fr);grid-template-rows:1fr 1fr;gap:6px}
+#loop{grid-row:1/3;font:800 21px var(--mono);letter-spacing:.06em;min-height:88px}
+#loop.on{background:var(--accent);color:#111;border-color:var(--accent)}
+.ls{min-height:41px;font:700 17px var(--mono)}
+.ls.sel{border-color:var(--accent);color:var(--accent)}
+.ls.on{background:var(--accent);color:#111}
+.lib{flex:1;min-height:110px;display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.libbar{display:flex;gap:6px;padding:6px}
+.libbar button{min-height:44px;padding:0 12px;font-weight:700}
+#loadDir{flex:1;background:#123d24;border-color:var(--green);font-size:16px}
+#auto{color:var(--muted)} #auto.on{color:#111;background:var(--green);border-color:var(--green)}
+#list{flex:1;overflow-y:auto;padding:0 6px 6px;display:flex;flex-direction:column;gap:4px;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+.trk{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:8px;align-items:center;text-align:left;padding:8px 10px;min-height:46px;border-radius:9px;flex:none}
+.trk .n{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600}
+.trk .m{font:12px var(--mono);color:var(--muted)}
+.trk .bd{font:800 11px var(--mono);padding:3px 6px;border-radius:5px;display:none}
+.trk.now{border-color:var(--green)} .trk.now .bd{display:block;background:var(--green);color:#06210f}
+.trk.next{border-color:var(--accent);background:#2a2610} .trk.next .bd{display:block;background:var(--accent);color:#111}
+.trk.bad{opacity:.45}
+.empty{color:var(--muted);text-align:center;margin:18px 6px}
+.toast{position:fixed;left:50%;bottom:22px;transform:translate(-50%,20px);background:var(--fg);color:var(--bg);padding:9px 16px;border-radius:999px;font-weight:600;opacity:0;pointer-events:none;transition:opacity .15s,transform .15s;max-width:90vw;text-align:center;z-index:5}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+.keys{display:none;font:11px var(--mono);color:var(--muted);text-align:center;margin:0}
+@media (hover:hover) and (pointer:fine){.keys{display:block}}
+@media (max-height:640px){.tx button{min-height:60px}.tx b{font-size:30px}.tx small{display:none}#loop{min-height:84px}.ls{min-height:39px}}
+@media (prefers-reduced-motion:reduce){.tx button.live,#cut.pending{animation:none}}
+</style>
+</head>
+<body>
+<header>
+  <h1>DJ<b>FX</b><small>lite</small></h1>
+  <a href="../">full deck &rarr;</a>
+</header>
+
+<section class="card now" aria-label="Now playing">
+  <span class="role">NOW</span><span class="t" id="nowT">Nothing playing yet</span>
+  <button id="play" aria-label="Play or pause (P)">&#9654;</button>
+  <div class="meter">
+    <span class="bpm" id="nowB">---</span>
+    <div class="dots" id="dots" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+    <div class="phr" id="phr" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+    <div class="prog"><i id="prog"></i></div>
+  </div>
+</section>
+
+<section class="card next" aria-label="Next song">
+  <span class="role">NEXT</span><span class="t" id="nextT">Tap a song below</span><span class="bpm" id="nextB"></span>
+  <span class="sub" id="nextS"></span>
+</section>
+
+<section class="tx" id="tx" aria-label="Transitions into the next song">
+  <button data-l="1" title="Clean 8-bar blend (1)"><b>1</b><span>Blend</span><small data-d="clean 8-bar mix">clean 8-bar mix</small></button>
+  <button data-l="2" title="Blend with filter sweeps and a bass swap (2)"><b>2</b><span>Filter</span><small data-d="sweep + bass swap">sweep + bass swap</small></button>
+  <button data-l="3" title="Blend, then throw the old song into an echo (3)"><b>3</b><span>Echo</span><small data-d="echo throw out">echo throw out</small></button>
+  <button data-l="4" title="Loop roll, riser and echo, then slam the drop (4)"><b>4</b><span>Drama</span><small data-d="roll, rise, SLAM">roll, rise, SLAM</small></button>
+</section>
+
+<button id="cut" title="Kill FX and loop, drop the next song on the next downbeat (Space)">CUT &middot; DROP<small>next song on the next 1</small></button>
+
+<section class="loop" aria-label="Loop">
+  <button id="loop" title="Loop on/off (L)">LOOP</button>
+  <button class="ls" data-b="0.25">1/4</button><button class="ls" data-b="0.5">1/2</button><button class="ls" data-b="1">1</button>
+  <button class="ls" data-b="2">2</button><button class="ls" data-b="4">4</button><button class="ls" data-b="8">8</button>
+</section>
+
+<section class="lib" aria-label="Songs">
+  <div class="libbar">
+    <button id="loadDir">&#128193; Load folder</button>
+    <button id="addFiles" title="Add single songs">+ songs</button>
+    <button id="auto" title="Mix into the next song by itself near the end">Auto</button>
+  </div>
+  <div id="list"></div>
+</section>
+<p class="keys">keys: 1-4 transition &middot; Space cut/drop &middot; L loop &middot; [ ] loop size &middot; P play/pause</p>
+
+<input type="file" id="dirIn" webkitdirectory multiple accept="audio/*" hidden>
+<input type="file" id="fileIn" multiple accept="audio/*,.mp3,.m4a,.wav,.flac,.ogg,.opus,.aac" hidden>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script src="../../audio-core.js?v=20261122a"></script>
+<script src="../js/analysis.js?v=20261122a"></script>
+<script src="../js/keylock.js?v=20261122a"></script>
+<script src="../js/engine.js?v=20261122a"></script>
+<script src="lite.js?v=20261122a"></script>
+</body>
+</html>
